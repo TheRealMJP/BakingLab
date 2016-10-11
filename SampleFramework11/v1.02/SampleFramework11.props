@@ -5,7 +5,7 @@
     <SampleFrameworkDir>../SampleFramework11/v1.02/</SampleFrameworkDir>
   </PropertyGroup>
   <PropertyGroup>
-    <LibraryPath>$(ProjectDir)..\Externals\HosekSky\Lib 2015;$(ProjectDir)..\Externals\DirectXTex Aug 2015\Lib 2015\$(Configuration);$(ProjectDir)..\Externals\Assimp-3.1.1\lib;$(ProjectDir)..\Externals\AntTweakBar\lib;$(Configuration);$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>$(ProjectDir)..\Externals\HosekSky\Lib 2015;$(ProjectDir)..\Externals\DirectXTex Aug 2015\Lib 2015 Win7\$(Configuration);$(ProjectDir)..\Externals\Assimp-3.1.1\lib;$(ProjectDir)..\Externals\AntTweakBar\lib;$(Configuration);$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)$(SampleFrameworkDir);$(ProjectDir)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
