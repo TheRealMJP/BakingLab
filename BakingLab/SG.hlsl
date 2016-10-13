@@ -56,7 +56,7 @@ float3 EvaluateASG(in ASG asg, in float3 dir)
 //-------------------------------------------------------------------------------------------------
 SG SGProduct(in SG x, in SG y)
 {
-    float3 um = (x.Sharpness * x.Axis + y.Sharpness + y.Axis) / (x.Sharpness + y.Sharpness);
+    float3 um = (x.Sharpness * x.Axis + y.Sharpness * y.Axis) / (x.Sharpness + y.Sharpness);
     float umLength = length(um);
     float lm = x.Sharpness + y.Sharpness;
 
