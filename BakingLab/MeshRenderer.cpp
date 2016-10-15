@@ -863,7 +863,7 @@ void MeshRenderer::RenderSunShadowMap(ID3D11DeviceContext* context, const Camera
         minExtents.x *= scale;
         minExtents.y *= scale;
         maxExtents.x *= scale;
-        maxExtents.x *= scale;
+        maxExtents.y *= scale;
 
         Float3 cascadeExtents = maxExtents - minExtents;
 
