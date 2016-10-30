@@ -545,7 +545,7 @@ void BakingLab::Update(const Timer& timer)
     unJitteredCamera = camera;
 
     Float2 jitter = 0.0f;
-    if(AppSettings::EnableTemporalAA && AppSettings::JitterMode != JitterModes::None)
+    if(AppSettings::EnableTemporalAA && AppSettings::EnableLuminancePicker == false && AppSettings::JitterMode != JitterModes::None)
     {
         if(AppSettings::JitterMode == JitterModes::Uniform2x)
         {

@@ -548,7 +548,7 @@ PSOutput PS(in PSInput input)
             lighting = indirectSpecular;
     }
 
-    float illuminance = dot(irradiance, float3(0.299f, 0.587f, 0.114f));
+    float illuminance = dot(irradiance, float3(0.2126f, 0.7152f, 0.0722f));
 
     PSOutput output;
     output.Lighting =  clamp(float4(lighting, illuminance), 0.0f, FP16Max);

@@ -604,7 +604,7 @@ inline Float3 SRGBToLinear(Float3 color)
 
 inline float ComputeLuminance(Float3 color)
 {
-    return Float3::Dot(color, Float3(0.299f, 0.587f, 0.114f));
+    return Float3::Dot(color, Float3(0.2126f, 0.7152f, 0.0722f));
 }
 
 // Convert from spherical coordinates to Cartesian coordinates(x, y, z)

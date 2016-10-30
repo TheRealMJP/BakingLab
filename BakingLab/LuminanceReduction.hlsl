@@ -40,7 +40,7 @@ groupshared float LumSamples[NumThreads];
 // Calculates luminance from an RGB value
 float CalcLuminance(float3 color)
 {
-    return dot(color, float3(0.299f, 0.587f, 0.114f));
+    return dot(color, float3(0.2126f, 0.7152f, 0.0722f));
 }
 
 //=================================================================================================

@@ -171,7 +171,7 @@ float4 ResolveVS(in uint VertexID : SV_VertexID) : SV_Position
 
 float Luminance(in float3 clr)
 {
-    return dot(clr, float3(0.299f, 0.587f, 0.114f));
+    return dot(clr, float3(0.2126f, 0.7152f, 0.0722f));
 }
 
 float4 ResolvePS(in float4 Position : SV_Position) : SV_Target0
