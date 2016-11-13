@@ -14,7 +14,7 @@ All baking modes bake progressively with real-time feedback, using an Embree-bac
 
 # Build Instructions
 
-The repository contains a Visual Studio 2015 project and solution file that's ready to build on Windows. All external dependencies are included in the repository, so there's no need to download additional libraries. Running the demo requires Windows 7 or higher, as well as a GPU that supports Feature Level 11_0.
+The repository contains Visual Studio 2015 and 2013 project files that are ready to build on Windows. All external dependencies are included in the repository, so there's no need to download additional libraries. Running the demo requires Windows 7 or higher, as well as a GPU that supports Feature Level 11_0.
 
 # Using the Demo App
 
