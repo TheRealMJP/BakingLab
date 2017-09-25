@@ -239,6 +239,10 @@ namespace AppSettings
     FloatSetting BakeRussianRouletteProbability;
     BakeModesSetting BakeMode;
     SolveModesSetting SolveMode;
+    BoolSetting UseProbes;
+    IntSetting ProbeResX;
+    IntSetting ProbeResY;
+    IntSetting ProbeResZ;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -496,6 +500,18 @@ namespace AppSettings
         SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::NNLS, 3, SolveModesLabels);
         Settings.AddSetting(&SolveMode);
 
+        UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", true);
+        Settings.AddSetting(&UseProbes);
+
+        ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 2, 2, 64);
+        Settings.AddSetting(&ProbeResX);
+
+        ProbeResY.Initialize(tweakBar, "ProbeResY", "Probes", "Probe Res Y", "", 2, 2, 64);
+        Settings.AddSetting(&ProbeResY);
+
+        ProbeResZ.Initialize(tweakBar, "ProbeResZ", "Probes", "Probe Res Z", "", 2, 2, 64);
+        Settings.AddSetting(&ProbeResZ);
+
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
@@ -599,6 +615,8 @@ namespace AppSettings
 
         TwHelper::SetOpened(tweakBar, "Baking", false);
 
+        TwHelper::SetOpened(tweakBar, "Probes", true);
+
         TwHelper::SetOpened(tweakBar, "Scene", false);
 
         TwHelper::SetOpened(tweakBar, "Ground Truth", false);
@@ -668,6 +686,10 @@ namespace AppSettings
         CBuffer.Data.LightMapResolution = LightMapResolution;
         CBuffer.Data.BakeMode = BakeMode;
         CBuffer.Data.SolveMode = SolveMode;
+        CBuffer.Data.UseProbes = UseProbes;
+        CBuffer.Data.ProbeResX = ProbeResX;
+        CBuffer.Data.ProbeResY = ProbeResY;
+        CBuffer.Data.ProbeResZ = ProbeResZ;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;

@@ -309,6 +309,10 @@ namespace AppSettings
     extern FloatSetting BakeRussianRouletteProbability;
     extern BakeModesSetting BakeMode;
     extern SolveModesSetting SolveMode;
+    extern BoolSetting UseProbes;
+    extern IntSetting ProbeResX;
+    extern IntSetting ProbeResY;
+    extern IntSetting ProbeResZ;
     extern ScenesSetting CurrentScene;
     extern BoolSetting EnableDiffuse;
     extern BoolSetting EnableSpecular;
@@ -388,6 +392,10 @@ namespace AppSettings
         int32 LightMapResolution;
         int32 BakeMode;
         int32 SolveMode;
+        bool32 UseProbes;
+        int32 ProbeResX;
+        int32 ProbeResY;
+        int32 ProbeResZ;
         bool32 EnableDiffuse;
         bool32 EnableSpecular;
         bool32 EnableDirectLighting;

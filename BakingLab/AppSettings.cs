@@ -660,6 +660,24 @@ public class Settings
         SolveModes SolveMode = SolveModes.NNLS;
     }
 
+    [ExpandGroup(true)]
+    public class Probes
+    {
+        bool UseProbes = true;
+
+        [MinValue(2)]
+        [MaxValue(64)]
+        int ProbeResX = 2;
+
+        [MinValue(2)]
+        [MaxValue(64)]
+        int ProbeResY = 2;
+
+        [MinValue(2)]
+        [MaxValue(64)]
+        int ProbeResZ = 2;
+    }
+
     [ExpandGroup(false)]
     public class Scene
     {

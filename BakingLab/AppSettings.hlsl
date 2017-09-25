@@ -47,6 +47,10 @@ cbuffer AppSettings : register(b7)
     int LightMapResolution;
     int BakeMode;
     int SolveMode;
+    bool UseProbes;
+    int ProbeResX;
+    int ProbeResY;
+    int ProbeResZ;
     bool EnableDiffuse;
     bool EnableSpecular;
     bool EnableDirectLighting;

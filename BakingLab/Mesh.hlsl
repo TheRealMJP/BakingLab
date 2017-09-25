@@ -353,24 +353,135 @@ SH9Color GetSHSpecularBRDF(in float3 viewTS, in float3x3 tangentToWorld, in floa
     return RotateSH9(shBrdf, localFrame);
 }
 
+struct SurfaceContext
+{
+    float3 ViewWS;
+    float3x3 TangentToWorld;
+    float3 NormalTS;
+    float3 NormalWS;
+    float3 VtxNormalWS;
+    float3 PositionWS;
+    float3 DiffuseAlbedo;
+    float3 SpecularAlbedo;
+    float SqrtRoughness;
+    float Roughness;
+};
+
+void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV,
+                                 out float3 indirectIrradiance, out float3 indirectSpecular)
+{
+    indirectIrradiance = 0.0f;
+    indirectSpecular = 0.0f;
+
+    float3 viewTS = mul(surface.ViewWS, transpose(surface.TangentToWorld));
+
+    if(BakeMode == BakeModes_Diffuse)
+    {
+        indirectIrradiance = BakedLightingMap.SampleLevel(LinearSampler, float3(lightMapUV, 0.0f), 0.0f).xyz * Pi;
+    }
+    else if(BakeMode == BakeModes_HL2)
+    {
+        const float3 BasisDirs[3] =
+        {
+            float3(-1.0f / sqrt(6.0f), -1.0f / sqrt(2.0f), 1.0f / sqrt(3.0f)),
+            float3(-1.0f / sqrt(6.0f), 1.0f / sqrt(2.0f), 1.0f / sqrt(3.0f)),
+            float3(sqrt(2.0f / 3.0f), 0.0f, 1.0f / sqrt(3.0f)),
+        };
+
+        float weightSum = 0.0f;
+
+        [unroll]
+        for(uint i = 0; i < 3; ++i)
+        {
+            float3 lightMap = BakedLightingMap.SampleLevel(LinearSampler, float3(lightMapUV, i), 0.0f).xyz;
+            indirectIrradiance += saturate(dot(surface.NormalTS, BasisDirs[i])) * lightMap;
+        }
+    }
+    else if(BakeMode == BakeModes_SH4)
+    {
+        SH4Color shRadiance;
+
+        [unroll]
+        for(uint i = 0; i < 4; ++i)
+            shRadiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(lightMapUV, i), 0.0f).xyz;
+
+        indirectIrradiance = EvalSH4Irradiance(surface.NormalTS, shRadiance);
+
+        SH4Color shSpecularBRDF = ConvertToSH4(GetSHSpecularBRDF(viewTS, surface.TangentToWorld, surface.NormalTS, surface.SpecularAlbedo, surface.SqrtRoughness));
+        indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
+    }
+    else if(BakeMode == BakeModes_SH9)
+    {
+        SH9Color shRadiance;
+
+        [unroll]
+        for(uint i = 0; i < 9; ++i)
+            shRadiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(lightMapUV, i), 0.0f).xyz;
+
+        indirectIrradiance = EvalSH9Irradiance(surface.NormalTS, shRadiance);
+
+        SH9Color shSpecularBRDF = GetSHSpecularBRDF(viewTS, surface.TangentToWorld, surface.NormalTS, surface.SpecularAlbedo, surface.SqrtRoughness);
+        indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
+    }
+    else if(BakeMode == BakeModes_H4)
+    {
+        H4Color hbIrradiance;
+
+        [unroll]
+        for(uint i = 0; i < 4; ++i)
+            hbIrradiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(lightMapUV, i), 0.0f).xyz;
+
+        indirectIrradiance = EvalH4(surface.NormalTS, hbIrradiance);
+    }
+    else if(BakeMode == BakeModes_H6)
+    {
+        H6Color hbIrradiance;
+
+        [unroll]
+        for(uint i = 0; i < 6; ++i)
+            hbIrradiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(lightMapUV, i), 0.0f).xyz;
+
+        indirectIrradiance = EvalH6(surface.NormalTS, hbIrradiance);
+    }
+    else if(BakeMode == BakeModes_SG5)
+    {
+        ComputeSGContribution(BakedLightingMap, lightMapUV, surface.NormalTS, surface.SpecularAlbedo, surface.Roughness,
+                              viewTS, 5, indirectIrradiance, indirectSpecular);
+    }
+    else if(BakeMode == BakeModes_SG6)
+    {
+        ComputeSGContribution(BakedLightingMap, lightMapUV, surface.NormalTS, surface.SpecularAlbedo, surface.Roughness,
+                              viewTS, 6, indirectIrradiance, indirectSpecular);
+    }
+    else if(BakeMode == BakeModes_SG9)
+    {
+        ComputeSGContribution(BakedLightingMap, lightMapUV, surface.NormalTS, surface.SpecularAlbedo, surface.Roughness,
+                              viewTS, 9, indirectIrradiance, indirectSpecular);
+    }
+    else if(BakeMode == BakeModes_SG12)
+    {
+        ComputeSGContribution(BakedLightingMap, lightMapUV, surface.NormalTS, surface.SpecularAlbedo, surface.Roughness,
+                              viewTS, 12, indirectIrradiance, indirectSpecular);
+    }
+}
+
 //=================================================================================================
 // Pixel Shader
 //=================================================================================================
 PSOutput PS(in PSInput input)
 {
-	float3 vtxNormal = normalize(input.NormalWS);
-    float3 positionWS = input.PositionWS;
-
-    float3 viewWS = normalize(CameraPosWS - positionWS);
-
-    float3 normalWS = vtxNormal;
+    SurfaceContext surface;
+	surface.VtxNormalWS = normalize(input.NormalWS);
+    surface.NormalWS = surface.VtxNormalWS;
+    surface.PositionWS = input.PositionWS;
+    surface.ViewWS = normalize(CameraPosWS - surface.PositionWS);
 
     float2 uv = input.TexCoord;
 
 	float3 normalTS = float3(0, 0, 1);
 	float3 tangentWS = normalize(input.TangentWS);
 	float3 bitangentWS = normalize(input.BitangentWS);
-	float3x3 tangentToWorld = float3x3(tangentWS, bitangentWS, normalWS);
+	float3x3 tangentToWorld = float3x3(tangentWS, bitangentWS, surface.VtxNormalWS);
 
     if(EnableNormalMaps)
     {
@@ -378,10 +489,11 @@ PSOutput PS(in PSInput input)
         normalTS.xy = NormalMap.Sample(AnisoSampler, uv).xy * 2.0f - 1.0f;
         normalTS.z = sqrt(1.0f - saturate(normalTS.x * normalTS.x + normalTS.y * normalTS.y));
         normalTS = lerp(float3(0, 0, 1), normalTS, NormalMapIntensity);
-        normalWS = normalize(mul(normalTS, tangentToWorld));
+        surface.NormalWS = normalize(mul(normalTS, tangentToWorld));
     }
 
-    float3 viewTS = mul(viewWS, transpose(tangentToWorld));
+    surface.NormalTS = normalTS;
+    surface.TangentToWorld = tangentToWorld;
 
     // Gather material parameters
     float3 albedoMap = 1.0f;
@@ -390,12 +502,12 @@ PSOutput PS(in PSInput input)
         albedoMap = AlbedoMap.Sample(AnisoSampler, uv).xyz;
 
     float metallic = saturate(MetallicMap.Sample(AnisoSampler, uv));
-    float3 diffuseAlbedo = lerp(albedoMap.xyz, 0.0f, metallic) * DiffuseAlbedoScale * EnableDiffuse;
-    float3 specularAlbedo = lerp(0.03f, albedoMap.xyz, metallic) * EnableSpecular;
+    surface.DiffuseAlbedo = lerp(albedoMap.xyz, 0.0f, metallic) * DiffuseAlbedoScale * EnableDiffuse;
+    surface.SpecularAlbedo = lerp(0.03f, albedoMap.xyz, metallic) * EnableSpecular;
 
-    float sqrtRoughness = RoughnessMap.Sample(AnisoSampler, uv);
-    sqrtRoughness *= RoughnessScale;
-    float roughness = sqrtRoughness * sqrtRoughness;
+    surface.SqrtRoughness = RoughnessMap.Sample(AnisoSampler, uv);
+    surface.SqrtRoughness *= RoughnessScale;
+    surface.Roughness = surface.SqrtRoughness * surface.SqrtRoughness;
 
     float depthVS = input.DepthVS;
 
@@ -406,37 +518,37 @@ PSOutput PS(in PSInput input)
     if(EnableDirectLighting && EnableSun)
     {
         float3 sunIrradiance = 0.0f;
-        float3 sunShadowVisibility = SunShadowVisibility(positionWS, depthVS);
+        float3 sunShadowVisibility = SunShadowVisibility(surface.PositionWS, depthVS);
         float3 sunDirection = SunDirectionWS;
         if(SunAreaLightApproximation)
         {
             float3 D = SunDirectionWS;
-            float3 R = reflect(-viewWS, normalWS);
+            float3 R = reflect(-surface.ViewWS, surface.NormalWS);
             float r = SinSunAngularRadius;
             float d = CosSunAngularRadius;
             float3 DDotR = dot(D, R);
             float3 S = R - DDotR * D;
             sunDirection = DDotR < d ? normalize(d * D + normalize(S) * r) : R;
         }
-        lighting += CalcLighting(normalWS, sunDirection, SunIlluminance, diffuseAlbedo, specularAlbedo,
-                                 roughness, positionWS, sunIrradiance) * sunShadowVisibility;
+        lighting += CalcLighting(surface.NormalWS, sunDirection, SunIlluminance, surface.DiffuseAlbedo, surface.SpecularAlbedo,
+                                 surface.Roughness, surface.PositionWS, sunIrradiance) * sunShadowVisibility;
         irradiance += sunIrradiance * sunShadowVisibility;
     }
 
     if(EnableDirectLighting && EnableAreaLight && BakeDirectAreaLight == false)
     {
         float3 areaLightPos = float3(AreaLightX, AreaLightY, AreaLightZ);
-        float3 areaLightDir = normalize(areaLightPos - positionWS);
-        float areaLightDist = length(areaLightPos - positionWS);
+        float3 areaLightDir = normalize(areaLightPos - surface.PositionWS);
+        float areaLightDist = length(areaLightPos - surface.PositionWS);
         SG lightLobe = MakeSphereSG(areaLightDir, AreaLightSize, AreaLightColor * FP16Scale, areaLightDist);
-        float3 sgIrradiance = SGIrradiance(lightLobe, normalWS, SGDiffuseMode);
+        float3 sgIrradiance = SGIrradiance(lightLobe, surface.NormalWS, SGDiffuseMode);
 
         float areaLightVisibility = 1.0f;
         if(EnableAreaLightShadows)
-            areaLightVisibility = AreaLightShadowVisibility(positionWS);
+            areaLightVisibility = AreaLightShadowVisibility(surface.PositionWS);
 
-        lighting += sgIrradiance * (diffuseAlbedo / Pi) * areaLightVisibility;
-        lighting += SpecularTermSG(lightLobe, normalWS, roughness, viewWS, specularAlbedo) * areaLightVisibility;
+        lighting += sgIrradiance * (surface.DiffuseAlbedo / Pi) * areaLightVisibility;
+        lighting += SpecularTermSG(lightLobe, surface.NormalWS, surface.Roughness, surface.ViewWS, surface.SpecularAlbedo) * areaLightVisibility;
         irradiance += sgIrradiance * areaLightVisibility;
     }
 
@@ -446,99 +558,12 @@ PSOutput PS(in PSInput input)
         float3 indirectIrradiance = 0.0f;
         float3 indirectSpecular = 0.0f;
 
-        if(BakeMode == BakeModes_Diffuse)
-        {
-            indirectIrradiance = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 0.0f), 0.0f).xyz * Pi;
-        }
-        else if(BakeMode == BakeModes_HL2)
-        {
-            const float3 BasisDirs[3] =
-            {
-                float3(-1.0f / sqrt(6.0f), -1.0f / sqrt(2.0f), 1.0f / sqrt(3.0f)),
-                float3(-1.0f / sqrt(6.0f), 1.0f / sqrt(2.0f), 1.0f / sqrt(3.0f)),
-                float3(sqrt(2.0f / 3.0f), 0.0f, 1.0f / sqrt(3.0f)),
-            };
-
-            float weightSum = 0.0f;
-
-            [unroll]
-            for(uint i = 0; i < 3; ++i)
-            {
-                float3 lightMap = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, i), 0.0f).xyz;
-                indirectIrradiance += saturate(dot(normalTS, BasisDirs[i])) * lightMap;
-            }
-        }
-        else if(BakeMode == BakeModes_SH4)
-        {
-            SH4Color shRadiance;
-
-            [unroll]
-            for(uint i = 0; i < 4; ++i)
-                shRadiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, i), 0.0f).xyz;
-
-            indirectIrradiance = EvalSH4Irradiance(normalTS, shRadiance);
-
-            SH4Color shSpecularBRDF = ConvertToSH4(GetSHSpecularBRDF(viewTS, tangentToWorld, normalTS, specularAlbedo, sqrtRoughness));
-            indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
-        }
-        else if(BakeMode == BakeModes_SH9)
-        {
-            SH9Color shRadiance;
-
-            [unroll]
-            for(uint i = 0; i < 9; ++i)
-                shRadiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, i), 0.0f).xyz;
-
-            indirectIrradiance = EvalSH9Irradiance(normalTS, shRadiance);
-
-            SH9Color shSpecularBRDF = GetSHSpecularBRDF(viewTS, tangentToWorld, normalTS, specularAlbedo, sqrtRoughness);
-            indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
-        }
-        else if(BakeMode == BakeModes_H4)
-        {
-            H4Color hbIrradiance;
-
-            [unroll]
-            for(uint i = 0; i < 4; ++i)
-                hbIrradiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, i), 0.0f).xyz;
-
-            indirectIrradiance = EvalH4(normalTS, hbIrradiance);
-        }
-        else if(BakeMode == BakeModes_H6)
-        {
-            H6Color hbIrradiance;
-
-            [unroll]
-            for(uint i = 0; i < 6; ++i)
-                hbIrradiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, i), 0.0f).xyz;
-
-            indirectIrradiance = EvalH6(normalTS, hbIrradiance);
-        }
-        else if(BakeMode == BakeModes_SG5)
-        {
-            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalTS, specularAlbedo, roughness,
-                                  viewTS, 5, indirectIrradiance, indirectSpecular);
-        }
-        else if(BakeMode == BakeModes_SG6)
-        {
-            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalTS, specularAlbedo, roughness,
-                                  viewTS, 6, indirectIrradiance, indirectSpecular);
-        }
-        else if(BakeMode == BakeModes_SG9)
-        {
-            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalTS, specularAlbedo, roughness,
-                                  viewTS, 9, indirectIrradiance, indirectSpecular);
-        }
-        else if(BakeMode == BakeModes_SG12)
-        {
-            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalTS, specularAlbedo, roughness,
-                                  viewTS, 12, indirectIrradiance, indirectSpecular);
-        }
+        ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
 
         if(EnableIndirectDiffuse)
         {
             irradiance += indirectIrradiance;
-            lighting += indirectIrradiance * (diffuseAlbedo / Pi);
+            lighting += indirectIrradiance * (surface.DiffuseAlbedo / Pi);
         }
 
         if(EnableIndirectSpecular)
