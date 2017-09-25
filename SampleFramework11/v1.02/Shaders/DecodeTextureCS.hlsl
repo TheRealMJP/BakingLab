@@ -16,8 +16,13 @@ Texture2D<float4> InputTexture : register(t0);
 Texture2DArray<float4> InputTextureArray : register(t0);
 
 // Outputs
-RWTexture2D<float4> OutputTexture : register(u0);
-RWTexture2DArray<float4> OutputTextureArray : register(u0);
+#if UnormOutput_
+    RWTexture2D<unorm float4> OutputTexture : register(u0);
+    RWTexture2DArray<unorm float4> OutputTextureArray : register(u0);
+#else
+    RWTexture2D<float4> OutputTexture : register(u0);
+    RWTexture2DArray<float4> OutputTextureArray : register(u0);
+#endif
 
 //=================================================================================================
 // Entry points
