@@ -66,6 +66,7 @@ Texture2DArray<float4> BakedLightingMap : register(t5);
 TextureCube<float> AreaLightShadowMap : register(t6);
 Texture3D<float4> SHSpecularLookupA : register(t7);
 Texture3D<float2> SHSpecularLookupB : register(t8);
+TextureCubeArray<float4> ProbeIrradiance : register(t9);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -558,7 +559,13 @@ PSOutput PS(in PSInput input)
         float3 indirectIrradiance = 0.0f;
         float3 indirectSpecular = 0.0f;
 
-        ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
+        if(UseProbes)
+        {
+            float probeIdx = 0.0f;
+            indirectIrradiance = ProbeIrradiance.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
+        }
+        else
+            ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
 
         if(EnableIndirectDiffuse)
         {

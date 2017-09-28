@@ -416,7 +416,7 @@ void MeshRenderer::OnResize(uint32 width, uint32 height)
     areaLightConstants.Data.RTSize = meshPSConstants.Data.RTSize;
 }
 
-void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer& depthTarget,
+void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, const DepthStencilBuffer& depthTarget,
                                const Camera& camera)
 {
     PIXEvent event(L"Depth Reduction");
@@ -676,6 +676,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
                 areaLightShadowMap.SRView,
                 shSpecularLookupA,
                 shSpecularLookupB,
+                status.ProbeIrradiance,
             };
 
             context->PSSetShaderResources(0, ArraySize_(psTextures), psTextures);

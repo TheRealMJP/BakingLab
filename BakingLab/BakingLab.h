@@ -50,6 +50,8 @@ protected:
 
     // Model
     Model sceneModels[uint64(Scenes::NumValues)];
+    Float3 sceneMins[uint64(Scenes::NumValues)];
+    Float3 sceneMaxes[uint64(Scenes::NumValues)];
     MeshRenderer meshRenderer;
     MeshBaker meshBaker;
 
@@ -70,6 +72,15 @@ protected:
     uint64 frameCount = 0;
     FirstPersonCamera unJitteredCamera;
 
+    RenderTarget2D probeCaptureMap;
+    RenderTarget2D probeVelocityTarget;
+    RenderTarget2D probeIrradianceMap;
+    DepthStencilBuffer probeDepthBuffer;
+
+    uint64 currProbeIdx = 0;
+
+    ComputeShaderPtr probeIntegrateIrradiance;
+
     struct ResolveConstants
     {
         uint32 SampleRadius;
@@ -85,8 +96,15 @@ protected:
         Float2 JitterOffset;
     };
 
+    struct IntegrateConstants
+    {
+        Float2 OutputTextureSize;
+        uint32 OutputSliceOffset;
+    };
+
     ConstantBuffer<ResolveConstants> resolveConstants;
     ConstantBuffer<BackgroundVelocityConstants> backgroundVelocityConstants;
+    ConstantBuffer<IntegrateConstants> integrateConstants;
 
     virtual void Initialize() override;
     virtual void Render(const Timer& timer) override;
@@ -96,7 +114,9 @@ protected:
 
     void CreateRenderTargets();
 
-    void RenderMainPass(const MeshBakerStatus& status);
+    void RenderProbes();
+    void RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* velocityTarget,
+                     const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 renderAreaLight);
     void RenderAA();
     void RenderBackgroundVelocity();
     void RenderHUD(const Timer& timer, float groundTruthProgress, float bakeProgress,

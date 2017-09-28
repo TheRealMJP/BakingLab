@@ -47,7 +47,7 @@ MeshRenderer();
 
     void OnResize(uint32 width, uint32 height);
 
-    void ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer& depthTarget,
+    void ReduceDepth(ID3D11DeviceContext* context, const DepthStencilBuffer& depthTarget,
                      const Camera& camera);
 
     void RenderSunShadowMap(ID3D11DeviceContext* context, const Camera& camera);

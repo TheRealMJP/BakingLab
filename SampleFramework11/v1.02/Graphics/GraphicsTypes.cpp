@@ -28,7 +28,7 @@ RenderTarget2D::RenderTarget2D() :  Width(0),
                                     MSQuality(0),
                                     AutoGenMipMaps(false),
                                     UAView(nullptr),
-                                    ArraySize(1)
+                                    ArraySize(0)
 {
 
 }
@@ -63,7 +63,7 @@ void RenderTarget2D::Initialize(ID3D11Device* device,
 
     if(cubeMap)
     {
-        Assert_(arraySize == 6);
+        Assert_(arraySize % 6 == 0);
         desc.MiscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
     }
 
@@ -114,42 +114,36 @@ void RenderTarget2D::Initialize(ID3D11Device* device,
 
     DXCall(device->CreateShaderResourceView(Texture, nullptr, &SRView));
 
+    uint32 numSRVSlices = cubeMap ? arraySize / 6 : arraySize;
     SRVArraySlices.clear();
-    for(uint32 i = 0; i < arraySize; ++i)
+    SRVArraySlices.reserve(numSRVSlices);
+    for(uint32 i = 0; i < numSRVSlices; ++i)
     {
         ID3D11ShaderResourceViewPtr srView;
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
         srvDesc.Format = format;
 
-        if(arraySize == 1)
+        if(multiSamples > 1)
         {
-            if(multiSamples > 1)
-            {
-                srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
-            }
-            else
-            {
-                srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-                srvDesc.Texture2D.MipLevels = -1;
-                srvDesc.Texture2D.MostDetailedMip = 0;
-            }
+            srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
+            srvDesc.Texture2DMSArray.ArraySize = 1;
+            srvDesc.Texture2DMSArray.FirstArraySlice = i;
+        }
+        else if(cubeMap)
+        {
+            srvDesc.ViewDimension =  D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+            srvDesc.TextureCubeArray.MostDetailedMip = 0;
+            srvDesc.TextureCubeArray.MipLevels = -1;
+            srvDesc.TextureCubeArray.First2DArrayFace = i;
+            srvDesc.TextureCubeArray.NumCubes = 1;
         }
         else
         {
-            if(multiSamples > 1)
-            {
-                srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
-                srvDesc.Texture2DMSArray.ArraySize = 1;
-                srvDesc.Texture2DMSArray.FirstArraySlice = i;
-            }
-            else
-            {
-                srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-                srvDesc.Texture2DArray.ArraySize = 1;
-                srvDesc.Texture2DArray.FirstArraySlice = i;
-                srvDesc.Texture2DArray.MipLevels = -1;
-                srvDesc.Texture2DArray.MostDetailedMip = 0;
-            }
+            srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+            srvDesc.Texture2DArray.ArraySize = 1;
+            srvDesc.Texture2DArray.FirstArraySlice = i;
+            srvDesc.Texture2DArray.MipLevels = -1;
+            srvDesc.Texture2DArray.MostDetailedMip = 0;
         }
 
         DXCall(device->CreateShaderResourceView(Texture, &srvDesc, &srView));

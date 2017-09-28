@@ -419,6 +419,29 @@ void BakingLab::Initialize()
             sceneModels[i].CreateFromMeshData(device, ScenePaths[i], true);
         else
             sceneModels[i].CreateWithAssimp(device, ScenePaths[i], true);
+
+        // Compute the scene AABB
+        sceneMins[i] = FLT_MAX;
+        sceneMaxes[i] = -FLT_MAX;
+
+        const uint64 numMeshes = sceneModels[i].Meshes().size();
+        for(uint64 meshIdx = 0; meshIdx < numMeshes; ++meshIdx)
+        {
+            const Mesh& mesh = sceneModels[i].Meshes()[meshIdx];
+            const uint8* vertices = mesh.Vertices();
+            const uint64 numVertices = mesh.NumVertices();
+            const uint64 stride = mesh.VertexStride();
+            for(uint64 vtxIdx = 0; vtxIdx < numVertices; ++vtxIdx)
+            {
+                const Float3& vtx = *(const Float3*)(vertices + vtxIdx * stride);
+                sceneMins[i].x = Min(sceneMins[i].x, vtx.x);
+                sceneMins[i].y = Min(sceneMins[i].y, vtx.y);
+                sceneMins[i].z = Min(sceneMins[i].z, vtx.z);
+                sceneMaxes[i].x = Max(sceneMaxes[i].x, vtx.x);
+                sceneMaxes[i].y = Max(sceneMaxes[i].y, vtx.y);
+                sceneMaxes[i].z = Max(sceneMaxes[i].z, vtx.z);
+            }
+        }
     }
 
     Model& currentModel = sceneModels[AppSettings::CurrentScene.Value()];
@@ -444,8 +467,11 @@ void BakingLab::Initialize()
     backgroundVelocityVS = CompileVSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityVS");
     backgroundVelocityPS = CompilePSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityPS");
 
+    probeIntegrateIrradiance = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateIrradiance");
+
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
+    integrateConstants.Initialize(device);
 
     // Init the post processor
     postProcessor.Initialize(device);
@@ -585,6 +611,99 @@ void BakingLab::Update(const Timer& timer)
     meshRenderer.Update(camera, jitterOffset);
 }
 
+void BakingLab::RenderProbes()
+{
+    PIXEvent pixEvent(L"Render Probes");
+
+    ID3D11DeviceContextPtr context = deviceManager.ImmediateContext();
+    ID3D11DevicePtr device = deviceManager.Device();
+
+    const uint64 currSceneIdx = AppSettings::CurrentScene;
+    const uint32 numProbes = AppSettings::ProbeResX * AppSettings::ProbeResY * AppSettings::ProbeResZ;
+
+    if(probeCaptureMap.Width == 0)
+    {
+        currProbeIdx = 0;
+        probeCaptureMap.Initialize(device, 256, 256, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, false, 6, true);
+        probeVelocityTarget.Initialize(device, 256, 256, DXGI_FORMAT_R16G16_FLOAT);
+        probeDepthBuffer.Initialize(device, 256, 256, DXGI_FORMAT_D24_UNORM_S8_UINT, true);
+    }
+
+    if(AppSettings::ProbeResX.Changed() || AppSettings::ProbeResY.Changed() ||
+       AppSettings::ProbeResZ.Changed() || probeIrradianceMap.ArraySize == 0)
+    {
+        currProbeIdx = 0;
+        probeIrradianceMap.Initialize(device, 16, 16, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
+    }
+
+    if(currProbeIdx >= numProbes)
+        return;
+
+    bool32 prevUseProbes = AppSettings::UseProbes;
+    AppSettings::UseProbes.SetValue(false);
+
+    uint64 probeX = currProbeIdx % AppSettings::ProbeResX;
+    uint64 probeY = (currProbeIdx / AppSettings::ProbeResX) % AppSettings::ProbeResY;
+    uint64 probeZ = currProbeIdx / (AppSettings::ProbeResX * AppSettings::ProbeResY);
+
+    Float3 probePos;
+    probePos.x = Lerp(sceneMins[currSceneIdx].x, sceneMaxes[currSceneIdx].x, (probeX + 0.5f) / AppSettings::ProbeResX);
+    probePos.y = Lerp(sceneMins[currSceneIdx].y, sceneMaxes[currSceneIdx].y, (probeY + 0.5f) / AppSettings::ProbeResY);
+    probePos.z = Lerp(sceneMins[currSceneIdx].z, sceneMaxes[currSceneIdx].z, (probeZ + 0.5f) / AppSettings::ProbeResZ);
+
+    PerspectiveCamera probeCam(1.0f, Pi_2, NearClip, FarClip);
+    probeCam.SetPosition(probePos);
+
+    MeshBakerStatus status;
+
+    for(uint64 i = 0; i < 6; ++i)
+    {
+        Quaternion orientation;
+        if(i == 0)
+            orientation = Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), Pi_2);
+        else if(i == 1)
+            orientation = Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), -Pi_2);
+        else if(i == 2)
+            orientation = Quaternion::FromAxisAngle(Float3(1.0f, 0.0f, 0.0f), -Pi_2);
+        else if(i == 3)
+            orientation = Quaternion::FromAxisAngle(Float3(1.0f, 0.0f, 0.0f), Pi_2);
+        else if(i == 4)
+            orientation = Quaternion();
+        else
+            orientation = Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), Pi);
+
+        probeCam.SetOrientation(orientation);
+        RenderScene(status, probeCaptureMap.RTVArraySlices[i], probeVelocityTarget.RTView, probeDepthBuffer, probeCam,
+                    false, AppSettings::BakeDirectAreaLight);
+    }
+
+    AppSettings::UseProbes.SetValue(prevUseProbes);
+
+    ID3D11RenderTargetView* rtvs[2] = { };
+    context->OMSetRenderTargets(2, rtvs, nullptr);
+
+    SetCSInputs(context, probeCaptureMap.SRView);
+    SetCSOutputs(context, probeIrradianceMap.UAView);
+    SetCSSamplers(context, samplerStates.LinearClamp());
+    SetCSShader(context, probeIntegrateIrradiance);
+
+    integrateConstants.Data.OutputTextureSize.x = float(probeIrradianceMap.Width);
+    integrateConstants.Data.OutputTextureSize.y = float(probeIrradianceMap.Height);
+    integrateConstants.Data.OutputSliceOffset = uint32(currProbeIdx * 6);
+    integrateConstants.ApplyChanges(context);
+    integrateConstants.SetCS(context, 0);
+
+    context->Dispatch(DispatchSize(8, probeIrradianceMap.Width), DispatchSize(8, probeIrradianceMap.Height), 6);
+
+    ClearCSInputs(context);
+    ClearCSOutputs(context);
+
+    ++currProbeIdx;
+
+    /*if(currProbeIdx == numProbes)
+        currProbeIdx = 0;*/
+}
+
 void BakingLab::Render(const Timer& timer)
 {
     if(AppSettings::MSAAMode.Changed())
@@ -594,6 +713,8 @@ void BakingLab::Render(const Timer& timer)
 
     MeshBakerStatus status = meshBaker.Update(unJitteredCamera, colorTargetMSAA.Width, colorTargetMSAA.Height,
                                               context, &sceneModels[AppSettings::CurrentScene]);
+
+    RenderProbes();
 
     if(AppSettings::ShowGroundTruth)
     {
@@ -614,7 +735,9 @@ void BakingLab::Render(const Timer& timer)
     }
     else
     {
-        RenderMainPass(status);
+        status.ProbeIrradiance = probeIrradianceMap.SRView;
+        RenderScene(status, colorTargetMSAA.RTView, velocityTargetMSAA.RTView, depthBuffer, camera,
+                    AppSettings::ShowBakeDataVisualizer, AppSettings::EnableAreaLight);
         RenderBackgroundVelocity();
     }
 
@@ -640,65 +763,67 @@ void BakingLab::Render(const Timer& timer)
     ++frameCount;
 }
 
-void BakingLab::RenderMainPass(const MeshBakerStatus& status)
+void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* velocityTarget,
+                            const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 renderAreaLight)
 {
-    PIXEvent event(L"Main Pass");
+    PIXEvent event(L"Render Scene");
 
     ID3D11DeviceContextPtr context = deviceManager.ImmediateContext();
 
     ID3D11RenderTargetView* renderTargets[2] = { nullptr, nullptr };
-    ID3D11DepthStencilView* ds = depthBuffer.DSView;
-    context->OMSetRenderTargets(1, renderTargets, ds);
+    ID3D11DepthStencilView* dsv = depth.DSView;
+    context->OMSetRenderTargets(1, renderTargets, dsv);
 
-    SetViewport(context, colorTargetMSAA.Width, colorTargetMSAA.Height);
+    SetViewport(context, depth.Width, depth.Height);
 
-    float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    context->ClearRenderTargetView(colorTargetMSAA.RTView, clearColor);
-    context->ClearRenderTargetView(velocityTargetMSAA.RTView, clearColor);
-    context->ClearDepthStencilView(ds, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
+    context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-    meshRenderer.RenderDepth(context, camera, false, false);
+    meshRenderer.RenderDepth(context, cam, false, false);
 
-    meshRenderer.ReduceDepth(context, depthBuffer, camera);
+    meshRenderer.ReduceDepth(context, depth, cam);
 
     if(AppSettings::EnableSun)
-        meshRenderer.RenderSunShadowMap(context, camera);
+        meshRenderer.RenderSunShadowMap(context, cam);
 
     if(AppSettings::EnableAreaLight)
-        meshRenderer.RenderAreaLightShadowMap(context, camera);
+        meshRenderer.RenderAreaLightShadowMap(context, cam);
 
-    renderTargets[0] = colorTargetMSAA.RTView;
-    renderTargets[1] = velocityTargetMSAA.RTView;
-    context->OMSetRenderTargets(2, renderTargets, ds);
-    SetViewport(context, colorTargetMSAA.Width, colorTargetMSAA.Height);
+    renderTargets[0] = colorTarget;
+    renderTargets[1] = velocityTarget;
+    context->OMSetRenderTargets(2, renderTargets, dsv);
+    SetViewport(context, depth.Width, depth.Height);
 
-    meshRenderer.RenderMainPass(context, camera, status);
+    float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    context->ClearRenderTargetView(colorTarget, clearColor);
+    context->ClearRenderTargetView(velocityTarget, clearColor);
 
-    if(AppSettings::ShowBakeDataVisualizer)
-        meshRenderer.RenderBakeDataVisualizer(context, camera, status);
+    meshRenderer.RenderMainPass(context, cam, status);
 
-    if(AppSettings::EnableAreaLight)
-        meshRenderer.RenderAreaLight(context, camera);
+    if(showBakeDataVisualizer)
+        meshRenderer.RenderBakeDataVisualizer(context, cam, status);
+
+    if(renderAreaLight)
+        meshRenderer.RenderAreaLight(context, cam);
 
     if(AppSettings::SkyMode == SkyModes::Procedural)
     {
         float sunSize = AppSettings::EnableSun ? AppSettings::SunSize : 0.0f;
         skybox.RenderSky(context, AppSettings::SunDirection, AppSettings::GroundAlbedo,
                          AppSettings::SunLuminance(), sunSize,
-                         AppSettings::Turbidity, camera.ViewMatrix(),
-                         camera.ProjectionMatrix(), 1.0f);
+                         AppSettings::Turbidity, cam.ViewMatrix(),
+                         cam.ProjectionMatrix(), 1.0f);
     }
     else if(AppSettings::SkyMode == SkyModes::Simple)
     {
         float sunSize = AppSettings::EnableSun ? AppSettings::SunSize : 0.0f;
         skybox.RenderSimpleSky(context, AppSettings::SkyColor, AppSettings::SunDirection,
                                AppSettings::SunLuminance(), sunSize,
-                               camera.ViewMatrix(), camera.ProjectionMatrix(), FP16Scale);
+                               cam.ViewMatrix(), cam.ProjectionMatrix(), FP16Scale);
     }
     else if(AppSettings::SkyMode >= AppSettings::CubeMapStart)
     {
         skybox.RenderEnvironmentMap(context, envMaps[AppSettings::SkyMode - AppSettings::CubeMapStart],
-                                    camera.ViewMatrix(), camera.ProjectionMatrix(), 1.0f);
+                                    cam.ViewMatrix(), cam.ProjectionMatrix(), 1.0f);
     }
 }
 
