@@ -50,6 +50,8 @@ cbuffer PSConstants : register(b0)
     float LightBleedingReduction;
     float2 RTSize;
     float2 JitterOffset;
+    float4 SceneMinBounds;
+    float4 SceneMaxBounds;
     float4 SGDirections[MaxSGCount];
     float SGSharpness;
 }
@@ -466,6 +468,43 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     }
 }
 
+float3 SampleIrradianceProbe(in float3 samplePos, float3 direction)
+{
+    float probeIdx = uint(samplePos.z) * (ProbeResX * ProbeResY) + uint(samplePos.y) * ProbeResX + uint(samplePos.x);
+    return ProbeIrradiance.Sample(LinearSampler, float4(direction, probeIdx)).xyz;
+}
+
+void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
+{
+    float3 sampleUVW = saturate((surface.PositionWS - SceneMinBounds.xyz) / (SceneMaxBounds.xyz - SceneMinBounds.xyz));
+    float3 probeDims = float3(ProbeResX, ProbeResY, ProbeResZ);
+
+    float3 halfTexelSize = 0.5f / probeDims;
+    float3 samplePos = frac(sampleUVW - halfTexelSize);
+    samplePos *= probeDims;
+    samplePos = min(probeDims, probeDims - 1.0f);
+    float3 samplePosNext = min(samplePos + 1, probeDims - 1.0f);
+
+    float3 lerpAmts = frac(samplePos);
+
+    float3 samples[8];
+    samples[0] = SampleIrradianceProbe(float3(samplePos.x , samplePos.y, samplePos.z), surface.NormalWS);
+    samples[1] = SampleIrradianceProbe(float3(samplePosNext.x , samplePos.y, samplePos.z), surface.NormalWS);
+    samples[2] = SampleIrradianceProbe(float3(samplePos.x , samplePosNext.y, samplePos.z), surface.NormalWS);
+    samples[3] = SampleIrradianceProbe(float3(samplePosNext.x , samplePosNext.y, samplePos.z), surface.NormalWS);
+
+    samples[4] = SampleIrradianceProbe(float3(samplePos.x , samplePos.y, samplePosNext.z), surface.NormalWS);
+    samples[5] = SampleIrradianceProbe(float3(samplePosNext.x , samplePos.y, samplePosNext.z), surface.NormalWS);
+    samples[6] = SampleIrradianceProbe(float3(samplePos.x , samplePosNext.y, samplePosNext.z), surface.NormalWS);
+    samples[7] = SampleIrradianceProbe(float3(samplePosNext.x , samplePosNext.y, samplePosNext.z), surface.NormalWS);
+
+    // lerp between the shadow values to calculate our light amount
+    float3 result0123 = lerp(lerp(samples[0], samples[1], lerpAmts.x), lerp(samples[2], samples[3], lerpAmts.x), lerpAmts.y);
+    float3 result4567 = lerp(lerp(samples[4], samples[5], lerpAmts.x), lerp(samples[6], samples[7], lerpAmts.x), lerpAmts.y);
+    indirectIrradiance = lerp(result0123, result4567, lerpAmts.z);
+    indirectSpecular = 0.0f;
+}
+
 //=================================================================================================
 // Pixel Shader
 //=================================================================================================
@@ -560,10 +599,7 @@ PSOutput PS(in PSInput input)
         float3 indirectSpecular = 0.0f;
 
         if(UseProbes)
-        {
-            float probeIdx = 0.0f;
-            indirectIrradiance = ProbeIrradiance.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
-        }
+            ComputeIndirectFromProbes(surface, indirectIrradiance, indirectSpecular);
         else
             ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
 

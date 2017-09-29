@@ -629,6 +629,8 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
     meshPSConstants.Data.PositiveExponent = PositiveExponent;
     meshPSConstants.Data.NegativeExponent = NegativeExponent;
     meshPSConstants.Data.LightBleedingReduction = LightBleedingReduction;
+    meshPSConstants.Data.SceneMinBounds = Float4(status.SceneMinBounds, 0.0f);
+    meshPSConstants.Data.SceneMaxBounds = Float4(status.SceneMaxBounds, 0.0f);
     for(uint64 i = 0; i < ArraySize_(status.SGDirections); ++i)
         meshPSConstants.Data.SGDirections[i] = Float4(status.SGDirections[i], 0.0f);
     meshPSConstants.Data.SGSharpness = status.SGSharpness;

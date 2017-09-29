@@ -655,6 +655,8 @@ void BakingLab::RenderProbes()
     probeCam.SetPosition(probePos);
 
     MeshBakerStatus status;
+    status.SceneMinBounds = sceneMins[currSceneIdx];
+    status.SceneMaxBounds = sceneMaxes[currSceneIdx];
 
     for(uint64 i = 0; i < 6; ++i)
     {
@@ -713,6 +715,8 @@ void BakingLab::Render(const Timer& timer)
 
     MeshBakerStatus status = meshBaker.Update(unJitteredCamera, colorTargetMSAA.Width, colorTargetMSAA.Height,
                                               context, &sceneModels[AppSettings::CurrentScene]);
+    status.SceneMinBounds = sceneMins[AppSettings::CurrentScene];
+    status.SceneMaxBounds = sceneMaxes[AppSettings::CurrentScene];
 
     RenderProbes();
 

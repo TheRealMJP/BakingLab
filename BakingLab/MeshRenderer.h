@@ -155,6 +155,9 @@ protected:
         Float2 RTSize;
         Float2 JitterOffset;
 
+        Float4 SceneMinBounds;
+        Float4 SceneMaxBounds;
+
         Float4Align Float4 SGDirections[AppSettings::MaxSGCount];
         float SGSharpness;
     };

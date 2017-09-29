@@ -66,6 +66,8 @@ struct MeshBakerStatus
     uint64 GroundTruthSampleCount = 0;
     Float3 SGDirections[AppSettings::MaxSGCount];
     float SGSharpness = 0.0f;
+    Float3 SceneMinBounds;
+    Float3 SceneMaxBounds;
 };
 
 class MeshBaker
