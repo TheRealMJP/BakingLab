@@ -676,7 +676,7 @@ void BakingLab::RenderProbes()
 
         probeCam.SetOrientation(orientation);
         RenderScene(status, probeCaptureMap.RTVArraySlices[i], probeVelocityTarget.RTView, probeDepthBuffer, probeCam,
-                    false, AppSettings::BakeDirectAreaLight);
+                    false, AppSettings::BakeDirectAreaLight, false);
     }
 
     AppSettings::UseProbes.SetValue(prevUseProbes);
@@ -741,7 +741,7 @@ void BakingLab::Render(const Timer& timer)
     {
         status.ProbeIrradiance = probeIrradianceMap.SRView;
         RenderScene(status, colorTargetMSAA.RTView, velocityTargetMSAA.RTView, depthBuffer, camera,
-                    AppSettings::ShowBakeDataVisualizer, AppSettings::EnableAreaLight);
+                    AppSettings::ShowBakeDataVisualizer, AppSettings::EnableAreaLight, true);
         RenderBackgroundVelocity();
     }
 
@@ -768,7 +768,8 @@ void BakingLab::Render(const Timer& timer)
 }
 
 void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* velocityTarget,
-                            const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 renderAreaLight)
+                            const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 renderAreaLight,
+                            bool32 enableSkySun)
 {
     PIXEvent event(L"Render Scene");
 
@@ -811,7 +812,7 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
 
     if(AppSettings::SkyMode == SkyModes::Procedural)
     {
-        float sunSize = AppSettings::EnableSun ? AppSettings::SunSize : 0.0f;
+        float sunSize = (AppSettings::EnableSun && enableSkySun) ? AppSettings::SunSize : 0.0f;
         skybox.RenderSky(context, AppSettings::SunDirection, AppSettings::GroundAlbedo,
                          AppSettings::SunLuminance(), sunSize,
                          AppSettings::Turbidity, cam.ViewMatrix(),
@@ -819,7 +820,7 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
     }
     else if(AppSettings::SkyMode == SkyModes::Simple)
     {
-        float sunSize = AppSettings::EnableSun ? AppSettings::SunSize : 0.0f;
+        float sunSize = (AppSettings::EnableSun && enableSkySun) ? AppSettings::SunSize : 0.0f;
         skybox.RenderSimpleSky(context, AppSettings::SkyColor, AppSettings::SunDirection,
                                AppSettings::SunLuminance(), sunSize,
                                cam.ViewMatrix(), cam.ProjectionMatrix(), FP16Scale);
