@@ -313,6 +313,7 @@ namespace AppSettings
     extern IntSetting ProbeResX;
     extern IntSetting ProbeResY;
     extern IntSetting ProbeResZ;
+    extern FloatSetting SceneBoundsScale;
     extern ScenesSetting CurrentScene;
     extern BoolSetting EnableDiffuse;
     extern BoolSetting EnableSpecular;

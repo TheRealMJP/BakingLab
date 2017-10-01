@@ -666,16 +666,19 @@ public class Settings
         bool UseProbes = true;
 
         [MinValue(2)]
-        [MaxValue(64)]
-        int ProbeResX = 2;
+        [MaxValue(16)]
+        int ProbeResX = 4;
 
         [MinValue(2)]
-        [MaxValue(64)]
-        int ProbeResY = 2;
+        [MaxValue(16)]
+        int ProbeResY = 4;
 
         [MinValue(2)]
-        [MaxValue(64)]
-        int ProbeResZ = 2;
+        [MaxValue(16)]
+        int ProbeResZ = 4;
+
+        [UseAsShaderConstant(false)]
+        float SceneBoundsScale = 1.25f;
     }
 
     [ExpandGroup(false)]

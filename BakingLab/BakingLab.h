@@ -52,6 +52,8 @@ protected:
     Model sceneModels[uint64(Scenes::NumValues)];
     Float3 sceneMins[uint64(Scenes::NumValues)];
     Float3 sceneMaxes[uint64(Scenes::NumValues)];
+    Float3 currSceneMin;
+    Float3 currSceneMax;
     MeshRenderer meshRenderer;
     MeshBaker meshBaker;
 
@@ -114,14 +116,14 @@ protected:
 
     void CreateRenderTargets();
 
-    void RenderProbes(const MeshBakerStatus& status);
+    void RenderProbes(MeshBakerStatus& status);
     void RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* velocityTarget,
                      const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
                      bool32 renderAreaLight, bool32 enableSkySun);
     void RenderAA();
     void RenderBackgroundVelocity();
     void RenderHUD(const Timer& timer, float groundTruthProgress, float bakeProgress,
-                   uint64 groundTruthSampleCount);
+                   uint64 groundTruthSampleCount, float probeBakeProgress);
 
 public:
 

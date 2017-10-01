@@ -501,7 +501,7 @@ void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrr
 //=================================================================================================
 // Pixel Shader
 //=================================================================================================
-PSOutput PS(in PSInput input)
+PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
 {
     SurfaceContext surface;
 	surface.VtxNormalWS = normalize(input.NormalWS);
@@ -612,7 +612,10 @@ PSOutput PS(in PSInput input)
     float illuminance = dot(irradiance, float3(0.2126f, 0.7152f, 0.0722f));
 
     PSOutput output;
-    output.Lighting =  clamp(float4(lighting, illuminance), 0.0f, FP16Max);
+    output.Lighting = clamp(float4(lighting, illuminance), 0.0f, FP16Max);
+
+    if(isFrontFace == false)
+        output.Lighting = 0.0f;
 
     float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
     prevPositionSS *= RTSize;

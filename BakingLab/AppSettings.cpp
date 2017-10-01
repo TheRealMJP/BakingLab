@@ -243,6 +243,7 @@ namespace AppSettings
     IntSetting ProbeResX;
     IntSetting ProbeResY;
     IntSetting ProbeResZ;
+    FloatSetting SceneBoundsScale;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -504,14 +505,17 @@ namespace AppSettings
         UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", true);
         Settings.AddSetting(&UseProbes);
 
-        ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 2, 2, 64);
+        ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 4, 2, 16);
         Settings.AddSetting(&ProbeResX);
 
-        ProbeResY.Initialize(tweakBar, "ProbeResY", "Probes", "Probe Res Y", "", 2, 2, 64);
+        ProbeResY.Initialize(tweakBar, "ProbeResY", "Probes", "Probe Res Y", "", 4, 2, 16);
         Settings.AddSetting(&ProbeResY);
 
-        ProbeResZ.Initialize(tweakBar, "ProbeResZ", "Probes", "Probe Res Z", "", 2, 2, 64);
+        ProbeResZ.Initialize(tweakBar, "ProbeResZ", "Probes", "Probe Res Z", "", 4, 2, 16);
         Settings.AddSetting(&ProbeResZ);
+
+        SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.2500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&SceneBoundsScale);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);

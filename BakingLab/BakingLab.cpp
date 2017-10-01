@@ -53,10 +53,15 @@ static const Float3 SceneCameraPositions[] = { Float3(0.0f, 2.5f, -15.0f), Float
 static const Float2 SceneCameraRotations[] = { Float2(0.0f, 0.0f), Float2(0.0f, Pi), Float2(0.414238036f, 1.39585948f) };
 static const float SceneAlbedoScales[] = { 0.5f, 0.5f, 1.0f };
 
+static const Uint3 SceneDefaultProbeRes[] = { Uint3(4, 4, 4), Uint3(5, 3, 5), Uint3(5, 5, 5) };
+static const float SceneDefaultBoundsScales[] { 1.5f, 1.65f, 1.0f };
+
 StaticAssert_(ArraySize_(ScenePaths) >= uint64(Scenes::NumValues));
 StaticAssert_(ArraySize_(SceneCameraPositions) >= uint64(Scenes::NumValues));
 StaticAssert_(ArraySize_(SceneCameraRotations) >= uint64(Scenes::NumValues));
 StaticAssert_(ArraySize_(SceneAlbedoScales) >= uint64(Scenes::NumValues));
+StaticAssert_(ArraySize_(SceneDefaultProbeRes) >= uint64(Scenes::NumValues));
+StaticAssert_(ArraySize_(SceneDefaultBoundsScales) >= uint64(Scenes::NumValues));
 
 static Setting* LightSettings[] =
 {
@@ -517,7 +522,7 @@ void BakingLab::Update(const Timer& timer)
     if(AppSettings::SaveLightSettings)
         SaveLightSettings(window.GetHwnd());
 
-    if(AppSettings::CurrentScene.Changed())
+    if(AppSettings::CurrentScene.Changed() || frameCount == 0)
     {
         uint64 currSceneIdx = uint64(AppSettings::CurrentScene);
         meshRenderer.SetModel(&sceneModels[currSceneIdx]);
@@ -525,6 +530,10 @@ void BakingLab::Update(const Timer& timer)
         camera.SetXRotation(SceneCameraRotations[currSceneIdx].x);
         camera.SetYRotation(SceneCameraRotations[currSceneIdx].y);
         AppSettings::DiffuseAlbedoScale.SetValue(SceneAlbedoScales[currSceneIdx]);
+        AppSettings::ProbeResX.SetValue(SceneDefaultProbeRes[currSceneIdx].x);
+        AppSettings::ProbeResY.SetValue(SceneDefaultProbeRes[currSceneIdx].y);
+        AppSettings::ProbeResZ.SetValue(SceneDefaultProbeRes[currSceneIdx].z);
+        AppSettings::SceneBoundsScale.SetValue(SceneDefaultBoundsScales[currSceneIdx]);
     }
 
     mouseState = MouseState::GetMouseState(window);
@@ -608,10 +617,14 @@ void BakingLab::Update(const Timer& timer)
     if(kbState.RisingEdge(KeyboardState::V))
         deviceManager.SetVSYNCEnabled(!deviceManager.VSYNCEnabled());
 
+    Float3 sceneCenter = (sceneMaxes[AppSettings::CurrentScene] + sceneMins[AppSettings::CurrentScene]) / 2.0f;;
+    currSceneMin = Lerp(sceneCenter, sceneMins[AppSettings::CurrentScene], AppSettings::SceneBoundsScale);
+    currSceneMax = Lerp(sceneCenter, sceneMaxes[AppSettings::CurrentScene], AppSettings::SceneBoundsScale);
+
     meshRenderer.Update(camera, jitterOffset);
 }
 
-void BakingLab::RenderProbes(const MeshBakerStatus& status)
+void BakingLab::RenderProbes(MeshBakerStatus& status)
 {
     PIXEvent pixEvent(L"Render Probes");
 
@@ -636,11 +649,14 @@ void BakingLab::RenderProbes(const MeshBakerStatus& status)
         probeIrradianceMap.Initialize(device, 16, 16, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
     }
 
-    if(status.BakingInvalidated)
+    if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed())
         currProbeIdx = 0;
 
     if(currProbeIdx >= numProbes)
+    {
+        status.ProbeBakeProgress = 1.0f;
         return;
+    }
 
     bool32 prevUseProbes = AppSettings::UseProbes;
     AppSettings::UseProbes.SetValue(false);
@@ -650,9 +666,9 @@ void BakingLab::RenderProbes(const MeshBakerStatus& status)
     uint64 probeZ = currProbeIdx / (AppSettings::ProbeResX * AppSettings::ProbeResY);
 
     Float3 probePos;
-    probePos.x = Lerp(sceneMins[currSceneIdx].x, sceneMaxes[currSceneIdx].x, (probeX + 0.5f) / AppSettings::ProbeResX);
-    probePos.y = Lerp(sceneMins[currSceneIdx].y, sceneMaxes[currSceneIdx].y, (probeY + 0.5f) / AppSettings::ProbeResY);
-    probePos.z = Lerp(sceneMins[currSceneIdx].z, sceneMaxes[currSceneIdx].z, (probeZ + 0.5f) / AppSettings::ProbeResZ);
+    probePos.x = Lerp(currSceneMin.x, currSceneMax.x, (probeX + 0.5f) / AppSettings::ProbeResX);
+    probePos.y = Lerp(currSceneMin.y, currSceneMax.y, (probeY + 0.5f) / AppSettings::ProbeResY);
+    probePos.z = Lerp(currSceneMin.z, currSceneMax.z, (probeZ + 0.5f) / AppSettings::ProbeResZ);
 
     PerspectiveCamera probeCam(1.0f, Pi_2, NearClip, FarClip);
     probeCam.SetPosition(probePos);
@@ -701,6 +717,8 @@ void BakingLab::RenderProbes(const MeshBakerStatus& status)
 
     ++currProbeIdx;
 
+    status.ProbeBakeProgress = currProbeIdx / (numProbes - 1.0f);
+
     /*if(currProbeIdx == numProbes)
         currProbeIdx = 0;*/
 }
@@ -714,8 +732,8 @@ void BakingLab::Render(const Timer& timer)
 
     MeshBakerStatus status = meshBaker.Update(unJitteredCamera, colorTargetMSAA.Width, colorTargetMSAA.Height,
                                               context, &sceneModels[AppSettings::CurrentScene]);
-    status.SceneMinBounds = sceneMins[AppSettings::CurrentScene];
-    status.SceneMaxBounds = sceneMaxes[AppSettings::CurrentScene];
+    status.SceneMinBounds = currSceneMin;
+    status.SceneMaxBounds = currSceneMax;
 
     RenderProbes(status);
 
@@ -762,7 +780,7 @@ void BakingLab::Render(const Timer& timer)
 
     SetViewport(context, deviceManager.BackBufferWidth(), deviceManager.BackBufferHeight());
 
-    RenderHUD(timer, status.GroundTruthProgress, status.BakeProgress, status.GroundTruthSampleCount);
+    RenderHUD(timer, status.GroundTruthProgress, status.BakeProgress, status.GroundTruthSampleCount, status.ProbeBakeProgress);
 
     ++frameCount;
 }
@@ -929,7 +947,7 @@ void BakingLab::RenderBackgroundVelocity()
 }
 
 void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float bakeProgress,
-                         uint64 groundTruthSampleCount)
+                         uint64 groundTruthSampleCount, float probeBakeProgress)
 {
     PIXEvent event(L"HUD Pass");
 
@@ -980,6 +998,17 @@ void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float b
 
         transform._41 = 35.0f;
         transform._42 = deviceManager.BackBufferHeight() - 60.0f;
+        spriteRenderer.RenderText(font, progressText.c_str(), transform);
+    }
+
+    if(probeBakeProgress < 1.0f)
+    {
+        float percent = Round(probeBakeProgress * 10000.0f);
+        percent /= 100.0f;
+        std::wstring progressText = L"Baking probes (" + ToString(percent) + L"%)";
+
+        transform._41 = 35.0f;
+        transform._42 = deviceManager.BackBufferHeight() - 40.0f;
         spriteRenderer.RenderText(font, progressText.c_str(), transform);
     }
 
