@@ -68,6 +68,7 @@ struct MeshBakerStatus
     float SGSharpness = 0.0f;
     Float3 SceneMinBounds;
     Float3 SceneMaxBounds;
+    bool32 BakingInvalidated = false;
 };
 
 class MeshBaker

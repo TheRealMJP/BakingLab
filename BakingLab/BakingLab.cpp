@@ -611,7 +611,7 @@ void BakingLab::Update(const Timer& timer)
     meshRenderer.Update(camera, jitterOffset);
 }
 
-void BakingLab::RenderProbes()
+void BakingLab::RenderProbes(const MeshBakerStatus& status)
 {
     PIXEvent pixEvent(L"Render Probes");
 
@@ -636,6 +636,9 @@ void BakingLab::RenderProbes()
         probeIrradianceMap.Initialize(device, 16, 16, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
     }
 
+    if(status.BakingInvalidated)
+        currProbeIdx = 0;
+
     if(currProbeIdx >= numProbes)
         return;
 
@@ -653,10 +656,6 @@ void BakingLab::RenderProbes()
 
     PerspectiveCamera probeCam(1.0f, Pi_2, NearClip, FarClip);
     probeCam.SetPosition(probePos);
-
-    MeshBakerStatus status;
-    status.SceneMinBounds = sceneMins[currSceneIdx];
-    status.SceneMaxBounds = sceneMaxes[currSceneIdx];
 
     for(uint64 i = 0; i < 6; ++i)
     {
@@ -718,7 +717,7 @@ void BakingLab::Render(const Timer& timer)
     status.SceneMinBounds = sceneMins[AppSettings::CurrentScene];
     status.SceneMaxBounds = sceneMaxes[AppSettings::CurrentScene];
 
-    RenderProbes();
+    RenderProbes(status);
 
     if(AppSettings::ShowGroundTruth)
     {

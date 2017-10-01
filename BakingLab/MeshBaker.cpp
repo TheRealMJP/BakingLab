@@ -1330,6 +1330,8 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
 
     const bool32 showGroundTruth = AppSettings::ShowGroundTruth;
 
+    MeshBakerStatus status;
+
     if(currentModel != input.SceneModel)
     {
         KillBakeThreads();
@@ -1549,6 +1551,8 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         InterlockedIncrement64(&bakeTag);
         currTile = 0;
         currBakeBatch = 0;
+
+        status.BakingInvalidated = true;
     }
 
     // Change checks for baking only
@@ -1589,7 +1593,6 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         currTile = 0;
     }
 
-    MeshBakerStatus status;
     status.GroundTruth = renderTextureSRV;
     status.LightMap = bakeTextureSRV;
     status.BakePoints = bakePointBuffer.SRView;
