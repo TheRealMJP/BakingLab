@@ -476,33 +476,25 @@ float3 SampleIrradianceProbe(in float3 samplePos, float3 direction)
 
 void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
 {
-    float3 sampleUVW = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
+    float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
     float3 probeDims = float3(ProbeResX, ProbeResY, ProbeResZ);
 
     float3 halfTexelSize = 0.5f / probeDims;
-    float3 samplePos = max(sampleUVW - halfTexelSize, 0.0f);
+    float3 baseSamplePos = saturate(normalizedSamplePos - halfTexelSize) * probeDims;
+    float3 lerpAmts = frac(baseSamplePos);
 
-    samplePos *= probeDims;
-    samplePos = min(samplePos, probeDims - 1.0f);
-    float3 samplePosNext = min(samplePos + 1, probeDims - 1.0f);
+    float3 irradianceSum = 0.0f;
+    for(uint i = 0; i < 8; ++i)
+    {
+        uint3 sampleOffset = uint3(i, i >> 1, i >> 2) & 0x1;
+        float3 samplePos = min(baseSamplePos + sampleOffset, probeDims - 1.0f);
+        float3 triLinear = lerp(1.0f - lerpAmts, lerpAmts, float3(sampleOffset));
+        float sampleWeight = triLinear.x * triLinear.y * triLinear.z;
+        float3 sample = SampleIrradianceProbe(samplePos, surface.NormalWS);
+        irradianceSum += sample * sampleWeight;
+    }
 
-    float3 lerpAmts = frac(samplePos);
-
-    float3 samples[8];
-    samples[0] = SampleIrradianceProbe(float3(samplePos.x , samplePos.y, samplePos.z), surface.NormalWS);
-    samples[1] = SampleIrradianceProbe(float3(samplePosNext.x , samplePos.y, samplePos.z), surface.NormalWS);
-    samples[2] = SampleIrradianceProbe(float3(samplePos.x , samplePosNext.y, samplePos.z), surface.NormalWS);
-    samples[3] = SampleIrradianceProbe(float3(samplePosNext.x , samplePosNext.y, samplePos.z), surface.NormalWS);
-
-    samples[4] = SampleIrradianceProbe(float3(samplePos.x , samplePos.y, samplePosNext.z), surface.NormalWS);
-    samples[5] = SampleIrradianceProbe(float3(samplePosNext.x , samplePos.y, samplePosNext.z), surface.NormalWS);
-    samples[6] = SampleIrradianceProbe(float3(samplePos.x , samplePosNext.y, samplePosNext.z), surface.NormalWS);
-    samples[7] = SampleIrradianceProbe(float3(samplePosNext.x , samplePosNext.y, samplePosNext.z), surface.NormalWS);
-
-    // lerp between the shadow values to calculate our light amount
-    float3 result0123 = lerp(lerp(samples[0], samples[1], lerpAmts.x), lerp(samples[2], samples[3], lerpAmts.x), lerpAmts.y);
-    float3 result4567 = lerp(lerp(samples[4], samples[5], lerpAmts.x), lerp(samples[6], samples[7], lerpAmts.x), lerpAmts.y);
-    indirectIrradiance = lerp(result0123, result4567, lerpAmts.z);
+    indirectIrradiance = irradianceSum;
     indirectSpecular = 0.0f;
 }
 
