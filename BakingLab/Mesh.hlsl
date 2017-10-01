@@ -50,10 +50,10 @@ cbuffer PSConstants : register(b0)
     float LightBleedingReduction;
     float2 RTSize;
     float2 JitterOffset;
-    float4 SceneMinBounds;
-    float4 SceneMaxBounds;
     float4 SGDirections[MaxSGCount];
     float SGSharpness;
+    float3 SceneMinBounds;
+    float3 SceneMaxBounds;
 }
 
 //=================================================================================================
@@ -476,13 +476,14 @@ float3 SampleIrradianceProbe(in float3 samplePos, float3 direction)
 
 void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
 {
-    float3 sampleUVW = saturate((surface.PositionWS - SceneMinBounds.xyz) / (SceneMaxBounds.xyz - SceneMinBounds.xyz));
+    float3 sampleUVW = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
     float3 probeDims = float3(ProbeResX, ProbeResY, ProbeResZ);
 
     float3 halfTexelSize = 0.5f / probeDims;
-    float3 samplePos = frac(sampleUVW - halfTexelSize);
+    float3 samplePos = max(sampleUVW - halfTexelSize, 0.0f);
+
     samplePos *= probeDims;
-    samplePos = min(probeDims, probeDims - 1.0f);
+    samplePos = min(samplePos, probeDims - 1.0f);
     float3 samplePosNext = min(samplePos + 1, probeDims - 1.0f);
 
     float3 lerpAmts = frac(samplePos);

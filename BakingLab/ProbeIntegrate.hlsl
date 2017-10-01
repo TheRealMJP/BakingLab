@@ -160,7 +160,7 @@ void IntegrateIrradiance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID :
     float3 bitangent = normalize(cross(normal, tangent));
     tangent = normalize(cross(bitangent, normal));
 
-    const uint numSamples = 64;
+    const uint numSamples = 256;
     float3 irradiance = 0.0f;
     for(uint i = 0; i < numSamples; ++i)
     {

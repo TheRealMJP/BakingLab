@@ -235,11 +235,6 @@ static void GenerateSphere(uint64 NumUSlices, uint64 NumVSlices, ID3D11Device* d
     DXCall(device->CreateBuffer(&bufferDesc, &initData, &idxBuffer));
 }
 
-MeshRenderer::MeshRenderer() : currFrame(0), sceneModel(nullptr),
-                                numHemisphereIndices(0), numAreaLightIndices(0)
-{
-}
-
 void MeshRenderer::LoadShaders()
 {
     // Load the mesh shaders
@@ -252,6 +247,9 @@ void MeshRenderer::LoadShaders()
 
     visualizerVS = CompileVSFromFile(device, L"BakeDataVisualizer.hlsl", "VS", "vs_5_0");
     visualizerPS = CompilePSFromFile(device, L"BakeDataVisualizer.hlsl", "PS", "ps_5_0");
+
+    probeVisualizerVS = CompileVSFromFile(device, L"ProbeVisualizer.hlsl", "VS", "vs_5_0");
+    probeVisualizerPS = CompilePSFromFile(device, L"ProbeVisualizer.hlsl", "PS", "ps_5_0");
 
     fullScreenVS = CompileVSFromFile(device, L"EVSMConvert.hlsl", "FullScreenVS");
 
@@ -336,7 +334,7 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
 
     GenerateHemisphere(16, 4, device, hemisphereVB, hemisphereIB, numHemisphereIndices);
 
-    GenerateSphere(256, 192, device, areaLightVB, areaLightIB, numAreaLightIndices);
+    GenerateSphere(256, 192, device, sphereVB, sphereIB, numSphereIndices);
 
     D3D11_INPUT_ELEMENT_DESC elements[1];
     elements[0].AlignedByteOffset = 0;
@@ -349,6 +347,9 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
 
     DXCall(device->CreateInputLayout(elements, 1, visualizerVS->ByteCode->GetBufferPointer(),
                                      visualizerVS->ByteCode->GetBufferSize(), &visualizerInputLayout));
+
+    DXCall(device->CreateInputLayout(elements, 1, probeVisualizerVS->ByteCode->GetBufferPointer(),
+                                     probeVisualizerVS->ByteCode->GetBufferSize(), &probeVisualizerInputLayout));
 
     DXCall(device->CreateInputLayout(elements, 1, areaLightVS->ByteCode->GetBufferPointer(),
                                      areaLightVS->ByteCode->GetBufferSize(), &areaLightInputLayout));
@@ -629,11 +630,11 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
     meshPSConstants.Data.PositiveExponent = PositiveExponent;
     meshPSConstants.Data.NegativeExponent = NegativeExponent;
     meshPSConstants.Data.LightBleedingReduction = LightBleedingReduction;
-    meshPSConstants.Data.SceneMinBounds = Float4(status.SceneMinBounds, 0.0f);
-    meshPSConstants.Data.SceneMaxBounds = Float4(status.SceneMaxBounds, 0.0f);
     for(uint64 i = 0; i < ArraySize_(status.SGDirections); ++i)
         meshPSConstants.Data.SGDirections[i] = Float4(status.SGDirections[i], 0.0f);
     meshPSConstants.Data.SGSharpness = status.SGSharpness;
+    meshPSConstants.Data.SceneMinBounds = status.SceneMinBounds;
+    meshPSConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
     meshPSConstants.ApplyChanges(context);
     meshPSConstants.SetPS(context, 0);
 
@@ -1002,14 +1003,14 @@ void MeshRenderer::RenderAreaLight(ID3D11DeviceContext* context, const Camera& c
     context->PSSetShader(areaLightPS, nullptr, 0);
 
     // Draw the visualizer sphere
-    ID3D11Buffer* vertexBuffers[1] = { areaLightVB };
+    ID3D11Buffer* vertexBuffers[1] = { sphereVB };
     uint32 vertexStrides[1] = { sizeof(Float3) };
     uint32 offsets[1] = { 0 };
     context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
-    context->IASetIndexBuffer(areaLightIB, DXGI_FORMAT_R32_UINT, 0);
+    context->IASetIndexBuffer(sphereIB, DXGI_FORMAT_R32_UINT, 0);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     context->IASetInputLayout(areaLightInputLayout);
-    context->DrawIndexedInstanced(uint32(numAreaLightIndices), 1, 0, 0, 0);
+    context->DrawIndexedInstanced(uint32(numSphereIndices), 1, 0, 0, 0);
 }
 
 // Renders the bake data visualizer
@@ -1028,6 +1029,8 @@ void MeshRenderer::RenderBakeDataVisualizer(ID3D11DeviceContext* context, const 
     for(uint64 i = 0; i < ArraySize_(status.SGDirections); ++i)
         visualizerConstants.Data.SGDirections[i] = Float4(status.SGDirections[i], 0.0f);
     visualizerConstants.Data.SGSharpness = status.SGSharpness;
+    visualizerConstants.Data.SceneMinBounds = status.SceneMinBounds;
+    visualizerConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
     visualizerConstants.ApplyChanges(context);
     visualizerConstants.SetVS(context, 0);
     visualizerConstants.SetPS(context, 0);
@@ -1042,8 +1045,11 @@ void MeshRenderer::RenderBakeDataVisualizer(ID3D11DeviceContext* context, const 
     ID3D11ShaderResourceView* vsSrvs[] = { status.BakePoints };
     context->VSSetShaderResources(0, ArraySize_(vsSrvs), vsSrvs);
 
-    ID3D11ShaderResourceView* psSrvs[1] = { status.LightMap };
-    context->PSSetShaderResources(0, 1, psSrvs);
+    ID3D11ShaderResourceView* psSrvs[] = { status.LightMap };
+    context->PSSetShaderResources(0, ArraySize_(psSrvs), psSrvs);
+
+    ID3D11SamplerState* psSamplers[] = { samplerStates.LinearClamp() };
+    context->PSSetSamplers(0, ArraySize_(psSamplers), psSamplers);
 
     // Draw the visualizer hemispheres for all sample points
     ID3D11Buffer* vertexBuffers[1] = { hemisphereVB };
@@ -1059,5 +1065,56 @@ void MeshRenderer::RenderBakeDataVisualizer(ID3D11DeviceContext* context, const 
 
     ID3D11ShaderResourceView* nullSRVs[] = { nullptr };
     context->VSSetShaderResources(0, 1, nullSRVs);
+    context->PSSetShaderResources(0, 1, nullSRVs);
+}
+
+// Renders the probe visualizer
+void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status)
+{
+    PIXEvent event(L"Probe Visualizer");
+
+    // Set states
+    float blendFactor[4] = {1, 1, 1, 1};
+    context->OMSetBlendState(blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
+    context->OMSetDepthStencilState(depthStencilStates.DepthWriteEnabled(), 0);
+    context->RSSetState(rasterizerStates.NoCull());
+
+    // Set constant buffers
+    visualizerConstants.Data.ViewProjection = Float4x4::Transpose(camera.ViewProjectionMatrix());
+    for(uint64 i = 0; i < ArraySize_(status.SGDirections); ++i)
+        visualizerConstants.Data.SGDirections[i] = Float4(status.SGDirections[i], 0.0f);
+    visualizerConstants.Data.SGSharpness = status.SGSharpness;
+    visualizerConstants.Data.SceneMinBounds = status.SceneMinBounds;
+    visualizerConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
+    visualizerConstants.ApplyChanges(context);
+    visualizerConstants.SetVS(context, 0);
+    visualizerConstants.SetPS(context, 0);
+
+    // Set shaders
+    context->DSSetShader(nullptr, nullptr, 0);
+    context->HSSetShader(nullptr, nullptr, 0);
+    context->GSSetShader(nullptr, nullptr, 0);
+    context->VSSetShader(probeVisualizerVS , nullptr, 0);
+    context->PSSetShader(probeVisualizerPS, nullptr, 0);
+
+    ID3D11ShaderResourceView* psSrvs[] = { status.ProbeIrradiance };
+    context->PSSetShaderResources(0, ArraySize_(psSrvs), psSrvs);
+
+    ID3D11SamplerState* psSamplers[] = { samplerStates.LinearClamp() };
+    context->PSSetSamplers(0, ArraySize_(psSamplers), psSamplers);
+
+    // Draw the visualizer hemispheres for all sample points
+    ID3D11Buffer* vertexBuffers[1] = { sphereVB };
+    uint32 vertexStrides[1] = { sizeof(Float3) };
+    uint32 offsets[1] = { 0 };
+    context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+    context->IASetIndexBuffer(sphereIB, DXGI_FORMAT_R32_UINT, 0);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->IASetInputLayout(probeVisualizerInputLayout);
+
+    // Draw
+    context->DrawIndexedInstanced(uint32(numSphereIndices), uint32(AppSettings::NumProbes()), 0, 0, 0);
+
+    ID3D11ShaderResourceView* nullSRVs[] = { nullptr };
     context->PSSetShaderResources(0, 1, nullSRVs);
 }

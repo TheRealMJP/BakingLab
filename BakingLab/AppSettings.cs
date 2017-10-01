@@ -815,6 +815,9 @@ public class Settings
         [UseAsShaderConstant(false)]
         bool ShowBakeDataVisualizer = false;
 
+        [UseAsShaderConstant(false)]
+        bool ShowProbeVisualizer = false;
+
         bool ViewIndirectSpecular = false;
 
         [DisplayName("Save Light Settings")]

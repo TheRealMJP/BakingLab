@@ -24,6 +24,8 @@ cbuffer Constants : register(b0)
     float4x4 ViewProjection;
     float4 SGDirections[MaxSGCount];
     float SGSharpness;
+    float3 SceneMinBounds;
+    float3 SceneMaxBounds;
 }
 
 //=================================================================================================

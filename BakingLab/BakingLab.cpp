@@ -619,7 +619,7 @@ void BakingLab::RenderProbes()
     ID3D11DevicePtr device = deviceManager.Device();
 
     const uint64 currSceneIdx = AppSettings::CurrentScene;
-    const uint32 numProbes = AppSettings::ProbeResX * AppSettings::ProbeResY * AppSettings::ProbeResZ;
+    const uint32 numProbes = uint32(AppSettings::NumProbes());
 
     if(probeCaptureMap.Width == 0)
     {
@@ -676,7 +676,7 @@ void BakingLab::RenderProbes()
 
         probeCam.SetOrientation(orientation);
         RenderScene(status, probeCaptureMap.RTVArraySlices[i], probeVelocityTarget.RTView, probeDepthBuffer, probeCam,
-                    false, AppSettings::BakeDirectAreaLight, false);
+                    false, false, AppSettings::BakeDirectAreaLight, false);
     }
 
     AppSettings::UseProbes.SetValue(prevUseProbes);
@@ -741,7 +741,8 @@ void BakingLab::Render(const Timer& timer)
     {
         status.ProbeIrradiance = probeIrradianceMap.SRView;
         RenderScene(status, colorTargetMSAA.RTView, velocityTargetMSAA.RTView, depthBuffer, camera,
-                    AppSettings::ShowBakeDataVisualizer, AppSettings::EnableAreaLight, true);
+                    AppSettings::ShowBakeDataVisualizer, AppSettings::ShowProbeVisualizer,
+                    AppSettings::EnableAreaLight, true);
         RenderBackgroundVelocity();
     }
 
@@ -768,8 +769,8 @@ void BakingLab::Render(const Timer& timer)
 }
 
 void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* velocityTarget,
-                            const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 renderAreaLight,
-                            bool32 enableSkySun)
+                            const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
+                            bool32 renderAreaLight, bool32 enableSkySun)
 {
     PIXEvent event(L"Render Scene");
 
@@ -806,6 +807,9 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
 
     if(showBakeDataVisualizer)
         meshRenderer.RenderBakeDataVisualizer(context, cam, status);
+
+    if(showProbeVisualizer)
+        meshRenderer.RenderProbeVisualizer(context, cam, status);
 
     if(renderAreaLight)
         meshRenderer.RenderAreaLight(context, cam);

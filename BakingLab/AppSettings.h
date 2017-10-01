@@ -337,6 +337,7 @@ namespace AppSettings
     extern FloatSetting BloomBlurSigma;
     extern BoolSetting EnableLuminancePicker;
     extern BoolSetting ShowBakeDataVisualizer;
+    extern BoolSetting ShowProbeVisualizer;
     extern BoolSetting ViewIndirectSpecular;
     extern Button SaveLightSettings;
     extern Button LoadLightSettings;
@@ -592,6 +593,11 @@ namespace AppSettings
             return false;
         else
             return true;
+    }
+
+    inline uint64 NumProbes()
+    {
+        return ProbeResX * ProbeResY * ProbeResZ;
     }
 
     void UpdateUI();

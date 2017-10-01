@@ -1256,11 +1256,9 @@ static uint32 __stdcall RenderThread(void* data)
 
 static uint64 GetNumThreads()
 {
-    /*SYSTEM_INFO sysInfo;
+    SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
-    return std::max<uint64>(1, sysInfo.dwNumberOfProcessors - 1);*/
-
-    return 1;
+    return std::max<uint64>(1, sysInfo.dwNumberOfProcessors - 1);
 }
 
 MeshBaker::MeshBaker()

@@ -35,7 +35,6 @@ protected:
     static const uint32 ReadbackLatency = 1;
 
 public:
-MeshRenderer();
 
     void Initialize(ID3D11Device* device, ID3D11DeviceContext* context, const Model* sceneModel);
     void SetModel(const Model* model);
@@ -56,6 +55,8 @@ MeshRenderer();
     void RenderAreaLight(ID3D11DeviceContext* context, const Camera& camera);
     void RenderBakeDataVisualizer(ID3D11DeviceContext* context, const Camera& camera,
                                    const MeshBakerStatus& status);
+    void RenderProbeVisualizer(ID3D11DeviceContext* context, const Camera& camera,
+                               const MeshBakerStatus& status);
 
 protected:
 
@@ -70,7 +71,7 @@ protected:
     DepthStencilStates depthStencilStates;
     SamplerStates samplerStates;
 
-    const Model* sceneModel;
+    const Model* sceneModel = nullptr;
 
     DepthStencilBuffer sunShadowDepthMap;
     RenderTarget2D  sunVSM;
@@ -90,15 +91,19 @@ protected:
 
     ID3D11BufferPtr hemisphereVB;
     ID3D11BufferPtr hemisphereIB;
-    uint64 numHemisphereIndices;
+    uint64 numHemisphereIndices = 0;
 
     ID3D11InputLayoutPtr visualizerInputLayout;
     VertexShaderPtr visualizerVS;
     PixelShaderPtr visualizerPS;
 
-    ID3D11BufferPtr areaLightVB;
-    ID3D11BufferPtr areaLightIB;
-    uint64 numAreaLightIndices;
+    ID3D11InputLayoutPtr probeVisualizerInputLayout;
+    VertexShaderPtr probeVisualizerVS;
+    PixelShaderPtr probeVisualizerPS;
+
+    ID3D11BufferPtr sphereVB;
+    ID3D11BufferPtr sphereIB;
+    uint64 numSphereIndices = 0;
 
     VertexShaderPtr areaLightVS;
     PixelShaderPtr areaLightPS;
@@ -113,7 +118,7 @@ protected:
     ComputeShaderPtr depthReductionCS;
     std::vector<RenderTarget2D> depthReductionTargets;
     StagingTexture2D reductionStagingTextures[ReadbackLatency];
-    uint32 currFrame;
+    uint32 currFrame = 0;
 
     Float2 reductionDepth;
 
@@ -155,11 +160,11 @@ protected:
         Float2 RTSize;
         Float2 JitterOffset;
 
-        Float4 SceneMinBounds;
-        Float4 SceneMaxBounds;
-
         Float4Align Float4 SGDirections[AppSettings::MaxSGCount];
         float SGSharpness;
+
+        Float3 SceneMinBounds;
+        Float4Align Float3 SceneMaxBounds;
     };
 
     struct AreaLightConstants
@@ -193,6 +198,8 @@ protected:
         Float4x4 ViewProjection;
         Float4Align Float4 SGDirections[AppSettings::MaxSGCount];
         float SGSharpness;
+        Float3 SceneMinBounds;
+        Float4Align Float3 SceneMaxBounds;
     };
 
     ConstantBuffer<MeshVSConstants> meshVSConstants;

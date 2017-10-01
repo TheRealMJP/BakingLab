@@ -267,6 +267,7 @@ namespace AppSettings
     FloatSetting BloomBlurSigma;
     BoolSetting EnableLuminancePicker;
     BoolSetting ShowBakeDataVisualizer;
+    BoolSetting ShowProbeVisualizer;
     BoolSetting ViewIndirectSpecular;
     Button SaveLightSettings;
     Button LoadLightSettings;
@@ -583,6 +584,9 @@ namespace AppSettings
 
         ShowBakeDataVisualizer.Initialize(tweakBar, "ShowBakeDataVisualizer", "Debug", "Show Bake Data Visualizer", "", false);
         Settings.AddSetting(&ShowBakeDataVisualizer);
+
+        ShowProbeVisualizer.Initialize(tweakBar, "ShowProbeVisualizer", "Debug", "Show Probe Visualizer", "", false);
+        Settings.AddSetting(&ShowProbeVisualizer);
 
         ViewIndirectSpecular.Initialize(tweakBar, "ViewIndirectSpecular", "Debug", "View Indirect Specular", "", false);
         Settings.AddSetting(&ViewIndirectSpecular);
