@@ -679,6 +679,8 @@ public class Settings
 
         [UseAsShaderConstant(false)]
         float SceneBoundsScale = 1.25f;
+
+        bool WeightProbesByNormal = true;
     }
 
     [ExpandGroup(false)]

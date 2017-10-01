@@ -244,6 +244,7 @@ namespace AppSettings
     IntSetting ProbeResY;
     IntSetting ProbeResZ;
     FloatSetting SceneBoundsScale;
+    BoolSetting WeightProbesByNormal;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -517,6 +518,9 @@ namespace AppSettings
         SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.2500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SceneBoundsScale);
 
+        WeightProbesByNormal.Initialize(tweakBar, "WeightProbesByNormal", "Probes", "Weight Probes By Normal", "", true);
+        Settings.AddSetting(&WeightProbesByNormal);
+
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
@@ -698,6 +702,7 @@ namespace AppSettings
         CBuffer.Data.ProbeResX = ProbeResX;
         CBuffer.Data.ProbeResY = ProbeResY;
         CBuffer.Data.ProbeResZ = ProbeResZ;
+        CBuffer.Data.WeightProbesByNormal = WeightProbesByNormal;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;

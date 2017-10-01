@@ -484,15 +484,28 @@ void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrr
     float3 lerpAmts = frac(baseSamplePos);
 
     float3 irradianceSum = 0.0f;
+    float weightSum = 0.0f;
     for(uint i = 0; i < 8; ++i)
     {
         uint3 sampleOffset = uint3(i, i >> 1, i >> 2) & 0x1;
         float3 samplePos = min(baseSamplePos + sampleOffset, probeDims - 1.0f);
         float3 triLinear = lerp(1.0f - lerpAmts, lerpAmts, float3(sampleOffset));
         float sampleWeight = triLinear.x * triLinear.y * triLinear.z;
+
+        float3 probePosWS = lerp(SceneMinBounds, SceneMaxBounds, samplePos / probeDims);
+        float3 dirToProbe = normalize(probePosWS - surface.PositionWS);
+
+        if(WeightProbesByNormal)
+            sampleWeight *= max(0.05f, dot(dirToProbe, surface.NormalWS));
+
+        sampleWeight = max(0.0002f, sampleWeight);
+
         float3 sample = SampleIrradianceProbe(samplePos, surface.NormalWS);
         irradianceSum += sample * sampleWeight;
+        weightSum += sampleWeight;
     }
+
+    irradianceSum *= 1.0f / weightSum;
 
     indirectIrradiance = irradianceSum;
     indirectSpecular = 0.0f;

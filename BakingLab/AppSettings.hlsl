@@ -51,6 +51,7 @@ cbuffer AppSettings : register(b7)
     int ProbeResX;
     int ProbeResY;
     int ProbeResZ;
+    bool WeightProbesByNormal;
     bool EnableDiffuse;
     bool EnableSpecular;
     bool EnableDirectLighting;
