@@ -75,13 +75,15 @@ protected:
     FirstPersonCamera unJitteredCamera;
 
     RenderTarget2D probeCaptureMap;
-    RenderTarget2D probeVelocityTarget;
+    RenderTarget2D probeDistanceCaptureMap;
     RenderTarget2D probeIrradianceMap;
+    RenderTarget2D probeDistanceMap;
     DepthStencilBuffer probeDepthBuffer;
 
     uint64 currProbeIdx = 0;
 
     ComputeShaderPtr probeIntegrateIrradiance;
+    ComputeShaderPtr probeIntegrateDistance;
 
     struct ResolveConstants
     {
@@ -117,9 +119,9 @@ protected:
     void CreateRenderTargets();
 
     void RenderProbes(MeshBakerStatus& status);
-    void RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* velocityTarget,
+    void RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* secondRT,
                      const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
-                     bool32 renderAreaLight, bool32 enableSkySun);
+                     bool32 renderAreaLight, bool32 enableSkySun, bool32 probeRendering);
     void RenderAA();
     void RenderBackgroundVelocity();
     void RenderHUD(const Timer& timer, float groundTruthProgress, float bakeProgress,

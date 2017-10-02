@@ -40,7 +40,8 @@ public:
     void SetModel(const Model* model);
 
     void RenderDepth(ID3D11DeviceContext* context, const Camera& camera, bool noZClip, bool flippedZRange);
-    void RenderMainPass(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status);
+    void RenderMainPass(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status,
+                        bool32 probeRendering);
 
     void Update(const Camera& camera, Float2 jitterOffset);
 
@@ -84,7 +85,7 @@ protected:
 
     std::vector<ID3D11InputLayoutPtr> meshInputLayouts;
     VertexShaderPtr meshVS;
-    PixelShaderPtr meshPS;
+    PixelShaderPtr meshPS[2];
 
     std::vector<ID3D11InputLayoutPtr> meshDepthInputLayouts;
     VertexShaderPtr meshDepthVS;

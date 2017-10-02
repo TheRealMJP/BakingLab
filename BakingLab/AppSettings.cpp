@@ -245,6 +245,7 @@ namespace AppSettings
     IntSetting ProbeResZ;
     FloatSetting SceneBoundsScale;
     BoolSetting WeightProbesByNormal;
+    BoolSetting WeightProbesByVisibility;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -506,13 +507,13 @@ namespace AppSettings
         UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", true);
         Settings.AddSetting(&UseProbes);
 
-        ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 4, 2, 16);
+        ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 4, 1, 16);
         Settings.AddSetting(&ProbeResX);
 
-        ProbeResY.Initialize(tweakBar, "ProbeResY", "Probes", "Probe Res Y", "", 4, 2, 16);
+        ProbeResY.Initialize(tweakBar, "ProbeResY", "Probes", "Probe Res Y", "", 4, 1, 16);
         Settings.AddSetting(&ProbeResY);
 
-        ProbeResZ.Initialize(tweakBar, "ProbeResZ", "Probes", "Probe Res Z", "", 4, 2, 16);
+        ProbeResZ.Initialize(tweakBar, "ProbeResZ", "Probes", "Probe Res Z", "", 4, 1, 16);
         Settings.AddSetting(&ProbeResZ);
 
         SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.2500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
@@ -520,6 +521,9 @@ namespace AppSettings
 
         WeightProbesByNormal.Initialize(tweakBar, "WeightProbesByNormal", "Probes", "Weight Probes By Normal", "", true);
         Settings.AddSetting(&WeightProbesByNormal);
+
+        WeightProbesByVisibility.Initialize(tweakBar, "WeightProbesByVisibility", "Probes", "Weight Probes By Visibility", "", true);
+        Settings.AddSetting(&WeightProbesByVisibility);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
@@ -703,6 +707,7 @@ namespace AppSettings
         CBuffer.Data.ProbeResY = ProbeResY;
         CBuffer.Data.ProbeResZ = ProbeResZ;
         CBuffer.Data.WeightProbesByNormal = WeightProbesByNormal;
+        CBuffer.Data.WeightProbesByVisibility = WeightProbesByVisibility;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;

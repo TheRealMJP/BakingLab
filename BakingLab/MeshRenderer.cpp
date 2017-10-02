@@ -239,8 +239,16 @@ void MeshRenderer::LoadShaders()
 {
     // Load the mesh shaders
     meshDepthVS = CompileVSFromFile(device, L"DepthOnly.hlsl", "VS", "vs_5_0");
-    meshVS = CompileVSFromFile(device, L"Mesh.hlsl", "VS", "vs_5_0");
-    meshPS = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0");
+    {
+        CompileOptions opts;
+        opts.Add("ProbeRendering_", 0);
+        meshVS = CompileVSFromFile(device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
+        meshPS[0] = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
+
+        opts.Reset();
+        opts.Add("ProbeRendering_", 1);
+        meshPS[1] = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
+    }
 
     areaLightVS = CompileVSFromFile(device, L"AreaLight.hlsl", "VS", "vs_5_0");
     areaLightPS = CompilePSFromFile(device, L"AreaLight.hlsl", "PS", "ps_5_0");
@@ -594,7 +602,8 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
 }
 
 // Renders all meshes in the model, with shadows
-void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status)
+void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status,
+                                  bool32 probeRendering)
 {
     PIXEvent event(L"Mesh Rendering");
 
@@ -643,7 +652,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
     context->VSSetShader(meshVS, nullptr, 0);
-    context->PSSetShader(meshPS, nullptr, 0);
+    context->PSSetShader(meshPS[probeRendering ? 1 : 0], nullptr, 0);
 
     // Draw all meshes
     for(uint64 meshIdx = 0; meshIdx < sceneModel->Meshes().size(); ++meshIdx)
@@ -680,6 +689,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
                 shSpecularLookupA,
                 shSpecularLookupB,
                 status.ProbeIrradiance,
+                status.ProbeDistance,
             };
 
             context->PSSetShaderResources(0, ArraySize_(psTextures), psTextures);

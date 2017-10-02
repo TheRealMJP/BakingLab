@@ -665,15 +665,15 @@ public class Settings
     {
         bool UseProbes = true;
 
-        [MinValue(2)]
+        [MinValue(1)]
         [MaxValue(16)]
         int ProbeResX = 4;
 
-        [MinValue(2)]
+        [MinValue(1)]
         [MaxValue(16)]
         int ProbeResY = 4;
 
-        [MinValue(2)]
+        [MinValue(1)]
         [MaxValue(16)]
         int ProbeResZ = 4;
 
@@ -681,6 +681,8 @@ public class Settings
         float SceneBoundsScale = 1.25f;
 
         bool WeightProbesByNormal = true;
+
+        bool WeightProbesByVisibility = true;
     }
 
     [ExpandGroup(false)]

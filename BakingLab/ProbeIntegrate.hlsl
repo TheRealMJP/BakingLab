@@ -16,9 +16,6 @@ cbuffer IntegrateConstants : register(b0)
     uint OutputSliceOffset;
 }
 
-TextureCube<float4> RadianceMap : register(t0);
-RWTexture2DArray<float4> IrradianceMap : register(u0);
-
 SamplerState LinearSampler : register(s0);
 
 float3 ComputeCubemapDirection(in uint2 pos, in uint face, in float2 textureSize)
@@ -72,7 +69,7 @@ float2 Hammersley2D(in uint sampleIdx, in uint numSamples)
     return float2(float(sampleIdx) / float(numSamples), RadicalInverseBase2(sampleIdx));
 }
 
-inline float2 SquareToConcentricDiskMapping(float x, float y)
+float2 SquareToConcentricDiskMapping(float x, float y)
 {
     float phi = 0.0f;
     float r = 0.0f;
@@ -117,7 +114,7 @@ inline float2 SquareToConcentricDiskMapping(float x, float y)
     return result;
 }
 
-inline float3 SampleCosineHemisphere(in float u1, in float u2)
+float3 SampleCosineHemisphere(in float u1, in float u2)
 {
     float2 uv = SquareToConcentricDiskMapping(u1, u2);
     float u = uv.x;
@@ -134,6 +131,31 @@ inline float3 SampleCosineHemisphere(in float u1, in float u2)
     return dir;
 }
 
+float3x3 MakeTangentFrame(in float3 normal, in uint faceIdx)
+{
+    float3 tangent = 0.0f;
+    if(faceIdx == 0)
+        tangent = float3(0.0f, 0.0f, -1.0f);
+    else if(faceIdx == 1)
+        tangent = float3(0.0f, 0.0f, 1.0f);
+    else if(faceIdx == 2)
+        tangent = float3(1.0f, 0.0f, 0.0f);
+    else if(faceIdx == 3)
+        tangent = float3(1.0f, 0.0f, 0.0f);
+    else if(faceIdx == 4)
+        tangent = float3(1.0f, 0.0f, 0.0f);
+    else if(faceIdx == 5)
+        tangent = float3(-1.0f, 0.0f, 0.0f);
+
+    float3 bitangent = normalize(cross(normal, tangent));
+    tangent = normalize(cross(bitangent, normal));
+
+    return float3x3(tangent, bitangent, normal);
+}
+
+TextureCube<float4> RadianceCaptureMap : register(t0);
+RWTexture2DArray<float4> IrradianceMap : register(u0);
+
 [numthreads(8, 8, 1)]
 void IntegrateIrradiance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : SV_GroupThreadID)
 {
@@ -142,23 +164,7 @@ void IntegrateIrradiance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID :
     uint outputSliceIdx = OutputSliceOffset + outputFaceIdx;
 
     float3 normal = ComputeCubemapDirection(outputPos, outputFaceIdx, OutputTextureSize);
-
-    float3 tangent = 0.0f;
-    if(outputFaceIdx == 0)
-        tangent = float3(0.0f, 0.0f, -1.0f);
-    else if(outputFaceIdx == 1)
-        tangent = float3(0.0f, 0.0f, 1.0f);
-    else if(outputFaceIdx == 2)
-        tangent = float3(1.0f, 0.0f, 0.0f);
-    else if(outputFaceIdx == 3)
-        tangent = float3(1.0f, 0.0f, 0.0f);
-    else if(outputFaceIdx == 4)
-        tangent = float3(1.0f, 0.0f, 0.0f);
-    else if(outputFaceIdx == 5)
-        tangent = float3(-1.0f, 0.0f, 0.0f);
-
-    float3 bitangent = normalize(cross(normal, tangent));
-    tangent = normalize(cross(bitangent, normal));
+    float3x3 tangentFrame = MakeTangentFrame(normal, outputFaceIdx);
 
     const uint numSamples = 256;
     float3 irradiance = 0.0f;
@@ -166,12 +172,45 @@ void IntegrateIrradiance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID :
     {
         float2 samplePos = Hammersley2D(i, numSamples);
         float3 sampleDir = SampleCosineHemisphere(samplePos.x, samplePos.y);
-        sampleDir = mul(sampleDir, float3x3(tangent, bitangent, normal));
-        float3 radiance = RadianceMap.SampleLevel(LinearSampler, sampleDir, 0.0f).xyz;
+        sampleDir = mul(sampleDir, tangentFrame);
+        float3 radiance = RadianceCaptureMap.SampleLevel(LinearSampler, sampleDir, 0.0f).xyz;
         irradiance += radiance;
     }
 
     irradiance *= (Pi / numSamples);
 
     IrradianceMap[uint3(outputPos, outputSliceIdx)] = float4(irradiance, 0.0f);
+}
+
+TextureCube<float2> DistanceCaptureMap : register(t0);
+RWTexture2DArray<float2> DistanceOutputMap : register(u0);
+
+[numthreads(8, 8, 1)]
+void IntegrateDistance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : SV_GroupThreadID)
+{
+    uint2 outputPos = GroupID.xy * 8 + GroupThreadID.xy;
+    uint outputFaceIdx = GroupID.z;
+    uint outputSliceIdx = OutputSliceOffset + outputFaceIdx;
+
+    float3 normal = ComputeCubemapDirection(outputPos, outputFaceIdx, OutputTextureSize);
+    float3x3 tangentFrame = MakeTangentFrame(normal, outputFaceIdx);
+
+    const uint numSamples = 256;
+    float2 outputDistance = 0.0f;
+    float weightSum = 0.0f;
+    for(uint i = 0; i < numSamples; ++i)
+    {
+        float2 samplePos = Hammersley2D(i, numSamples);
+        float3 sampleDir = SampleCosineHemisphere(samplePos.x, samplePos.y);
+        sampleDir = mul(sampleDir, tangentFrame);
+        float2 sampleDistance = DistanceCaptureMap.SampleLevel(LinearSampler, sampleDir, 0.0f);
+
+        float sampleWeight = pow(saturate(dot(sampleDir, normal)), 4.0f);
+        outputDistance += sampleDistance * sampleWeight;
+        weightSum += sampleWeight;
+    }
+
+    outputDistance *= (1.0f / weightSum);
+
+    DistanceOutputMap[uint3(outputPos, outputSliceIdx)] = outputDistance;
 }

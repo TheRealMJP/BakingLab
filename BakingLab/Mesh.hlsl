@@ -69,6 +69,7 @@ TextureCube<float> AreaLightShadowMap : register(t6);
 Texture3D<float4> SHSpecularLookupA : register(t7);
 Texture3D<float2> SHSpecularLookupB : register(t8);
 TextureCubeArray<float4> ProbeIrradiance : register(t9);
+TextureCubeArray<float2> ProbeDistance : register(t10);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -119,7 +120,11 @@ struct PSInput
 struct PSOutput
 {
     float4 Lighting             : SV_Target0;
-    float2 Velocity             : SV_Target1;
+    #if ProbeRendering_
+        float2 ProbeDistance    : SV_Target1;
+    #else
+        float2 Velocity         : SV_Target1;
+    #endif
 };
 
 //=================================================================================================
@@ -468,12 +473,6 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     }
 }
 
-float3 SampleIrradianceProbe(in float3 samplePos, float3 direction)
-{
-    float probeIdx = uint(samplePos.z) * (ProbeResX * ProbeResY) + uint(samplePos.y) * ProbeResX + uint(samplePos.x);
-    return ProbeIrradiance.Sample(LinearSampler, float4(direction, probeIdx)).xyz;
-}
-
 void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
 {
     float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
@@ -488,20 +487,33 @@ void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrr
     for(uint i = 0; i < 8; ++i)
     {
         uint3 sampleOffset = uint3(i, i >> 1, i >> 2) & 0x1;
-        float3 samplePos = min(baseSamplePos + sampleOffset, probeDims - 1.0f);
+        uint3 probeIndices = min(uint3(baseSamplePos) + sampleOffset, probeDims - 1.0f);
+        float probeIdx = uint(probeIndices.z) * (ProbeResX * ProbeResY) + uint(probeIndices.y) * ProbeResX + uint(probeIndices.x);
         float3 triLinear = lerp(1.0f - lerpAmts, lerpAmts, float3(sampleOffset));
         float sampleWeight = triLinear.x * triLinear.y * triLinear.z;
 
-        float3 probePosWS = lerp(SceneMinBounds, SceneMaxBounds, samplePos / probeDims);
+        float3 probePosWS = lerp(SceneMinBounds, SceneMaxBounds, (probeIndices + 0.5f) / probeDims);
         float3 dirToProbe = normalize(probePosWS - surface.PositionWS);
+        float distToProbe = length(probePosWS - surface.PositionWS);
 
         if(WeightProbesByNormal)
-            sampleWeight *= max(0.05f, dot(dirToProbe, surface.NormalWS));
+            sampleWeight *= max(0.05f, dot(dirToProbe, surface.VtxNormalWS));
+
+        if(WeightProbesByVisibility)
+        {
+            float2 distSample = ProbeDistance.Sample(LinearSampler, float4(-dirToProbe, probeIdx));
+            float mean = distSample.x;
+            float variance = abs(distSample.y - (mean * mean));
+
+            float tSubMean = distToProbe - mean;
+            float chebychev = variance / (variance + (tSubMean * tSubMean));
+            sampleWeight *= ((distToProbe <= mean) ? 1.0f : max(chebychev, 0.0f));
+        }
 
         sampleWeight = max(0.0002f, sampleWeight);
 
-        float3 sample = SampleIrradianceProbe(samplePos, surface.NormalWS);
-        irradianceSum += sample * sampleWeight;
+        float3 irradianceSample = ProbeIrradiance.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
+        irradianceSum += irradianceSample * sampleWeight;
         weightSum += sampleWeight;
     }
 
@@ -604,7 +616,7 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         float3 indirectIrradiance = 0.0f;
         float3 indirectSpecular = 0.0f;
 
-        if(UseProbes)
+        if(UseProbes || ProbeRendering_)
             ComputeIndirectFromProbes(surface, indirectIrradiance, indirectSpecular);
         else
             ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
@@ -630,11 +642,16 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
     if(isFrontFace == false)
         output.Lighting = 0.0f;
 
-    float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
-    prevPositionSS *= RTSize;
-    output.Velocity = input.PositionSS.xy - prevPositionSS;
-    output.Velocity -= JitterOffset;
-    output.Velocity /= RTSize;
+    #if ProbeRendering_
+        float distanceFromProbe = length(surface.PositionWS - CameraPosWS);
+        output.ProbeDistance = float2(distanceFromProbe, distanceFromProbe * distanceFromProbe);
+    #else
+        float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
+        prevPositionSS *= RTSize;
+        output.Velocity = input.PositionSS.xy - prevPositionSS;
+        output.Velocity -= JitterOffset;
+        output.Velocity /= RTSize;
+    #endif
 
     return output;
 }

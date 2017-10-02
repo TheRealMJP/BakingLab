@@ -315,6 +315,7 @@ namespace AppSettings
     extern IntSetting ProbeResZ;
     extern FloatSetting SceneBoundsScale;
     extern BoolSetting WeightProbesByNormal;
+    extern BoolSetting WeightProbesByVisibility;
     extern ScenesSetting CurrentScene;
     extern BoolSetting EnableDiffuse;
     extern BoolSetting EnableSpecular;
@@ -400,6 +401,7 @@ namespace AppSettings
         int32 ProbeResY;
         int32 ProbeResZ;
         bool32 WeightProbesByNormal;
+        bool32 WeightProbesByVisibility;
         bool32 EnableDiffuse;
         bool32 EnableSpecular;
         bool32 EnableDirectLighting;

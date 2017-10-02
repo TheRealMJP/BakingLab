@@ -473,6 +473,7 @@ void BakingLab::Initialize()
     backgroundVelocityPS = CompilePSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityPS");
 
     probeIntegrateIrradiance = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateIrradiance");
+    probeIntegrateDistance = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistance");
 
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
@@ -638,7 +639,7 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     {
         currProbeIdx = 0;
         probeCaptureMap.Initialize(device, 256, 256, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, false, 6, true);
-        probeVelocityTarget.Initialize(device, 256, 256, DXGI_FORMAT_R16G16_FLOAT);
+        probeDistanceCaptureMap.Initialize(device, 256, 256, DXGI_FORMAT_R16G16_FLOAT, 1, 1, 0, false, false, 6, true);
         probeDepthBuffer.Initialize(device, 256, 256, DXGI_FORMAT_D24_UNORM_S8_UINT, true);
     }
 
@@ -647,6 +648,7 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     {
         currProbeIdx = 0;
         probeIrradianceMap.Initialize(device, 16, 16, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
+        probeDistanceMap.Initialize(device, 32, 32, DXGI_FORMAT_R16G16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
     }
 
     if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed())
@@ -690,8 +692,8 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
             orientation = Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), Pi);
 
         probeCam.SetOrientation(orientation);
-        RenderScene(status, probeCaptureMap.RTVArraySlices[i], probeVelocityTarget.RTView, probeDepthBuffer, probeCam,
-                    false, false, AppSettings::BakeDirectAreaLight, false);
+        RenderScene(status, probeCaptureMap.RTVArraySlices[i], probeDistanceCaptureMap.RTVArraySlices[i], probeDepthBuffer, probeCam,
+                    false, false, AppSettings::BakeDirectAreaLight, false, true);
     }
 
     AppSettings::UseProbes.SetValue(prevUseProbes);
@@ -711,6 +713,15 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     integrateConstants.SetCS(context, 0);
 
     context->Dispatch(DispatchSize(8, probeIrradianceMap.Width), DispatchSize(8, probeIrradianceMap.Height), 6);
+
+    ClearCSInputs(context);
+    ClearCSOutputs(context);
+
+    SetCSInputs(context, probeDistanceCaptureMap.SRView);
+    SetCSOutputs(context, probeDistanceMap.UAView);
+    SetCSShader(context, probeIntegrateDistance);
+
+    context->Dispatch(DispatchSize(8, probeDistanceMap.Width), DispatchSize(8, probeDistanceMap.Height), 6);
 
     ClearCSInputs(context);
     ClearCSOutputs(context);
@@ -757,9 +768,10 @@ void BakingLab::Render(const Timer& timer)
     else
     {
         status.ProbeIrradiance = probeIrradianceMap.SRView;
+        status.ProbeDistance = probeDistanceMap.SRView;
         RenderScene(status, colorTargetMSAA.RTView, velocityTargetMSAA.RTView, depthBuffer, camera,
                     AppSettings::ShowBakeDataVisualizer, AppSettings::ShowProbeVisualizer,
-                    AppSettings::EnableAreaLight, true);
+                    AppSettings::EnableAreaLight, true, false);
         RenderBackgroundVelocity();
     }
 
@@ -785,9 +797,9 @@ void BakingLab::Render(const Timer& timer)
     ++frameCount;
 }
 
-void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* velocityTarget,
+void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* secondRT,
                             const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
-                            bool32 renderAreaLight, bool32 enableSkySun)
+                            bool32 renderAreaLight, bool32 enableSkySun, bool32 probeRendering)
 {
     PIXEvent event(L"Render Scene");
 
@@ -812,15 +824,18 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
         meshRenderer.RenderAreaLightShadowMap(context, cam);
 
     renderTargets[0] = colorTarget;
-    renderTargets[1] = velocityTarget;
+    renderTargets[1] = secondRT;
     context->OMSetRenderTargets(2, renderTargets, dsv);
     SetViewport(context, depth.Width, depth.Height);
 
-    float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    context->ClearRenderTargetView(colorTarget, clearColor);
-    context->ClearRenderTargetView(velocityTarget, clearColor);
+    float maxDistance = Float3::Length(FarClip);
 
-    meshRenderer.RenderMainPass(context, cam, status);
+    float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float secondClearColor[4] = { maxDistance, maxDistance * maxDistance, 0.0f, 0.0f };
+    context->ClearRenderTargetView(colorTarget, clearColor);
+    context->ClearRenderTargetView(secondRT, secondClearColor);
+
+    meshRenderer.RenderMainPass(context, cam, status, probeRendering);
 
     if(showBakeDataVisualizer)
         meshRenderer.RenderBakeDataVisualizer(context, cam, status);
