@@ -621,6 +621,12 @@ void BakingLab::Update(const Timer& timer)
     Float3 sceneCenter = (sceneMaxes[AppSettings::CurrentScene] + sceneMins[AppSettings::CurrentScene]) / 2.0f;;
     currSceneMin = Lerp(sceneCenter, sceneMins[AppSettings::CurrentScene], AppSettings::SceneBoundsScale);
     currSceneMax = Lerp(sceneCenter, sceneMaxes[AppSettings::CurrentScene], AppSettings::SceneBoundsScale);
+    currSceneMin.x += AppSettings::SceneBoundsOffsetX;
+    currSceneMin.y += AppSettings::SceneBoundsOffsetY;
+    currSceneMin.z += AppSettings::SceneBoundsOffsetZ;
+    currSceneMax.x += AppSettings::SceneBoundsOffsetX;
+    currSceneMax.y += AppSettings::SceneBoundsOffsetY;
+    currSceneMax.z += AppSettings::SceneBoundsOffsetZ;
 
     meshRenderer.Update(camera, jitterOffset);
 }
@@ -652,7 +658,8 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     }
 
     if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed() ||
-       AppSettings::AlwaysRegenerateProbes.Changed())
+       AppSettings::AlwaysRegenerateProbes.Changed() || AppSettings::SceneBoundsOffsetX.Changed() ||
+       AppSettings::SceneBoundsOffsetY.Changed() || AppSettings::SceneBoundsOffsetZ.Changed())
         currProbeIdx = 0;
 
     if(currProbeIdx >= numProbes)

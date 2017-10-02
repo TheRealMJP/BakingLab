@@ -844,5 +844,20 @@ public class Settings
 
         [UseAsShaderConstant(false)]
         bool AlwaysRegenerateProbes = false;
+
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [UseAsShaderConstant(false)]
+        float SceneBoundsOffsetX = 0.0f;
+
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [UseAsShaderConstant(false)]
+        float SceneBoundsOffsetY = 0.0f;
+
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [UseAsShaderConstant(false)]
+        float SceneBoundsOffsetZ = 0.0f;
     }
 }

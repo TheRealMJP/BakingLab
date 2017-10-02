@@ -166,7 +166,7 @@ void IntegrateIrradiance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID :
     float3 normal = ComputeCubemapDirection(outputPos, outputFaceIdx, OutputTextureSize);
     float3x3 tangentFrame = MakeTangentFrame(normal, outputFaceIdx);
 
-    const uint numSamples = 256;
+    const uint numSamples = 1024;
     float3 irradiance = 0.0f;
     for(uint i = 0; i < numSamples; ++i)
     {
@@ -179,11 +179,26 @@ void IntegrateIrradiance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID :
 
     irradiance *= (Pi / numSamples);
 
+    // irradiance = 16.0f;
+
     IrradianceMap[uint3(outputPos, outputSliceIdx)] = float4(irradiance, 0.0f);
 }
 
 TextureCube<float2> DistanceCaptureMap : register(t0);
 RWTexture2DArray<float2> DistanceOutputMap : register(u0);
+
+float3 SampleCosinePower(in float2 xi, in float n)
+{
+    float phi = 2.0f * Pi * xi.x;
+    float theta = acos(pow(1.0f - xi.y, 1.0f /(n + 1.0f)));
+
+    float3 dir;
+    dir.x = sin(theta) * cos(phi);
+    dir.y = sin(theta) * sin(phi);
+    dir.z = cos(theta);
+
+    return dir;
+}
 
 [numthreads(8, 8, 1)]
 void IntegrateDistance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : SV_GroupThreadID)
@@ -196,16 +211,18 @@ void IntegrateDistance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : S
     float3x3 tangentFrame = MakeTangentFrame(normal, outputFaceIdx);
 
     const uint numSamples = 256;
+    const float cosinePower = exp2(12.0f);
+
     float2 outputDistance = 0.0f;
     float weightSum = 0.0f;
     for(uint i = 0; i < numSamples; ++i)
     {
         float2 samplePos = Hammersley2D(i, numSamples);
-        float3 sampleDir = SampleCosineHemisphere(samplePos.x, samplePos.y);
+        float3 sampleDir = SampleCosinePower(samplePos, cosinePower);
         sampleDir = mul(sampleDir, tangentFrame);
         float2 sampleDistance = DistanceCaptureMap.SampleLevel(LinearSampler, sampleDir, 0.0f);
 
-        float sampleWeight = pow(saturate(dot(sampleDir, normal)), 32.0f);
+        float sampleWeight = ((cosinePower + 1.0f)  / Pi2) * pow(saturate(dot(sampleDir, normal)), cosinePower);
         outputDistance += sampleDistance * sampleWeight;
         weightSum += sampleWeight;
     }

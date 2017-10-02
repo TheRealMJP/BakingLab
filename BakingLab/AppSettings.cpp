@@ -277,6 +277,9 @@ namespace AppSettings
     Button SaveEXRScreenshot;
     BoolSetting ShowSunIntensity;
     BoolSetting AlwaysRegenerateProbes;
+    FloatSetting SceneBoundsOffsetX;
+    FloatSetting SceneBoundsOffsetY;
+    FloatSetting SceneBoundsOffsetZ;
 
     ConstantBuffer<AppSettingsCBuffer> CBuffer;
 
@@ -618,6 +621,15 @@ namespace AppSettings
 
         AlwaysRegenerateProbes.Initialize(tweakBar, "AlwaysRegenerateProbes", "Debug", "Always Regenerate Probes", "", false);
         Settings.AddSetting(&AlwaysRegenerateProbes);
+
+        SceneBoundsOffsetX.Initialize(tweakBar, "SceneBoundsOffsetX", "Debug", "Scene Bounds Offset X", "", 0.0000f, -100.0000f, 100.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&SceneBoundsOffsetX);
+
+        SceneBoundsOffsetY.Initialize(tweakBar, "SceneBoundsOffsetY", "Debug", "Scene Bounds Offset Y", "", 0.0000f, -100.0000f, 100.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&SceneBoundsOffsetY);
+
+        SceneBoundsOffsetZ.Initialize(tweakBar, "SceneBoundsOffsetZ", "Debug", "Scene Bounds Offset Z", "", 0.0000f, -100.0000f, 100.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&SceneBoundsOffsetZ);
 
         TwHelper::SetOpened(tweakBar, "Sun Light", true);
 

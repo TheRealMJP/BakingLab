@@ -347,6 +347,9 @@ namespace AppSettings
     extern Button SaveEXRScreenshot;
     extern BoolSetting ShowSunIntensity;
     extern BoolSetting AlwaysRegenerateProbes;
+    extern FloatSetting SceneBoundsOffsetX;
+    extern FloatSetting SceneBoundsOffsetY;
+    extern FloatSetting SceneBoundsOffsetZ;
 
     struct AppSettingsCBuffer
     {
