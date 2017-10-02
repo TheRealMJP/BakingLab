@@ -1107,7 +1107,7 @@ void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Cam
     context->VSSetShader(probeVisualizerVS , nullptr, 0);
     context->PSSetShader(probeVisualizerPS, nullptr, 0);
 
-    ID3D11ShaderResourceView* psSrvs[] = { status.ProbeIrradiance };
+    ID3D11ShaderResourceView* psSrvs[] = { status.ProbeIrradiance, status.ProbeDistance };
     context->PSSetShaderResources(0, ArraySize_(psSrvs), psSrvs);
 
     ID3D11SamplerState* psSamplers[] = { samplerStates.LinearClamp() };
@@ -1125,6 +1125,6 @@ void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Cam
     // Draw
     context->DrawIndexedInstanced(uint32(numSphereIndices), uint32(AppSettings::NumProbes()), 0, 0, 0);
 
-    ID3D11ShaderResourceView* nullSRVs[] = { nullptr };
-    context->PSSetShaderResources(0, 1, nullSRVs);
+    ID3D11ShaderResourceView* nullSRVs[2] = { };
+    context->PSSetShaderResources(0, ArraySize_(nullSRVs), nullSRVs);
 }

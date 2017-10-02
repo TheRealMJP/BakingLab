@@ -651,7 +651,8 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
         probeDistanceMap.Initialize(device, 32, 32, DXGI_FORMAT_R16G16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
     }
 
-    if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed())
+    if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed() ||
+       AppSettings::AlwaysRegenerateProbes.Changed())
         currProbeIdx = 0;
 
     if(currProbeIdx >= numProbes)
@@ -721,6 +722,11 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     SetCSOutputs(context, probeDistanceMap.UAView);
     SetCSShader(context, probeIntegrateDistance);
 
+    integrateConstants.Data.OutputTextureSize.x = float(probeDistanceMap.Width);
+    integrateConstants.Data.OutputTextureSize.y = float(probeDistanceMap.Height);
+    integrateConstants.Data.OutputSliceOffset = uint32(currProbeIdx * 6);
+    integrateConstants.ApplyChanges(context);
+
     context->Dispatch(DispatchSize(8, probeDistanceMap.Width), DispatchSize(8, probeDistanceMap.Height), 6);
 
     ClearCSInputs(context);
@@ -730,8 +736,8 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
 
     status.ProbeBakeProgress = currProbeIdx / (numProbes - 1.0f);
 
-    /*if(currProbeIdx == numProbes)
-        currProbeIdx = 0;*/
+    if(currProbeIdx == numProbes && AppSettings::AlwaysRegenerateProbes)
+        currProbeIdx = 0;
 }
 
 void BakingLab::Render(const Timer& timer)

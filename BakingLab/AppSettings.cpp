@@ -276,6 +276,7 @@ namespace AppSettings
     Button LoadLightSettings;
     Button SaveEXRScreenshot;
     BoolSetting ShowSunIntensity;
+    BoolSetting AlwaysRegenerateProbes;
 
     ConstantBuffer<AppSettingsCBuffer> CBuffer;
 
@@ -614,6 +615,9 @@ namespace AppSettings
 
         ShowSunIntensity.Initialize(tweakBar, "ShowSunIntensity", "Debug", "Show Sun Intensity", "", false);
         Settings.AddSetting(&ShowSunIntensity);
+
+        AlwaysRegenerateProbes.Initialize(tweakBar, "AlwaysRegenerateProbes", "Debug", "Always Regenerate Probes", "", false);
+        Settings.AddSetting(&AlwaysRegenerateProbes);
 
         TwHelper::SetOpened(tweakBar, "Sun Light", true);
 

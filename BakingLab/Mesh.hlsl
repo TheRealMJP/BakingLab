@@ -473,6 +473,20 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     }
 }
 
+float ChebyshevUpperBound(float2 moments, float mean, float minVariance)
+{
+    // Compute variance
+    float variance = moments.y - (moments.x * moments.x);
+    variance = max(variance, minVariance);
+
+    // Compute probabilistic upper bound
+    float d = mean - moments.x;
+    float pMax = variance / (variance + (d * d));
+
+    // One-tailed Chebyshev
+    return (mean <= moments.x ? 1.0f : pMax);
+}
+
 void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
 {
     float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
@@ -502,12 +516,7 @@ void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrr
         if(WeightProbesByVisibility)
         {
             float2 distSample = ProbeDistance.Sample(LinearSampler, float4(-dirToProbe, probeIdx));
-            float mean = distSample.x;
-            float variance = abs(distSample.y - (mean * mean));
-
-            float tSubMean = distToProbe - mean;
-            float chebychev = variance / (variance + (tSubMean * tSubMean));
-            sampleWeight *= ((distToProbe <= mean) ? 1.0f : max(chebychev, 0.0f));
+            sampleWeight *= ChebyshevUpperBound(distSample, distToProbe, 0.0001f);
         }
 
         sampleWeight = max(0.0002f, sampleWeight);

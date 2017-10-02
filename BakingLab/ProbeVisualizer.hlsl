@@ -32,6 +32,7 @@ cbuffer Constants : register(b0)
 // Resources
 //=================================================================================================
 TextureCubeArray<float4> ProbeIrradiance : register(t0);
+TextureCubeArray<float2> ProbeDistance : register(t1);
 SamplerState LinearSampler : register(s0);
 
 //=================================================================================================
@@ -85,5 +86,7 @@ VSOutput VS(in float3 SpherePosition : POSITION, in uint InstanceID : SV_Instanc
 float4 PS(in PSInput input) : SV_Target0
 {
     float3 irradiance = ProbeIrradiance.Sample(LinearSampler, float4(input.NormalWS, input.ProbeIdx)).xyz;
+    float2 distance = ProbeDistance.Sample(LinearSampler, float4(input.NormalWS, input.ProbeIdx));
     return float4(irradiance * InvPi, 0.0f);
+    // return float4(distance * 0.01f, 0.0f, 1.0f);
 }

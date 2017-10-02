@@ -841,5 +841,8 @@ public class Settings
 
         [UseAsShaderConstant(false)]
         bool ShowSunIntensity = false;
+
+        [UseAsShaderConstant(false)]
+        bool AlwaysRegenerateProbes = false;
     }
 }

@@ -205,12 +205,14 @@ void IntegrateDistance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : S
         sampleDir = mul(sampleDir, tangentFrame);
         float2 sampleDistance = DistanceCaptureMap.SampleLevel(LinearSampler, sampleDir, 0.0f);
 
-        float sampleWeight = pow(saturate(dot(sampleDir, normal)), 4.0f);
+        float sampleWeight = pow(saturate(dot(sampleDir, normal)), 32.0f);
         outputDistance += sampleDistance * sampleWeight;
         weightSum += sampleWeight;
     }
 
     outputDistance *= (1.0f / weightSum);
+
+    // outputDistance = DistanceCaptureMap.SampleLevel(LinearSampler, normal, 0.0f).xy;
 
     DistanceOutputMap[uint3(outputPos, outputSliceIdx)] = outputDistance;
 }
