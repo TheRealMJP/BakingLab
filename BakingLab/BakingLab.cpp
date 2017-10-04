@@ -645,7 +645,7 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     {
         currProbeIdx = 0;
         probeCaptureMap.Initialize(device, 256, 256, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, false, 6, true);
-        probeDistanceCaptureMap.Initialize(device, 256, 256, DXGI_FORMAT_R16G16_FLOAT, 1, 1, 0, false, false, 6, true);
+        probeDistanceCaptureMap.Initialize(device, 256, 256, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, false, 6, true);
         probeDepthBuffer.Initialize(device, 256, 256, DXGI_FORMAT_D24_UNORM_S8_UINT, true);
     }
 
@@ -654,7 +654,7 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     {
         currProbeIdx = 0;
         probeIrradianceMap.Initialize(device, 16, 16, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
-        probeDistanceMap.Initialize(device, 32, 32, DXGI_FORMAT_R16G16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
+        probeDistanceMap.Initialize(device, 128, 128, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true, numProbes * 6, true);
     }
 
     if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed() ||

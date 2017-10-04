@@ -473,20 +473,6 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     }
 }
 
-float ChebyshevUpperBound(float2 moments, float mean, float minVariance)
-{
-    // Compute variance
-    float variance = moments.y - (moments.x * moments.x);
-    variance = max(variance, minVariance);
-
-    // Compute probabilistic upper bound
-    float d = mean - moments.x;
-    float pMax = variance / (variance + (d * d));
-
-    // One-tailed Chebyshev
-    return (mean <= moments.x ? 1.0f : pMax);
-}
-
 void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
 {
     float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
@@ -515,8 +501,12 @@ void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrr
 
         if(WeightProbesByVisibility)
         {
+            float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
+            float compareDistance = saturate(distToProbe * rcp(maxDistance));
+
             float2 distSample = ProbeDistance.Sample(LinearSampler, float4(-dirToProbe, probeIdx));
-            sampleWeight *= ChebyshevUpperBound(distSample, distToProbe, 0.0001f);
+            float visTerm = ChebyshevUpperBound(distSample, compareDistance, 0.0001f, 0.25f);
+            sampleWeight *= visTerm;
         }
 
         sampleWeight = max(0.0002f, sampleWeight);
@@ -527,6 +517,7 @@ void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrr
     }
 
     irradianceSum *= 1.0f / weightSum;
+    // irradianceSum *= 1.0f / max(weightSum, 0.0002f);
 
     indirectIrradiance = irradianceSum;
     indirectSpecular = 0.0f;
@@ -653,6 +644,8 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
 
     #if ProbeRendering_
         float distanceFromProbe = length(surface.PositionWS - CameraPosWS);
+        float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
+        distanceFromProbe = saturate(distanceFromProbe * rcp(maxDistance));
         output.ProbeDistance = float2(distanceFromProbe, distanceFromProbe * distanceFromProbe);
     #else
         float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
