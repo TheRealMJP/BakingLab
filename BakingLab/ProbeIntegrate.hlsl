@@ -9,6 +9,7 @@
 //=================================================================================================
 
 #include <Constants.hlsl>
+#include "AppSettings.hlsl"
 
 cbuffer IntegrateConstants : register(b0)
 {
@@ -185,7 +186,7 @@ void IntegrateIrradiance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID :
 }
 
 TextureCube<float2> DistanceCaptureMap : register(t0);
-RWTexture2DArray<float2> DistanceOutputMap : register(u0);
+RWTexture2DArray<unorm float2> DistanceOutputMap : register(u0);
 
 float3 SampleCosinePower(in float2 xi, in float n)
 {
@@ -211,7 +212,7 @@ void IntegrateDistance(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : S
     float3x3 tangentFrame = MakeTangentFrame(normal, outputFaceIdx);
 
     const uint numSamples = 256;
-    const float cosinePower = exp2(12.0f);
+    const float cosinePower = exp2(DistanceFilterSharpness);
 
     float2 outputDistance = 0.0f;
     float weightSum = 0.0f;

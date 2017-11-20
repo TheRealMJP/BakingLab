@@ -641,25 +641,32 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     const uint64 currSceneIdx = AppSettings::CurrentScene;
     const uint32 numProbes = uint32(AppSettings::NumProbes());
 
-    if(probeCaptureMap.Width == 0)
+    if(probeCaptureMap.Width == 0 || AppSettings::ProbeCubemapCaptureRes.Changed())
     {
         currProbeIdx = 0;
-        probeCaptureMap.Initialize(device, 256, 256, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, false, 6, true);
-        probeDistanceCaptureMap.Initialize(device, 256, 256, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, false, 6, true);
-        probeDepthBuffer.Initialize(device, 256, 256, DXGI_FORMAT_D24_UNORM_S8_UINT, true);
+
+        const uint32 resolution = AppSettings::ProbeCubemapCaptureRes;
+        probeCaptureMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, false, 6, true);
+        probeDistanceCaptureMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, false, 6, true);
+        probeDepthBuffer.Initialize(device, resolution, resolution, DXGI_FORMAT_D24_UNORM_S8_UINT, true);
     }
 
     if(AppSettings::ProbeResX.Changed() || AppSettings::ProbeResY.Changed() ||
-       AppSettings::ProbeResZ.Changed() || probeIrradianceMap.ArraySize == 0)
+       AppSettings::ProbeResZ.Changed() || probeIrradianceMap.ArraySize == 0 ||
+       AppSettings::ProbeIrradianceCubemapRes.Changed() || AppSettings::ProbeDistanceCubemapRes.Changed())
     {
         currProbeIdx = 0;
-        probeIrradianceMap.Initialize(device, 16, 16, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
-        probeDistanceMap.Initialize(device, 128, 128, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true, numProbes * 6, true);
+
+        const uint32 irrResolution = AppSettings::ProbeIrradianceCubemapRes;
+        const uint32 distResolution = AppSettings::ProbeDistanceCubemapRes;
+        probeIrradianceMap.Initialize(device, irrResolution, irrResolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
+        probeDistanceMap.Initialize(device, distResolution, distResolution, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true, numProbes * 6, true);
     }
 
     if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed() ||
        AppSettings::AlwaysRegenerateProbes.Changed() || AppSettings::SceneBoundsOffsetX.Changed() ||
-       AppSettings::SceneBoundsOffsetY.Changed() || AppSettings::SceneBoundsOffsetZ.Changed())
+       AppSettings::SceneBoundsOffsetY.Changed() || AppSettings::SceneBoundsOffsetZ.Changed() ||
+       AppSettings::DistanceFilterSharpness.Changed())
         currProbeIdx = 0;
 
     if(currProbeIdx >= numProbes)

@@ -243,9 +243,13 @@ namespace AppSettings
     IntSetting ProbeResX;
     IntSetting ProbeResY;
     IntSetting ProbeResZ;
+    IntSetting ProbeCubemapCaptureRes;
+    IntSetting ProbeIrradianceCubemapRes;
+    IntSetting ProbeDistanceCubemapRes;
     FloatSetting SceneBoundsScale;
     BoolSetting WeightProbesByNormal;
     BoolSetting WeightProbesByVisibility;
+    FloatSetting DistanceFilterSharpness;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -520,6 +524,15 @@ namespace AppSettings
         ProbeResZ.Initialize(tweakBar, "ProbeResZ", "Probes", "Probe Res Z", "", 4, 1, 16);
         Settings.AddSetting(&ProbeResZ);
 
+        ProbeCubemapCaptureRes.Initialize(tweakBar, "ProbeCubemapCaptureRes", "Probes", "Probe Cubemap Capture Res", "", 256, 1, 4096);
+        Settings.AddSetting(&ProbeCubemapCaptureRes);
+
+        ProbeIrradianceCubemapRes.Initialize(tweakBar, "ProbeIrradianceCubemapRes", "Probes", "Probe Irradiance Cubemap Res", "", 16, 1, 4096);
+        Settings.AddSetting(&ProbeIrradianceCubemapRes);
+
+        ProbeDistanceCubemapRes.Initialize(tweakBar, "ProbeDistanceCubemapRes", "Probes", "Probe Distance Cubemap Res", "", 128, 1, 4096);
+        Settings.AddSetting(&ProbeDistanceCubemapRes);
+
         SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.2500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SceneBoundsScale);
 
@@ -528,6 +541,9 @@ namespace AppSettings
 
         WeightProbesByVisibility.Initialize(tweakBar, "WeightProbesByVisibility", "Probes", "Weight Probes By Visibility", "", true);
         Settings.AddSetting(&WeightProbesByVisibility);
+
+        DistanceFilterSharpness.Initialize(tweakBar, "DistanceFilterSharpness", "Probes", "Distance Filter Sharpness", "", 10.0000f, 1.0000f, 20.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&DistanceFilterSharpness);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
@@ -722,8 +738,12 @@ namespace AppSettings
         CBuffer.Data.ProbeResX = ProbeResX;
         CBuffer.Data.ProbeResY = ProbeResY;
         CBuffer.Data.ProbeResZ = ProbeResZ;
+        CBuffer.Data.ProbeCubemapCaptureRes = ProbeCubemapCaptureRes;
+        CBuffer.Data.ProbeIrradianceCubemapRes = ProbeIrradianceCubemapRes;
+        CBuffer.Data.ProbeDistanceCubemapRes = ProbeDistanceCubemapRes;
         CBuffer.Data.WeightProbesByNormal = WeightProbesByNormal;
         CBuffer.Data.WeightProbesByVisibility = WeightProbesByVisibility;
+        CBuffer.Data.DistanceFilterSharpness = DistanceFilterSharpness;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;

@@ -677,12 +677,28 @@ public class Settings
         [MaxValue(16)]
         int ProbeResZ = 4;
 
+        [MinValue(1)]
+        [MaxValue(4096)]
+        int ProbeCubemapCaptureRes = 256;
+
+        [MinValue(1)]
+        [MaxValue(4096)]
+        int ProbeIrradianceCubemapRes = 16;
+
+        [MinValue(1)]
+        [MaxValue(4096)]
+        int ProbeDistanceCubemapRes = 128;
+
         [UseAsShaderConstant(false)]
         float SceneBoundsScale = 1.25f;
 
         bool WeightProbesByNormal = true;
 
         bool WeightProbesByVisibility = true;
+
+        [MinValue(1.0f)]
+        [MaxValue(20.0f)]
+        float DistanceFilterSharpness = 10.0f;
     }
 
     [ExpandGroup(false)]
