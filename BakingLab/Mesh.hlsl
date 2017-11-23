@@ -68,8 +68,8 @@ Texture2DArray<float4> BakedLightingMap : register(t5);
 TextureCube<float> AreaLightShadowMap : register(t6);
 Texture3D<float4> SHSpecularLookupA : register(t7);
 Texture3D<float2> SHSpecularLookupB : register(t8);
-TextureCubeArray<float4> ProbeIrradiance : register(t9);
-TextureCubeArray<float2> ProbeDistance : register(t10);
+TextureCubeArray<float4> ProbeIrradianceCubeMaps : register(t9);
+TextureCubeArray<float2> ProbeDistanceCubeMaps : register(t10);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -504,14 +504,14 @@ void ComputeIndirectFromProbes(in SurfaceContext surface, out float3 indirectIrr
             float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
             float compareDistance = saturate(distToProbe * rcp(maxDistance));
 
-            float2 distSample = ProbeDistance.Sample(LinearSampler, float4(-dirToProbe, probeIdx));
+            float2 distSample = ProbeDistanceCubeMaps.Sample(LinearSampler, float4(-dirToProbe, probeIdx));
             float visTerm = ChebyshevUpperBound(distSample, compareDistance, 0.0001f, 0.25f);
             sampleWeight *= visTerm;
         }
 
         sampleWeight = max(0.0002f, sampleWeight);
 
-        float3 irradianceSample = ProbeIrradiance.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
+        float3 irradianceSample = ProbeIrradianceCubeMaps.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
         irradianceSum += irradianceSample * sampleWeight;
         weightSum += sampleWeight;
     }

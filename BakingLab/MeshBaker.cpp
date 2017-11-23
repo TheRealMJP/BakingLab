@@ -43,7 +43,7 @@ struct GutterTexel
 // Returns the final monte-carlo weighting factor using the PDF of a cosine-weighted hemisphere
 static float CosineWeightedMonteCarloFactor(uint64 numSamples)
 {
-    // Integrating cosine factor about the hemisphere gives you Pi, and the PDF
+    // Integrating the cosine factor about the hemisphere gives you Pi, and the PDF
     // of a cosine-weighted hemisphere function is 1 / Pi.
     // So the final monte-carlo weighting factor is 1 / NumSamples
     return (1.0f / numSamples);
@@ -57,7 +57,7 @@ static float HemisphereMonteCarloFactor(uint64 numSamples)
 
 static float SphereMonteCarloFactor(uint64 numSamples)
 {
-    // The area of a unit hemisphere is 2 * Pi, so the PDF is 1 / (2 * Pi)
+    // The area of a unit sphere is 4 * Pi, so the PDF is 1 / (4 * Pi)
     return ((4.0f * Pi) / numSamples);
 }
 

@@ -76,14 +76,20 @@ protected:
 
     RenderTarget2D probeCaptureMap;
     RenderTarget2D probeDistanceCaptureMap;
-    RenderTarget2D probeIrradianceMap;
-    RenderTarget2D probeDistanceMap;
+    RenderTarget2D probeIrradianceCubeMap;
+    RenderTarget2D probeDistanceCubeMap;
     DepthStencilBuffer probeDepthBuffer;
+
+    RenderTarget3D probeVolumeMaps[AppSettings::MaxBasisCount];
+    RenderTarget3D probeDistanceVolumeMaps[AppSettings::MaxBasisCount];
 
     uint64 currProbeIdx = 0;
 
-    ComputeShaderPtr probeIntegrateIrradiance;
-    ComputeShaderPtr probeIntegrateDistance;
+    ComputeShaderPtr probeIntegrateIrradianceCubeMap;
+    ComputeShaderPtr probeIntegrateDistanceCubeMap;
+
+    ComputeShaderPtr probeIntegrateVolumeMap;
+    ComputeShaderPtr probeIntegrateDistanceVolumeMap;
 
     struct ResolveConstants
     {
@@ -103,7 +109,7 @@ protected:
     struct IntegrateConstants
     {
         Float2 OutputTextureSize;
-        uint32 OutputSliceOffset;
+        uint32 OutputProbeIdx;
     };
 
     ConstantBuffer<ResolveConstants> resolveConstants;

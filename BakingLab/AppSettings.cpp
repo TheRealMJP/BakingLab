@@ -161,6 +161,12 @@ static const char* SolveModesLabels[3] =
     "Non-Negative Least Squares",
 };
 
+static const char* ProbeModesLabels[2] =
+{
+    "CubeMap",
+    "AmbientCube",
+};
+
 static const char* ScenesLabels[3] =
 {
     "Box",
@@ -240,6 +246,7 @@ namespace AppSettings
     BakeModesSetting BakeMode;
     SolveModesSetting SolveMode;
     BoolSetting UseProbes;
+    ProbeModesSetting ProbeMode;
     IntSetting ProbeResX;
     IntSetting ProbeResY;
     IntSetting ProbeResZ;
@@ -515,6 +522,9 @@ namespace AppSettings
         UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", true);
         Settings.AddSetting(&UseProbes);
 
+        ProbeMode.Initialize(tweakBar, "ProbeMode", "Probes", "Probe Mode", "", ProbeModes::CubeMap, 2, ProbeModesLabels);
+        Settings.AddSetting(&ProbeMode);
+
         ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 4, 1, 2048);
         Settings.AddSetting(&ProbeResX);
 
@@ -735,6 +745,7 @@ namespace AppSettings
         CBuffer.Data.BakeMode = BakeMode;
         CBuffer.Data.SolveMode = SolveMode;
         CBuffer.Data.UseProbes = UseProbes;
+        CBuffer.Data.ProbeMode = ProbeMode;
         CBuffer.Data.ProbeResX = ProbeResX;
         CBuffer.Data.ProbeResY = ProbeResY;
         CBuffer.Data.ProbeResZ = ProbeResZ;

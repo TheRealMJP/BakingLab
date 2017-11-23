@@ -223,6 +223,16 @@ enum class SolveModes
 
 typedef EnumSettingT<SolveModes> SolveModesSetting;
 
+enum class ProbeModes
+{
+    CubeMap = 0,
+    AmbientCube = 1,
+
+    NumValues
+};
+
+typedef EnumSettingT<ProbeModes> ProbeModesSetting;
+
 enum class Scenes
 {
     Box = 0,
@@ -310,6 +320,7 @@ namespace AppSettings
     extern BakeModesSetting BakeMode;
     extern SolveModesSetting SolveMode;
     extern BoolSetting UseProbes;
+    extern ProbeModesSetting ProbeMode;
     extern IntSetting ProbeResX;
     extern IntSetting ProbeResY;
     extern IntSetting ProbeResZ;
@@ -405,6 +416,7 @@ namespace AppSettings
         int32 BakeMode;
         int32 SolveMode;
         bool32 UseProbes;
+        int32 ProbeMode;
         int32 ProbeResX;
         int32 ProbeResY;
         int32 ProbeResZ;
@@ -615,6 +627,39 @@ namespace AppSettings
     inline uint64 NumProbes()
     {
         return ProbeResX * ProbeResY * ProbeResZ;
+    }
+
+    inline uint64 ProbeBasisCount(uint64 probeMode)
+    {
+        Assert_(probeMode < uint64(ProbeModes::NumValues));
+        static const uint64 BasisCounts[] = { 1, 6, }; // 4, 9, 4, 6, 5, 6, 9, 12 };
+        StaticAssert_(ArraySize_(BasisCounts) == uint64(ProbeModes::NumValues));
+        Assert_(BasisCounts[probeMode] <= MaxBasisCount);
+        return BasisCounts[probeMode];
+    }
+
+    inline uint64 ProbeBasisCount(ProbeModes probeMode)
+    {
+        return BasisCount(uint64(probeMode));
+    }
+
+    inline uint64 ProbeBasisCount()
+    {
+        return BasisCount(uint64(ProbeMode));
+    }
+
+    inline uint64 ProbeSGCount(ProbeModes probeMode)
+    {
+        /*Assert_(uint64(probeMode) < uint64(ProbeModes::NumValues));
+        if(uint64(probeMode) >= uint64(ProbeModes::SG5))
+            return BasisCount(probeMode);
+        else*/
+            return 0;
+    }
+
+    inline uint64 ProbeSGCount()
+    {
+        return SGCount(BakeMode);
     }
 
     void UpdateUI();

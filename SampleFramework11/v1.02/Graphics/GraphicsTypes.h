@@ -37,17 +37,42 @@ struct RenderTarget2D
 
     RenderTarget2D();
 
-  void Initialize(      ID3D11Device* device,
-                        uint32 width,
-                        uint32 height,
-                        DXGI_FORMAT format,
-                        uint32 numMipLevels = 1,
-                        uint32 multiSamples = 1,
-                        uint32 msQuality = 0,
-                        bool32 autoGenMipMaps = false,
-                        bool32 createUAV = false,
-                        uint32 arraySize = 1,
-                        bool32 cubeMap = false);
+    void Initialize(ID3D11Device* device,
+                    uint32 width,
+                    uint32 height,
+                    DXGI_FORMAT format,
+                    uint32 numMipLevels = 1,
+                    uint32 multiSamples = 1,
+                    uint32 msQuality = 0,
+                    bool32 autoGenMipMaps = false,
+                    bool32 createUAV = false,
+                    uint32 arraySize = 1,
+                    bool32 cubeMap = false);
+};
+
+struct RenderTarget3D
+{
+    ID3D11Texture3DPtr Texture;
+    ID3D11RenderTargetViewPtr RTView;
+    ID3D11ShaderResourceViewPtr SRView;
+    ID3D11UnorderedAccessViewPtr UAView;
+    uint32 Width = 0;
+    uint32 Height = 0;
+    uint32 Depth = 0;
+    uint32 NumMipLevels = 0;
+    DXGI_FORMAT Format;
+    bool32 AutoGenMipMaps = false;
+
+
+    void Initialize(ID3D11Device* device,
+                    uint32 width,
+                    uint32 height,
+                    uint32 depth,
+                    DXGI_FORMAT format,
+                    uint32 numMipLevels,
+                    bool32 autoGenMipMaps,
+                    bool32 createRTV,
+                    bool32 createUAV);
 };
 
 struct DepthStencilBuffer

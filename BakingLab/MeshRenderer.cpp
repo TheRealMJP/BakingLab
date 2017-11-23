@@ -688,11 +688,18 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
                 areaLightShadowMap.SRView,
                 shSpecularLookupA,
                 shSpecularLookupB,
-                status.ProbeIrradiance,
-                status.ProbeDistance,
+                status.ProbeIrradianceCubeMap,
+                status.ProbeDistanceCubeMap,
             };
 
             context->PSSetShaderResources(0, ArraySize_(psTextures), psTextures);
+
+            uint32 offset = ArraySize_(psTextures);
+            context->PSSetShaderResources(offset, ArraySize_(status.ProbeVolumeMaps), status.ProbeVolumeMaps);
+
+            offset += ArraySize_(status.ProbeVolumeMaps);
+            context->PSSetShaderResources(offset, ArraySize_(status.ProbeDistanceVolumeMaps), status.ProbeDistanceVolumeMaps);
+
             context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
         }
     }
@@ -1107,8 +1114,14 @@ void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Cam
     context->VSSetShader(probeVisualizerVS , nullptr, 0);
     context->PSSetShader(probeVisualizerPS, nullptr, 0);
 
-    ID3D11ShaderResourceView* psSrvs[] = { status.ProbeIrradiance, status.ProbeDistance };
+    ID3D11ShaderResourceView* psSrvs[] = { status.ProbeIrradianceCubeMap, status.ProbeDistanceCubeMap };
     context->PSSetShaderResources(0, ArraySize_(psSrvs), psSrvs);
+
+    uint32 offset = ArraySize_(psSrvs);
+    context->PSSetShaderResources(offset, ArraySize_(status.ProbeVolumeMaps), status.ProbeVolumeMaps);
+
+    offset += ArraySize_(status.ProbeVolumeMaps);
+    context->PSSetShaderResources(offset, ArraySize_(status.ProbeDistanceVolumeMaps), status.ProbeDistanceVolumeMaps);
 
     ID3D11SamplerState* psSamplers[] = { samplerStates.LinearClamp() };
     context->PSSetSamplers(0, ArraySize_(psSamplers), psSamplers);

@@ -300,6 +300,12 @@ enum SGDiffuseModes
     Fitted,
 }
 
+enum ProbeModes
+{
+    CubeMap,
+    AmbientCube
+}
+
 public class Settings
 {
     const float BaseSunSize = 0.27f;
@@ -664,6 +670,8 @@ public class Settings
     public class Probes
     {
         bool UseProbes = true;
+
+        ProbeModes ProbeMode = ProbeModes.CubeMap;
 
         [MinValue(1)]
         [MaxValue(2048)]

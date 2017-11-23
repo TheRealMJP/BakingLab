@@ -163,6 +163,52 @@ void RenderTarget2D::Initialize(ID3D11Device* device,
         DXCall(device->CreateUnorderedAccessView(Texture, nullptr, &UAView));
 };
 
+// == RenderTarget3D ==============================================================================
+
+void RenderTarget3D::Initialize(ID3D11Device* device,
+                                uint32 width,
+                                uint32 height,
+                                uint32 depth,
+                                DXGI_FORMAT format,
+                                uint32 numMipLevels,
+                                bool32 autoGenMipMaps,
+                                bool32 createRTV,
+                                bool32 createUAV)
+{
+    D3D11_TEXTURE3D_DESC desc = { };
+    desc.Width = width;
+    desc.Height = height;
+    desc.Depth = depth;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    if(createRTV | autoGenMipMaps)
+        desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+    if(createUAV)
+        desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+
+    desc.CPUAccessFlags = 0;
+    desc.Format = format;
+    desc.MipLevels = numMipLevels;
+    desc.MiscFlags = (autoGenMipMaps && numMipLevels != 1) ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+
+    DXCall(device->CreateTexture3D(&desc, nullptr, &Texture));
+
+    DXCall(device->CreateShaderResourceView(Texture, nullptr, &SRView));
+
+    if(createRTV)
+        DXCall(device->CreateRenderTargetView(Texture, nullptr, &RTView));
+
+    if(createUAV)
+        DXCall(device->CreateUnorderedAccessView(Texture, nullptr, &UAView));
+
+    Width = width;
+    Height = height;
+    Depth = depth;
+    NumMipLevels = numMipLevels;
+    Format = format;
+    AutoGenMipMaps = autoGenMipMaps;
+};
+
 // == DepthStencilBuffer ==========================================================================
 
 DepthStencilBuffer::DepthStencilBuffer() :  Width(0),

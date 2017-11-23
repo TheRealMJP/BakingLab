@@ -48,6 +48,7 @@ cbuffer AppSettings : register(b7)
     int BakeMode;
     int SolveMode;
     bool UseProbes;
+    int ProbeMode;
     int ProbeResX;
     int ProbeResY;
     int ProbeResZ;
@@ -185,6 +186,9 @@ static const int BakeModes_SG12 = 9;
 static const int SolveModes_Projection = 0;
 static const int SolveModes_SVD = 1;
 static const int SolveModes_NNLS = 2;
+
+static const int ProbeModes_CubeMap = 0;
+static const int ProbeModes_AmbientCube = 1;
 
 static const int Scenes_Box = 0;
 static const int Scenes_WhiteRoom = 1;

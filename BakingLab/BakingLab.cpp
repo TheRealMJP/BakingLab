@@ -472,8 +472,11 @@ void BakingLab::Initialize()
     backgroundVelocityVS = CompileVSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityVS");
     backgroundVelocityPS = CompilePSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityPS");
 
-    probeIntegrateIrradiance = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateIrradiance");
-    probeIntegrateDistance = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistance");
+    probeIntegrateIrradianceCubeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateIrradianceCubeMap");
+    probeIntegrateDistanceCubeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistanceCubeMap");
+
+    probeIntegrateVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateVolumeMap");
+    probeIntegrateDistanceVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistanceVolumeMap");
 
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
@@ -628,20 +631,23 @@ void BakingLab::Update(const Timer& timer)
     currSceneMax.y += AppSettings::SceneBoundsOffsetY;
     currSceneMax.z += AppSettings::SceneBoundsOffsetZ;
 
-    // Make sure that our probes fit within a single texture resource
-    const uint64 maxProbes = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION / 6;
-    uint64 numProbes = AppSettings::NumProbes();
-    if(numProbes > maxProbes)
+    if(AppSettings::ProbeMode == ProbeModes::CubeMap)
     {
-        const uint64 biggestDimRes = Max(Max(AppSettings::ProbeResX, AppSettings::ProbeResY), AppSettings::ProbeResZ);
-        const uint64 probesPerBiggestDimSlice = numProbes / biggestDimRes;
-        const int32 newRes = int32(maxProbes / float(probesPerBiggestDimSlice));
-        if(biggestDimRes == AppSettings::ProbeResX)
-            AppSettings::ProbeResX.SetValue(newRes);
-        else if(biggestDimRes == AppSettings::ProbeResY)
-            AppSettings::ProbeResY.SetValue(newRes);
-        else
-            AppSettings::ProbeResZ.SetValue(newRes);
+        // Make sure that our probes fit within a single texture resource
+        const uint64 maxProbes = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION / 6;
+        uint64 numProbes = AppSettings::NumProbes();
+        if(numProbes > maxProbes)
+        {
+            const uint64 biggestDimRes = Max(Max(AppSettings::ProbeResX, AppSettings::ProbeResY), AppSettings::ProbeResZ);
+            const uint64 probesPerBiggestDimSlice = numProbes / biggestDimRes;
+            const int32 newRes = int32(maxProbes / float(probesPerBiggestDimSlice));
+            if(biggestDimRes == AppSettings::ProbeResX)
+                AppSettings::ProbeResX.SetValue(newRes);
+            else if(biggestDimRes == AppSettings::ProbeResY)
+                AppSettings::ProbeResY.SetValue(newRes);
+            else
+                AppSettings::ProbeResZ.SetValue(newRes);
+        }
     }
 
     meshRenderer.Update(camera, jitterOffset);
@@ -668,15 +674,23 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     }
 
     if(AppSettings::ProbeResX.Changed() || AppSettings::ProbeResY.Changed() ||
-       AppSettings::ProbeResZ.Changed() || probeIrradianceMap.ArraySize == 0 ||
-       AppSettings::ProbeIrradianceCubemapRes.Changed() || AppSettings::ProbeDistanceCubemapRes.Changed())
+       AppSettings::ProbeResZ.Changed() || probeIrradianceCubeMap.ArraySize == 0 ||
+       AppSettings::ProbeIrradianceCubemapRes.Changed() || AppSettings::ProbeDistanceCubemapRes.Changed() ||
+       AppSettings::ProbeMode.Changed())
     {
         currProbeIdx = 0;
 
-        const uint32 irrResolution = AppSettings::ProbeIrradianceCubemapRes;
-        const uint32 distResolution = AppSettings::ProbeDistanceCubemapRes;
-        probeIrradianceMap.Initialize(device, irrResolution, irrResolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
-        probeDistanceMap.Initialize(device, distResolution, distResolution, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true, numProbes * 6, true);
+        if(AppSettings::ProbeMode == ProbeModes::CubeMap)
+        {
+            const uint32 irrResolution = AppSettings::ProbeIrradianceCubemapRes;
+            const uint32 distResolution = AppSettings::ProbeDistanceCubemapRes;
+            probeIrradianceCubeMap.Initialize(device, irrResolution, irrResolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
+            probeDistanceCubeMap.Initialize(device, distResolution, distResolution, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true, numProbes * 6, true);
+        }
+        else
+        {
+
+        }
     }
 
     if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed() ||
@@ -733,31 +747,31 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     context->OMSetRenderTargets(2, rtvs, nullptr);
 
     SetCSInputs(context, probeCaptureMap.SRView);
-    SetCSOutputs(context, probeIrradianceMap.UAView);
+    SetCSOutputs(context, probeIrradianceCubeMap.UAView);
     SetCSSamplers(context, samplerStates.LinearClamp());
-    SetCSShader(context, probeIntegrateIrradiance);
+    SetCSShader(context, probeIntegrateIrradianceCubeMap);
 
-    integrateConstants.Data.OutputTextureSize.x = float(probeIrradianceMap.Width);
-    integrateConstants.Data.OutputTextureSize.y = float(probeIrradianceMap.Height);
-    integrateConstants.Data.OutputSliceOffset = uint32(currProbeIdx * 6);
+    integrateConstants.Data.OutputTextureSize.x = float(probeIrradianceCubeMap.Width);
+    integrateConstants.Data.OutputTextureSize.y = float(probeIrradianceCubeMap.Height);
+    integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
     integrateConstants.ApplyChanges(context);
     integrateConstants.SetCS(context, 0);
 
-    context->Dispatch(DispatchSize(8, probeIrradianceMap.Width), DispatchSize(8, probeIrradianceMap.Height), 6);
+    context->Dispatch(DispatchSize(8, probeIrradianceCubeMap.Width), DispatchSize(8, probeIrradianceCubeMap.Height), 6);
 
     ClearCSInputs(context);
     ClearCSOutputs(context);
 
     SetCSInputs(context, probeDistanceCaptureMap.SRView);
-    SetCSOutputs(context, probeDistanceMap.UAView);
-    SetCSShader(context, probeIntegrateDistance);
+    SetCSOutputs(context, probeDistanceCubeMap.UAView);
+    SetCSShader(context, probeIntegrateDistanceCubeMap);
 
-    integrateConstants.Data.OutputTextureSize.x = float(probeDistanceMap.Width);
-    integrateConstants.Data.OutputTextureSize.y = float(probeDistanceMap.Height);
-    integrateConstants.Data.OutputSliceOffset = uint32(currProbeIdx * 6);
+    integrateConstants.Data.OutputTextureSize.x = float(probeDistanceCubeMap.Width);
+    integrateConstants.Data.OutputTextureSize.y = float(probeDistanceCubeMap.Height);
+    integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
     integrateConstants.ApplyChanges(context);
 
-    context->Dispatch(DispatchSize(8, probeDistanceMap.Width), DispatchSize(8, probeDistanceMap.Height), 6);
+    context->Dispatch(DispatchSize(8, probeDistanceCubeMap.Width), DispatchSize(8, probeDistanceCubeMap.Height), 6);
 
     ClearCSInputs(context);
     ClearCSOutputs(context);
@@ -803,8 +817,14 @@ void BakingLab::Render(const Timer& timer)
     }
     else
     {
-        status.ProbeIrradiance = probeIrradianceMap.SRView;
-        status.ProbeDistance = probeDistanceMap.SRView;
+        status.ProbeIrradianceCubeMap = probeIrradianceCubeMap.SRView;
+        status.ProbeDistanceCubeMap = probeDistanceCubeMap.SRView;
+        for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
+        {
+            status.ProbeVolumeMaps[i] = probeVolumeMaps[i].SRView;
+            status.ProbeDistanceVolumeMaps[i] = probeDistanceVolumeMaps[i].SRView;
+        }
+
         RenderScene(status, colorTargetMSAA.RTView, velocityTargetMSAA.RTView, depthBuffer, camera,
                     AppSettings::ShowBakeDataVisualizer, AppSettings::ShowProbeVisualizer,
                     AppSettings::EnableAreaLight, true, false);

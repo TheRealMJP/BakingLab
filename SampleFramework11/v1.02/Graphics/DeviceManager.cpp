@@ -32,8 +32,8 @@ DeviceManager::DeviceManager()  :  backBufferFormat(DXGI_FORMAT_R8G8B8A8_UNORM_S
                                    msCount(1),
                                    msQuality(0),
                                    fullScreen(false),
-                                   featureLevel(D3D_FEATURE_LEVEL_11_0),
-                                   minFeatureLevel(D3D_FEATURE_LEVEL_10_0),
+                                   featureLevel(D3D_FEATURE_LEVEL_11_1),
+                                   minFeatureLevel(D3D_FEATURE_LEVEL_11_1),
                                    vsync(true),
                                    numVSYNCIntervals(1)
 {
@@ -109,8 +109,10 @@ void DeviceManager::Initialize(HWND outputWindow)
         flags |= D3D11_CREATE_DEVICE_DEBUG;
     #endif
 
+    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_1 };
+
     DXCall(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags,
-                                         NULL, 0, D3D11_SDK_VERSION, &desc, &swapChain,
+                                         featureLevels, ArraySize_(featureLevels), D3D11_SDK_VERSION, &desc, &swapChain,
                                          &device, NULL, &immediateContext));
 
     featureLevel = device->GetFeatureLevel();
