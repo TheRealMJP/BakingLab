@@ -628,6 +628,22 @@ void BakingLab::Update(const Timer& timer)
     currSceneMax.y += AppSettings::SceneBoundsOffsetY;
     currSceneMax.z += AppSettings::SceneBoundsOffsetZ;
 
+    // Make sure that our probes fit within a single texture resource
+    const uint64 maxProbes = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION / 6;
+    uint64 numProbes = AppSettings::NumProbes();
+    if(numProbes > maxProbes)
+    {
+        const uint64 biggestDimRes = Max(Max(AppSettings::ProbeResX, AppSettings::ProbeResY), AppSettings::ProbeResZ);
+        const uint64 probesPerBiggestDimSlice = numProbes / biggestDimRes;
+        const int32 newRes = int32(maxProbes / float(probesPerBiggestDimSlice));
+        if(biggestDimRes == AppSettings::ProbeResX)
+            AppSettings::ProbeResX.SetValue(newRes);
+        else if(biggestDimRes == AppSettings::ProbeResY)
+            AppSettings::ProbeResY.SetValue(newRes);
+        else
+            AppSettings::ProbeResZ.SetValue(newRes);
+    }
+
     meshRenderer.Update(camera, jitterOffset);
 }
 

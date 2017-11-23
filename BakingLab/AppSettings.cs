@@ -666,15 +666,15 @@ public class Settings
         bool UseProbes = true;
 
         [MinValue(1)]
-        [MaxValue(16)]
+        [MaxValue(2048)]
         int ProbeResX = 4;
 
         [MinValue(1)]
-        [MaxValue(16)]
+        [MaxValue(2048)]
         int ProbeResY = 4;
 
         [MinValue(1)]
-        [MaxValue(16)]
+        [MaxValue(2048)]
         int ProbeResZ = 4;
 
         [MinValue(1)]

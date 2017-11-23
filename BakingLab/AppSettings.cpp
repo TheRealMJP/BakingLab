@@ -515,13 +515,13 @@ namespace AppSettings
         UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", true);
         Settings.AddSetting(&UseProbes);
 
-        ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 4, 1, 16);
+        ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 4, 1, 2048);
         Settings.AddSetting(&ProbeResX);
 
-        ProbeResY.Initialize(tweakBar, "ProbeResY", "Probes", "Probe Res Y", "", 4, 1, 16);
+        ProbeResY.Initialize(tweakBar, "ProbeResY", "Probes", "Probe Res Y", "", 4, 1, 2048);
         Settings.AddSetting(&ProbeResY);
 
-        ProbeResZ.Initialize(tweakBar, "ProbeResZ", "Probes", "Probe Res Z", "", 4, 1, 16);
+        ProbeResZ.Initialize(tweakBar, "ProbeResZ", "Probes", "Probe Res Z", "", 4, 1, 2048);
         Settings.AddSetting(&ProbeResZ);
 
         ProbeCubemapCaptureRes.Initialize(tweakBar, "ProbeCubemapCaptureRes", "Probes", "Probe Cubemap Capture Res", "", 256, 1, 4096);
