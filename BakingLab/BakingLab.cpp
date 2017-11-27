@@ -689,7 +689,13 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
         }
         else
         {
-
+            for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
+            {
+                probeVolumeMaps[i].Initialize(device, AppSettings::ProbeResX, AppSettings::ProbeResY, AppSettings::ProbeResZ,
+                                              DXGI_FORMAT_R16G16B16A16_FLOAT, 1, false, false, true);
+                probeDistanceVolumeMaps[i].Initialize(device, AppSettings::ProbeResX, AppSettings::ProbeResY, AppSettings::ProbeResZ,
+                                                      DXGI_FORMAT_R16G16_UNORM, 1, false, false, true);
+            }
         }
     }
 
@@ -746,35 +752,76 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     ID3D11RenderTargetView* rtvs[2] = { };
     context->OMSetRenderTargets(2, rtvs, nullptr);
 
-    SetCSInputs(context, probeCaptureMap.SRView);
-    SetCSOutputs(context, probeIrradianceCubeMap.UAView);
-    SetCSSamplers(context, samplerStates.LinearClamp());
-    SetCSShader(context, probeIntegrateIrradianceCubeMap);
+    if(AppSettings::ProbeMode == ProbeModes::CubeMap)
+    {
+        SetCSInputs(context, probeCaptureMap.SRView);
+        SetCSOutputs(context, probeIrradianceCubeMap.UAView);
+        SetCSSamplers(context, samplerStates.LinearClamp());
+        SetCSShader(context, probeIntegrateIrradianceCubeMap);
 
-    integrateConstants.Data.OutputTextureSize.x = float(probeIrradianceCubeMap.Width);
-    integrateConstants.Data.OutputTextureSize.y = float(probeIrradianceCubeMap.Height);
-    integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
-    integrateConstants.ApplyChanges(context);
-    integrateConstants.SetCS(context, 0);
+        integrateConstants.Data.OutputTextureSize.x = float(probeIrradianceCubeMap.Width);
+        integrateConstants.Data.OutputTextureSize.y = float(probeIrradianceCubeMap.Height);
+        integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
+        integrateConstants.ApplyChanges(context);
+        integrateConstants.SetCS(context, 0);
 
-    context->Dispatch(DispatchSize(8, probeIrradianceCubeMap.Width), DispatchSize(8, probeIrradianceCubeMap.Height), 6);
+        context->Dispatch(DispatchSize(8, probeIrradianceCubeMap.Width), DispatchSize(8, probeIrradianceCubeMap.Height), 6);
+
+        ClearCSInputs(context);
+        ClearCSOutputs(context);
+
+        SetCSInputs(context, probeDistanceCaptureMap.SRView);
+        SetCSOutputs(context, probeDistanceCubeMap.UAView);
+        SetCSShader(context, probeIntegrateDistanceCubeMap);
+
+        integrateConstants.Data.OutputTextureSize.x = float(probeDistanceCubeMap.Width);
+        integrateConstants.Data.OutputTextureSize.y = float(probeDistanceCubeMap.Height);
+        integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
+        integrateConstants.ApplyChanges(context);
+
+        context->Dispatch(DispatchSize(8, probeDistanceCubeMap.Width), DispatchSize(8, probeDistanceCubeMap.Height), 6);
+    }
+    else
+    {
+        SetCSInputs(context, probeCaptureMap.SRView);
+        SetCSSamplers(context, samplerStates.LinearClamp());
+        SetCSShader(context, probeIntegrateVolumeMap);
+
+        ID3D11UnorderedAccessView* uavs[AppSettings::MaxBasisCount] = { };
+        for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
+            uavs[i] = probeVolumeMaps[i].UAView;
+        context->CSSetUnorderedAccessViews(0, AppSettings::MaxBasisCount, uavs, nullptr);
+
+        integrateConstants.Data.OutputTextureSize.x = 0.0f;
+        integrateConstants.Data.OutputTextureSize.y = 0.0f;
+        integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
+        integrateConstants.ApplyChanges(context);
+        integrateConstants.SetCS(context, 0);
+
+        context->Dispatch(1, 1, 1);
+
+        ClearCSInputs(context);
+        ClearCSOutputs(context);
+
+        SetCSInputs(context, probeDistanceCaptureMap.SRView);
+        SetCSShader(context, probeIntegrateDistanceVolumeMap);
+
+        for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
+            uavs[i] = probeDistanceVolumeMaps[i].UAView;
+        context->CSSetUnorderedAccessViews(0, AppSettings::MaxBasisCount, uavs, nullptr);
+
+        integrateConstants.Data.OutputTextureSize.x = 0.0f;
+        integrateConstants.Data.OutputTextureSize.y = 0.0f;
+        integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
+        integrateConstants.ApplyChanges(context);
+
+        context->Dispatch(1, 1, 1);
+    }
 
     ClearCSInputs(context);
-    ClearCSOutputs(context);
-
-    SetCSInputs(context, probeDistanceCaptureMap.SRView);
-    SetCSOutputs(context, probeDistanceCubeMap.UAView);
-    SetCSShader(context, probeIntegrateDistanceCubeMap);
-
-    integrateConstants.Data.OutputTextureSize.x = float(probeDistanceCubeMap.Width);
-    integrateConstants.Data.OutputTextureSize.y = float(probeDistanceCubeMap.Height);
-    integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
-    integrateConstants.ApplyChanges(context);
-
-    context->Dispatch(DispatchSize(8, probeDistanceCubeMap.Width), DispatchSize(8, probeDistanceCubeMap.Height), 6);
-
-    ClearCSInputs(context);
-    ClearCSOutputs(context);
+    
+    ID3D11UnorderedAccessView* uavs[AppSettings::MaxBasisCount] = { };
+    context->CSSetUnorderedAccessViews(0, AppSettings::MaxBasisCount, uavs, nullptr);
 
     ++currProbeIdx;
 

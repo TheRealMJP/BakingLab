@@ -170,12 +170,12 @@ void IntegrateOntoBasis(in float3 dir, in float3 value, inout float3 output[MaxB
 {
     if(ProbeMode == ProbeModes_AmbientCube)
     {
-        output[0] += value * dir.x;
-        output[1] += value * dir.y;
-        output[2] += value * dir.z;
-        output[3] += value * -dir.x;
-        output[4] += value * -dir.y;
-        output[5] += value * -dir.z;
+        output[0] += value * saturate(dir.x);
+        output[1] += value * saturate(dir.y);
+        output[2] += value * saturate(dir.z);
+        output[3] += value * saturate(-dir.x);
+        output[4] += value * saturate(-dir.y);
+        output[5] += value * saturate(-dir.z);
     }
 }
 
@@ -234,7 +234,6 @@ void IntegrateVolumeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : 
         float2 samplePos = Hammersley2D(sampleIdx, numSamples);
         float3 sampleDir = SampleDirectionSphere(samplePos.x, samplePos.y);
         float3 radiance = RadianceCaptureMap.SampleLevel(LinearSampler, sampleDir, 0.0f).xyz;
-
 
         IntegrateOntoBasis(sampleDir, radiance, output);
     }
