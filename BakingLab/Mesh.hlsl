@@ -533,13 +533,13 @@ void ComputeIndirectFromProbeVolumeMaps(in SurfaceContext surface, out float3 in
     indirectIrradiance = 0.0f;
     indirectSpecular = 0.0f;
 
-    float3 cubeDirs[6] = { float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), float3(-1, 0, 0), float3(0, -1, 0), float3(0, 0, -1) };
+    float3 ambientCubeDirs[6] = { float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), float3(-1, 0, 0), float3(0, -1, 0), float3(0, 0, -1) };
     float weightSum = 0.0f;
 
     [unroll]
     for(uint i = 0; i < 6; ++i)
     {
-        float weight = saturate(dot(surface.NormalWS, cubeDirs[i]));
+        float weight = saturate(dot(surface.NormalWS, ambientCubeDirs[i]));
         if(weight > 0.0f)
             indirectIrradiance += ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz * weight;
         weightSum += weight;

@@ -342,7 +342,7 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
 
     GenerateHemisphere(16, 4, device, hemisphereVB, hemisphereIB, numHemisphereIndices);
 
-    GenerateSphere(256, 192, device, sphereVB, sphereIB, numSphereIndices);
+    GenerateSphere(16, 8, device, sphereVB, sphereIB, numSphereIndices);
 
     D3D11_INPUT_ELEMENT_DESC elements[1];
     elements[0].AlignedByteOffset = 0;
