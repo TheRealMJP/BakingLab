@@ -111,6 +111,26 @@ float4 PS(in PSInput input) : SV_Target0
 
         output *= rcp(weightSum) * InvPi;
     }
+    else if(ProbeMode == ProbeModes_L1_SH)
+    {
+        SH4Color sh;
+
+        [unroll]
+        for(uint i = 0; i < 4; ++i)
+            sh.c[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, input.ProbeUVW, 0.0f).xyz;
+
+        output = EvalSH4(input.NormalWS, sh);
+    }
+    else if(ProbeMode == ProbeModes_L2_SH)
+    {
+        SH9Color sh;
+
+        [unroll]
+        for(uint i = 0; i < 9; ++i)
+            sh.c[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, input.ProbeUVW, 0.0f).xyz;
+
+        output = EvalSH9(input.NormalWS, sh);
+    }
 
     return float4(output, 1.0f);
 }

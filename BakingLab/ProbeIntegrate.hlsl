@@ -9,6 +9,7 @@
 //=================================================================================================
 
 #include <Constants.hlsl>
+#include <SH.hlsl>
 #include "AppSettings.hlsl"
 
 cbuffer IntegrateConstants : register(b0)
@@ -176,6 +177,22 @@ void IntegrateOntoBasis(in float3 dir, in float3 value, inout float3 output[MaxB
         output[3] += value * saturate(-dir.x);
         output[4] += value * saturate(-dir.y);
         output[5] += value * saturate(-dir.z);
+    }
+    else if(ProbeMode == ProbeModes_L1_SH)
+    {
+        SH4Color sh = ProjectOntoSH4Color(dir, value);
+
+        [unroll]
+        for(uint i = 0; i < 4; ++i)
+            output[i] += sh.c[i];
+    }
+    else if(ProbeMode == ProbeModes_L2_SH)
+    {
+        SH9Color sh = ProjectOntoSH9Color(dir, value);
+
+        [unroll]
+        for(uint i = 0; i < 9; ++i)
+            output[i] += sh.c[i];
     }
 }
 

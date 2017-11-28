@@ -303,7 +303,13 @@ enum SGDiffuseModes
 enum ProbeModes
 {
     CubeMap,
-    AmbientCube
+    AmbientCube,
+
+    [EnumLabel("L1 SH")]
+    L1_SH,
+
+    [EnumLabel("L2 SH")]
+    L2_SH,
 }
 
 public class Settings

@@ -227,6 +227,8 @@ enum class ProbeModes
 {
     CubeMap = 0,
     AmbientCube = 1,
+    L1_SH = 2,
+    L2_SH = 3,
 
     NumValues
 };
@@ -632,7 +634,7 @@ namespace AppSettings
     inline uint64 ProbeBasisCount(uint64 probeMode)
     {
         Assert_(probeMode < uint64(ProbeModes::NumValues));
-        static const uint64 BasisCounts[] = { 1, 6, }; // 4, 9, 4, 6, 5, 6, 9, 12 };
+        static const uint64 BasisCounts[] = { 1, 6, 4, 9 };
         StaticAssert_(ArraySize_(BasisCounts) == uint64(ProbeModes::NumValues));
         Assert_(BasisCounts[probeMode] <= MaxBasisCount);
         return BasisCounts[probeMode];

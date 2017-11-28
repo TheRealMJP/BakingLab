@@ -161,10 +161,12 @@ static const char* SolveModesLabels[3] =
     "Non-Negative Least Squares",
 };
 
-static const char* ProbeModesLabels[2] =
+static const char* ProbeModesLabels[4] =
 {
     "CubeMap",
     "AmbientCube",
+    "L1 SH",
+    "L2 SH",
 };
 
 static const char* ScenesLabels[3] =
@@ -522,7 +524,7 @@ namespace AppSettings
         UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", true);
         Settings.AddSetting(&UseProbes);
 
-        ProbeMode.Initialize(tweakBar, "ProbeMode", "Probes", "Probe Mode", "", ProbeModes::CubeMap, 2, ProbeModesLabels);
+        ProbeMode.Initialize(tweakBar, "ProbeMode", "Probes", "Probe Mode", "", ProbeModes::CubeMap, 4, ProbeModesLabels);
         Settings.AddSetting(&ProbeMode);
 
         ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 4, 1, 2048);

@@ -189,6 +189,8 @@ static const int SolveModes_NNLS = 2;
 
 static const int ProbeModes_CubeMap = 0;
 static const int ProbeModes_AmbientCube = 1;
+static const int ProbeModes_L1_SH = 2;
+static const int ProbeModes_L2_SH = 3;
 
 static const int Scenes_Box = 0;
 static const int Scenes_WhiteRoom = 1;

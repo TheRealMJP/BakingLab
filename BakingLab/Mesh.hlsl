@@ -525,6 +525,73 @@ void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indi
     indirectSpecular = 0.0f;
 }
 
+float3 EvaluateProbeIrradiance(in float3 basis[MaxBasisCount], in float3 dir)
+{
+    float3 output = 0.0f;
+
+    if(ProbeMode == ProbeModes_AmbientCube)
+    {
+        float3 ambientCubeDirs[6] = { float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), float3(-1, 0, 0), float3(0, -1, 0), float3(0, 0, -1) };
+        float weightSum = 0.0f;
+
+        [unroll]
+        for(uint i = 0; i < 6; ++i)
+        {
+            float weight = saturate(dot(dir, ambientCubeDirs[i]));
+            output += basis[i] * weight;
+            weightSum += weight;
+        }
+
+        output /= weightSum;
+    }
+    else if(ProbeMode == ProbeModes_L1_SH)
+    {
+        SH4Color sh;
+
+        [unroll]
+        for(uint i = 0; i < 4; ++i)
+            sh.c[i] = basis[i];
+
+        output = EvalSH4Irradiance(dir, sh);
+    }
+    else if(ProbeMode == ProbeModes_L2_SH)
+    {
+        SH9Color sh;
+
+        [unroll]
+        for(uint i = 0; i < 9; ++i)
+            sh.c[i] = basis[i];
+
+
+        output = EvalSH9Irradiance(dir, sh);
+    }
+
+    return output;
+}
+
+
+void SampleVolumeTextures(in SurfaceContext surface, in float3 uvw, out float3 basis[MaxBasisCount])
+{
+    if(ProbeMode == ProbeModes_AmbientCube)
+    {
+        [unroll]
+        for(uint i = 0; i < 6; ++i)
+            basis[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz;
+    }
+    else if(ProbeMode == ProbeModes_L1_SH)
+    {
+        [unroll]
+        for(uint i = 0; i < 4; ++i)
+            basis[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz;
+    }
+    else if(ProbeMode == ProbeModes_L2_SH)
+    {
+        [unroll]
+        for(uint i = 0; i < 9; ++i)
+            basis[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz;
+    }
+}
+
 void ComputeIndirectFromProbeVolumeMaps(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
 {
     float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
@@ -533,19 +600,15 @@ void ComputeIndirectFromProbeVolumeMaps(in SurfaceContext surface, out float3 in
     indirectIrradiance = 0.0f;
     indirectSpecular = 0.0f;
 
-    float3 ambientCubeDirs[6] = { float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), float3(-1, 0, 0), float3(0, -1, 0), float3(0, 0, -1) };
-    float weightSum = 0.0f;
+    float3 basis[MaxBasisCount];
 
     [unroll]
-    for(uint i = 0; i < 6; ++i)
-    {
-        float weight = saturate(dot(surface.NormalWS, ambientCubeDirs[i]));
-        if(weight > 0.0f)
-            indirectIrradiance += ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz * weight;
-        weightSum += weight;
-    }
+    for(uint i = 0; i < uint(MaxBasisCount); ++i)
+        basis[i] = 0.0f;
 
-    indirectIrradiance /= weightSum;
+    SampleVolumeTextures(surface, uvw, basis);
+
+    indirectIrradiance = EvaluateProbeIrradiance(basis, surface.NormalWS);
 }
 
 //=================================================================================================
