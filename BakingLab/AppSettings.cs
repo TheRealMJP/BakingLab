@@ -700,9 +700,9 @@ public class Settings
         [UseAsShaderConstant(false)]
         float SceneBoundsScale = 1.25f;
 
-        bool WeightProbesByNormal = true;
+        bool WeightProbesByNormal = false;
 
-        bool WeightProbesByVisibility = true;
+        bool WeightProbesByVisibility = false;
 
         [MinValue(1.0f)]
         [MaxValue(20.0f)]

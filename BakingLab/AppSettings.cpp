@@ -546,10 +546,10 @@ namespace AppSettings
         SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.2500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SceneBoundsScale);
 
-        WeightProbesByNormal.Initialize(tweakBar, "WeightProbesByNormal", "Probes", "Weight Probes By Normal", "", true);
+        WeightProbesByNormal.Initialize(tweakBar, "WeightProbesByNormal", "Probes", "Weight Probes By Normal", "", false);
         Settings.AddSetting(&WeightProbesByNormal);
 
-        WeightProbesByVisibility.Initialize(tweakBar, "WeightProbesByVisibility", "Probes", "Weight Probes By Visibility", "", true);
+        WeightProbesByVisibility.Initialize(tweakBar, "WeightProbesByVisibility", "Probes", "Weight Probes By Visibility", "", false);
         Settings.AddSetting(&WeightProbesByVisibility);
 
         DistanceFilterSharpness.Initialize(tweakBar, "DistanceFilterSharpness", "Probes", "Distance Filter Sharpness", "", 10.0000f, 1.0000f, 20.0000f, 0.0100f, ConversionMode::None, 1.0000f);
