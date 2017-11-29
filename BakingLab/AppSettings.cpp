@@ -259,6 +259,10 @@ namespace AppSettings
     BoolSetting WeightProbesByNormal;
     BoolSetting WeightProbesByVisibility;
     FloatSetting DistanceFilterSharpness;
+    BoolSetting BakeWithVCT;
+    IntSetting VoxelResX;
+    IntSetting VoxelResY;
+    IntSetting VoxelResZ;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -515,13 +519,13 @@ namespace AppSettings
         BakeRussianRouletteProbability.Initialize(tweakBar, "BakeRussianRouletteProbability", "Baking", "Russian Roullette Probability", "Maximum probability for continuing when Russian roulette is used", 0.5000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&BakeRussianRouletteProbability);
 
-        BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "", BakeModes::SG9, 10, BakeModesLabels);
+        BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "", BakeModes::H4, 10, BakeModesLabels);
         Settings.AddSetting(&BakeMode);
 
         SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::NNLS, 3, SolveModesLabels);
         Settings.AddSetting(&SolveMode);
 
-        UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", true);
+        UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", false);
         Settings.AddSetting(&UseProbes);
 
         ProbeMode.Initialize(tweakBar, "ProbeMode", "Probes", "Probe Mode", "", ProbeModes::CubeMap, 4, ProbeModesLabels);
@@ -557,6 +561,18 @@ namespace AppSettings
         DistanceFilterSharpness.Initialize(tweakBar, "DistanceFilterSharpness", "Probes", "Distance Filter Sharpness", "", 10.0000f, 1.0000f, 20.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&DistanceFilterSharpness);
 
+        BakeWithVCT.Initialize(tweakBar, "BakeWithVCT", "VCT", "Bake With VCT", "", false);
+        Settings.AddSetting(&BakeWithVCT);
+
+        VoxelResX.Initialize(tweakBar, "VoxelResX", "VCT", "Voxel Res X", "", 32, 1, 2048);
+        Settings.AddSetting(&VoxelResX);
+
+        VoxelResY.Initialize(tweakBar, "VoxelResY", "VCT", "Voxel Res Y", "", 32, 1, 2048);
+        Settings.AddSetting(&VoxelResY);
+
+        VoxelResZ.Initialize(tweakBar, "VoxelResZ", "VCT", "Voxel Res Z", "", 32, 1, 2048);
+        Settings.AddSetting(&VoxelResZ);
+
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
@@ -575,7 +591,7 @@ namespace AppSettings
         EnableIndirectDiffuse.Initialize(tweakBar, "EnableIndirectDiffuse", "Scene", "Enable Indirect Diffuse", "Enables indirect diffuse lighting", true);
         Settings.AddSetting(&EnableIndirectDiffuse);
 
-        EnableIndirectSpecular.Initialize(tweakBar, "EnableIndirectSpecular", "Scene", "Enable Indirect Specular", "Enables indirect specular lighting", true);
+        EnableIndirectSpecular.Initialize(tweakBar, "EnableIndirectSpecular", "Scene", "Enable Indirect Specular", "Enables indirect specular lighting", false);
         Settings.AddSetting(&EnableIndirectSpecular);
 
         EnableAlbedoMaps.Initialize(tweakBar, "EnableAlbedoMaps", "Scene", "Enable Albedo Maps", "Enables albedo maps", true);
@@ -677,6 +693,8 @@ namespace AppSettings
 
         TwHelper::SetOpened(tweakBar, "Probes", true);
 
+        TwHelper::SetOpened(tweakBar, "VCT", true);
+
         TwHelper::SetOpened(tweakBar, "Scene", false);
 
         TwHelper::SetOpened(tweakBar, "Ground Truth", false);
@@ -757,6 +775,10 @@ namespace AppSettings
         CBuffer.Data.WeightProbesByNormal = WeightProbesByNormal;
         CBuffer.Data.WeightProbesByVisibility = WeightProbesByVisibility;
         CBuffer.Data.DistanceFilterSharpness = DistanceFilterSharpness;
+        CBuffer.Data.BakeWithVCT = BakeWithVCT;
+        CBuffer.Data.VoxelResX = VoxelResX;
+        CBuffer.Data.VoxelResY = VoxelResY;
+        CBuffer.Data.VoxelResZ = VoxelResZ;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;

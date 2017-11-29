@@ -819,7 +819,7 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     }
 
     ClearCSInputs(context);
-    
+
     ID3D11UnorderedAccessView* uavs[AppSettings::MaxBasisCount] = { };
     context->CSSetUnorderedAccessViews(0, AppSettings::MaxBasisCount, uavs, nullptr);
 
@@ -829,6 +829,30 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
 
     if(currProbeIdx == numProbes && AppSettings::AlwaysRegenerateProbes)
         currProbeIdx = 0;
+}
+
+void BakingLab::VoxelizeScene()
+{
+    PIXEvent pixEvent(L"Voxelize Scene");
+
+    OrthographicCamera voxelCameraZ(currSceneMin.x, currSceneMin.y, currSceneMax.x, currSceneMax.y, 0.0f, currSceneMax.z - currSceneMax.z);
+    voxelCameraZ.SetPosition(Float3((currSceneMin.x + currSceneMax.x) / 2.0f, (currSceneMin.y + currSceneMax.y) / 2.0f, currSceneMin.z));
+
+    OrthographicCamera voxelCameraX = voxelCameraZ;
+    voxelCameraX.SetPosition(Float3(currSceneMin.x, (currSceneMin.y + currSceneMax.y) / 2.0f, (currSceneMin.z + currSceneMax.z) / 2.0f));
+    voxelCameraX.SetOrientation(Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), Pi_2));
+
+    OrthographicCamera voxelCameraY = voxelCameraZ;
+    voxelCameraY.SetPosition(Float3((currSceneMin.x + currSceneMax.x) / 2.0f, currSceneMin.y, (currSceneMin.z + currSceneMax.z) / 2.0f));
+    voxelCameraY.SetOrientation(Quaternion::FromAxisAngle(Float3(1.0f, 0.0f, 0.0f), -Pi_2));
+
+    ID3D11DeviceContext* context = deviceManager.ImmediateContext();
+
+    if(AppSettings::EnableSun)
+        meshRenderer.RenderSunShadowMap(context, voxelCameraZ, false);
+
+    if(AppSettings::EnableAreaLight)
+        meshRenderer.RenderAreaLightShadowMap(context, voxelCameraZ);
 }
 
 void BakingLab::Render(const Timer& timer)
@@ -921,7 +945,7 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
     meshRenderer.ReduceDepth(context, depth, cam);
 
     if(AppSettings::EnableSun)
-        meshRenderer.RenderSunShadowMap(context, cam);
+        meshRenderer.RenderSunShadowMap(context, cam, true);
 
     if(AppSettings::EnableAreaLight)
         meshRenderer.RenderAreaLightShadowMap(context, cam);
@@ -938,7 +962,7 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
     context->ClearRenderTargetView(colorTarget, clearColor);
     context->ClearRenderTargetView(secondRT, secondClearColor);
 
-    meshRenderer.RenderMainPass(context, cam, status, probeRendering);
+    meshRenderer.RenderMainPass(context, cam, status, probeRendering, false);
 
     if(showBakeDataVisualizer)
         meshRenderer.RenderBakeDataVisualizer(context, cam, status);

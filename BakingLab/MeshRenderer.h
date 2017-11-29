@@ -41,7 +41,7 @@ public:
 
     void RenderDepth(ID3D11DeviceContext* context, const Camera& camera, bool noZClip, bool flippedZRange);
     void RenderMainPass(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status,
-                        bool32 probeRendering);
+                        bool32 probeRendering, bool voxelizing);
 
     void Update(const Camera& camera, Float2 jitterOffset);
 
@@ -50,7 +50,7 @@ public:
     void ReduceDepth(ID3D11DeviceContext* context, const DepthStencilBuffer& depthTarget,
                      const Camera& camera);
 
-    void RenderSunShadowMap(ID3D11DeviceContext* context, const Camera& camera);
+    void RenderSunShadowMap(ID3D11DeviceContext* context, const Camera& camera, bool useReductionDepth);
     void RenderAreaLightShadowMap(ID3D11DeviceContext* context, const Camera& camera);
 
     void RenderAreaLight(ID3D11DeviceContext* context, const Camera& camera);
@@ -85,7 +85,7 @@ protected:
 
     std::vector<ID3D11InputLayoutPtr> meshInputLayouts;
     VertexShaderPtr meshVS;
-    PixelShaderPtr meshPS[2];
+    PixelShaderPtr meshPS[3];
 
     std::vector<ID3D11InputLayoutPtr> meshDepthInputLayouts;
     VertexShaderPtr meshDepthVS;

@@ -58,6 +58,10 @@ cbuffer AppSettings : register(b7)
     bool WeightProbesByNormal;
     bool WeightProbesByVisibility;
     float DistanceFilterSharpness;
+    bool BakeWithVCT;
+    int VoxelResX;
+    int VoxelResY;
+    int VoxelResZ;
     bool EnableDiffuse;
     bool EnableSpecular;
     bool EnableDirectLighting;

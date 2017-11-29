@@ -667,7 +667,7 @@ public class Settings
         [DisplayName("Russian Roullette Probability")]
         float BakeRussianRouletteProbability = 0.5f;
 
-        BakeModes BakeMode = BakeModes.SG9;
+        BakeModes BakeMode = BakeModes.H4;
 
         SolveModes SolveMode = SolveModes.NNLS;
     }
@@ -675,7 +675,7 @@ public class Settings
     [ExpandGroup(true)]
     public class Probes
     {
-        bool UseProbes = true;
+        bool UseProbes = false;
 
         ProbeModes ProbeMode = ProbeModes.CubeMap;
 
@@ -715,6 +715,24 @@ public class Settings
         float DistanceFilterSharpness = 10.0f;
     }
 
+    [ExpandGroup(true)]
+    public class VCT
+    {
+        bool BakeWithVCT = false;
+
+        [MinValue(1)]
+        [MaxValue(2048)]
+        int VoxelResX = 32;
+
+        [MinValue(1)]
+        [MaxValue(2048)]
+        int VoxelResY = 32;
+
+        [MinValue(1)]
+        [MaxValue(2048)]
+        int VoxelResZ = 32;
+    }
+
     [ExpandGroup(false)]
     public class Scene
     {
@@ -743,7 +761,7 @@ public class Settings
 
         [DisplayName("Enable Indirect Specular")]
         [HelpText("Enables indirect specular lighting")]
-        bool EnableIndirectSpecular = true;
+        bool EnableIndirectSpecular = false;
 
         [DisplayName("Enable Albedo Maps")]
         [HelpText("Enables albedo maps")]

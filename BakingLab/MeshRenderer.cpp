@@ -242,12 +242,19 @@ void MeshRenderer::LoadShaders()
     {
         CompileOptions opts;
         opts.Add("ProbeRendering_", 0);
+        opts.Add("Voxelize_", 0);
         meshVS = CompileVSFromFile(device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
         meshPS[0] = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
 
         opts.Reset();
         opts.Add("ProbeRendering_", 1);
+        opts.Add("Voxelize_", 0);
         meshPS[1] = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
+
+        opts.Reset();
+        opts.Add("ProbeRendering_", 0);
+        opts.Add("Voxelize_", 1);
+        meshPS[2] = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
     }
 
     areaLightVS = CompileVSFromFile(device, L"AreaLight.hlsl", "VS", "vs_5_0");
@@ -603,8 +610,10 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
 
 // Renders all meshes in the model, with shadows
 void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status,
-                                  bool32 probeRendering)
+                                  bool32 probeRendering, bool voxelizing)
 {
+    Assert_(probeRendering == false || voxelizing == false);
+
     PIXEvent event(L"Mesh Rendering");
 
     // Set states
@@ -652,7 +661,14 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
     context->VSSetShader(meshVS, nullptr, 0);
-    context->PSSetShader(meshPS[probeRendering ? 1 : 0], nullptr, 0);
+
+    uint32 psIdx = 0;
+    if(voxelizing)
+        psIdx = 2;
+    else if(probeRendering)
+        psIdx = 1;
+
+    context->PSSetShader(meshPS[psIdx], nullptr, 0);
 
     // Draw all meshes
     for(uint64 meshIdx = 0; meshIdx < sceneModel->Meshes().size(); ++meshIdx)
@@ -763,12 +779,12 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
 }
 
 // Renders meshes using cascaded shadow mapping
-void MeshRenderer::RenderSunShadowMap(ID3D11DeviceContext* context, const Camera& camera)
+void MeshRenderer::RenderSunShadowMap(ID3D11DeviceContext* context, const Camera& camera, bool useReductionDepth)
 {
     PIXEvent event(L"Sun Shadow Map Rendering");
 
-    const float MinDistance = reductionDepth.x;
-    const float MaxDistance = reductionDepth.y;
+    const float MinDistance = useReductionDepth ? reductionDepth.x : 0.0f;
+    const float MaxDistance = useReductionDepth ? reductionDepth.y : 1.0f;
 
     // Compute the split distances based on the partitioning mode
     float CascadeSplits[4] = { 0.0f, 0.0f, 0.0f, 0.0f };

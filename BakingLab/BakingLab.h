@@ -125,6 +125,7 @@ protected:
     void CreateRenderTargets();
 
     void RenderProbes(MeshBakerStatus& status);
+    void VoxelizeScene();
     void RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* secondRT,
                      const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
                      bool32 renderAreaLight, bool32 enableSkySun, bool32 probeRendering);

@@ -78,6 +78,10 @@ SamplerState EVSMSampler : register(s1);
 SamplerState LinearSampler : register(s2);
 SamplerComparisonState PCFSampler : register(s3);
 
+#if Voxelize_
+    RWTexture3D<float4> VoxelOutput[2] : register(u0);
+#endif
+
 //=================================================================================================
 // Input/Output structs
 //=================================================================================================
@@ -119,15 +123,19 @@ struct PSInput
     float3 PrevPosition         : PREVPOSITION;
 };
 
-struct PSOutput
-{
-    float4 Lighting             : SV_Target0;
-    #if ProbeRendering_
-        float2 ProbeDistance    : SV_Target1;
-    #else
-        float2 Velocity         : SV_Target1;
-    #endif
-};
+#if Voxelize_
+    #define PSOutput void
+#else
+    struct PSOutput
+    {
+        float4 Lighting             : SV_Target0;
+        #if ProbeRendering_
+            float2 ProbeDistance    : SV_Target1;
+        #else
+            float2 Velocity         : SV_Target1;
+        #endif
+    };
+#endif
 
 //=================================================================================================
 // Vertex Shader
@@ -143,8 +151,7 @@ VSOutput VS(in VSInput input, in uint VertexID : SV_VertexID)
 
     // Calc the clip-space position
     output.PositionCS = mul(float4(positionOS, 1.0f), WorldViewProjection);
-    output.DepthVS = output.PositionCS.w;
-
+    output.DepthVS = mul(float4(output.PositionWS, 1.0f), View).z;
 
 	// Rotate the normal into world space
     output.NormalWS = normalize(mul(input.NormalOS, (float3x3)World));
@@ -699,7 +706,7 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
     }
 
 	// Add in the indirect
-    if(EnableIndirectLighting || ViewIndirectSpecular)
+    if((EnableIndirectLighting || ViewIndirectSpecular) && Voxelize_ == false)
     {
         float3 indirectIrradiance = 0.0f;
         float3 indirectSpecular = 0.0f;
@@ -729,24 +736,34 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
 
     float illuminance = dot(irradiance, float3(0.2126f, 0.7152f, 0.0722f));
 
-    PSOutput output;
-    output.Lighting = clamp(float4(lighting, illuminance), 0.0f, FP16Max);
-
-    if(isFrontFace == false)
-        output.Lighting = 0.0f;
-
-    #if ProbeRendering_
-        float distanceFromProbe = length(surface.PositionWS - CameraPosWS);
-        float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
-        distanceFromProbe = saturate(distanceFromProbe * rcp(maxDistance));
-        output.ProbeDistance = float2(distanceFromProbe, distanceFromProbe * distanceFromProbe);
+    #if Voxelize_
+        float3 voxelRadiance = clamp(irradiance * surface.DiffuseAlbedo * InvPi, 0.0f, FP16Max);
+        float3 voxelUVW = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
+        uint3 voxelCoord = uint3(voxelUVW * float3(VoxelResX, VoxelResY, VoxelResZ));
+        if(isFrontFace)
+            VoxelOutput[0][voxelCoord] = float4(voxelRadiance, 1.0f);
+        else
+            VoxelOutput[1][voxelCoord] = float4(voxelRadiance, 1.0f);
     #else
-        float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
-        prevPositionSS *= RTSize;
-        output.Velocity = input.PositionSS.xy - prevPositionSS;
-        output.Velocity -= JitterOffset;
-        output.Velocity /= RTSize;
-    #endif
+        PSOutput output;
+        output.Lighting = clamp(float4(lighting, illuminance), 0.0f, FP16Max);
 
-    return output;
+        if(isFrontFace == false)
+            output.Lighting = 0.0f;
+
+        #if ProbeRendering_
+            float distanceFromProbe = length(surface.PositionWS - CameraPosWS);
+            float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
+            distanceFromProbe = saturate(distanceFromProbe * rcp(maxDistance));
+            output.ProbeDistance = float2(distanceFromProbe, distanceFromProbe * distanceFromProbe);
+        #else
+            float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
+            prevPositionSS *= RTSize;
+            output.Velocity = input.PositionSS.xy - prevPositionSS;
+            output.Velocity -= JitterOffset;
+            output.Velocity /= RTSize;
+        #endif
+
+        return output;
+    #endif
 }

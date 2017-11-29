@@ -333,6 +333,10 @@ namespace AppSettings
     extern BoolSetting WeightProbesByNormal;
     extern BoolSetting WeightProbesByVisibility;
     extern FloatSetting DistanceFilterSharpness;
+    extern BoolSetting BakeWithVCT;
+    extern IntSetting VoxelResX;
+    extern IntSetting VoxelResY;
+    extern IntSetting VoxelResZ;
     extern ScenesSetting CurrentScene;
     extern BoolSetting EnableDiffuse;
     extern BoolSetting EnableSpecular;
@@ -428,6 +432,10 @@ namespace AppSettings
         bool32 WeightProbesByNormal;
         bool32 WeightProbesByVisibility;
         float DistanceFilterSharpness;
+        bool32 BakeWithVCT;
+        int32 VoxelResX;
+        int32 VoxelResY;
+        int32 VoxelResZ;
         bool32 EnableDiffuse;
         bool32 EnableSpecular;
         bool32 EnableDirectLighting;
