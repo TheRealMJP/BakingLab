@@ -90,7 +90,7 @@ float2 SquareToConcentricDiskMapping(float x, float y)
         else                        // region 2, also |b| > |a|
         {
             r = b;
-            phi = (Pi / 4.0f) * (2.0f - (a / b));
+            phi = (Pi / 4.0f) * (2.0f - (a / max(b, 0.00001f)));
         }
     }
     else                            // region 3 or 4
@@ -104,7 +104,7 @@ float2 SquareToConcentricDiskMapping(float x, float y)
         {
             r = -b;
             if(b != 0)
-                phi = (Pi / 4.0f) * (6.0f - (a / b));
+                phi = (Pi / 4.0f) * (6.0f - (a / max(b, 0.00001f)));
             else
                 phi = 0;
         }
@@ -211,7 +211,7 @@ void IntegrateIrradianceCubeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThr
     float3 normal = ComputeCubemapDirection(outputPos, outputFaceIdx, OutputTextureSize);
     float3x3 tangentFrame = MakeTangentFrame(normal, outputFaceIdx);
 
-    const uint numSamples = 1024;
+    const uint numSamples = max(ProbeIntegrationSamples * ProbeIntegrationSamples, 1);
     float3 irradiance = 0.0f;
     for(uint i = 0; i < numSamples; ++i)
     {
@@ -245,7 +245,7 @@ void IntegrateVolumeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : 
     for(int b = 0; b < MaxBasisCount; ++b)
         output[b] = 0.0f;
 
-    const uint numSamples = 1024;
+    const uint numSamples = max(ProbeIntegrationSamples * ProbeIntegrationSamples, 1);
     for(uint sampleIdx = 0; sampleIdx < numSamples; ++sampleIdx)
     {
         float2 samplePos = Hammersley2D(sampleIdx, numSamples);
@@ -291,7 +291,7 @@ void IntegrateDistanceCubeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThrea
     float3 normal = ComputeCubemapDirection(outputPos, outputFaceIdx, OutputTextureSize);
     float3x3 tangentFrame = MakeTangentFrame(normal, outputFaceIdx);
 
-    const uint numSamples = 256;
+    const uint numSamples = max(ProbeDistanceIntegrationSamples * ProbeDistanceIntegrationSamples, 1);
     const float cosinePower = exp2(DistanceFilterSharpness);
 
     float2 outputDistance = 0.0f;
@@ -331,7 +331,7 @@ void IntegrateDistanceVolumeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThr
     for(int b = 0; b < MaxBasisCount; ++b)
         output[b] = 0.0f;
 
-    const uint numSamples = 1024;
+    const uint numSamples = max(ProbeIntegrationSamples * ProbeIntegrationSamples, 1);
     for(uint sampleIdx = 0; sampleIdx < numSamples; ++sampleIdx)
     {
         float2 samplePos = Hammersley2D(sampleIdx, numSamples);

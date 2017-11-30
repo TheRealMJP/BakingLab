@@ -259,6 +259,8 @@ namespace AppSettings
     BoolSetting WeightProbesByNormal;
     BoolSetting WeightProbesByVisibility;
     FloatSetting DistanceFilterSharpness;
+    IntSetting ProbeIntegrationSamples;
+    IntSetting ProbeDistanceIntegrationSamples;
     BoolSetting BakeWithVCT;
     IntSetting VoxelResX;
     IntSetting VoxelResY;
@@ -294,6 +296,7 @@ namespace AppSettings
     Button SaveEXRScreenshot;
     BoolSetting ShowSunIntensity;
     BoolSetting AlwaysRegenerateProbes;
+    BoolSetting AlwaysRevoxelize;
     FloatSetting SceneBoundsOffsetX;
     FloatSetting SceneBoundsOffsetY;
     FloatSetting SceneBoundsOffsetZ;
@@ -561,6 +564,12 @@ namespace AppSettings
         DistanceFilterSharpness.Initialize(tweakBar, "DistanceFilterSharpness", "Probes", "Distance Filter Sharpness", "", 10.0000f, 1.0000f, 20.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&DistanceFilterSharpness);
 
+        ProbeIntegrationSamples.Initialize(tweakBar, "ProbeIntegrationSamples", "Probes", "Probe Integration Samples", "", 32, 1, 64);
+        Settings.AddSetting(&ProbeIntegrationSamples);
+
+        ProbeDistanceIntegrationSamples.Initialize(tweakBar, "ProbeDistanceIntegrationSamples", "Probes", "Probe Distance Integration Samples", "", 32, 1, 64);
+        Settings.AddSetting(&ProbeDistanceIntegrationSamples);
+
         BakeWithVCT.Initialize(tweakBar, "BakeWithVCT", "VCT", "Bake With VCT", "", false);
         Settings.AddSetting(&BakeWithVCT);
 
@@ -665,6 +674,9 @@ namespace AppSettings
 
         AlwaysRegenerateProbes.Initialize(tweakBar, "AlwaysRegenerateProbes", "Debug", "Always Regenerate Probes", "", false);
         Settings.AddSetting(&AlwaysRegenerateProbes);
+
+        AlwaysRevoxelize.Initialize(tweakBar, "AlwaysRevoxelize", "Debug", "Always Revoxelize", "", false);
+        Settings.AddSetting(&AlwaysRevoxelize);
 
         SceneBoundsOffsetX.Initialize(tweakBar, "SceneBoundsOffsetX", "Debug", "Scene Bounds Offset X", "", 0.0000f, -100.0000f, 100.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SceneBoundsOffsetX);
@@ -775,6 +787,8 @@ namespace AppSettings
         CBuffer.Data.WeightProbesByNormal = WeightProbesByNormal;
         CBuffer.Data.WeightProbesByVisibility = WeightProbesByVisibility;
         CBuffer.Data.DistanceFilterSharpness = DistanceFilterSharpness;
+        CBuffer.Data.ProbeIntegrationSamples = ProbeIntegrationSamples;
+        CBuffer.Data.ProbeDistanceIntegrationSamples = ProbeDistanceIntegrationSamples;
         CBuffer.Data.BakeWithVCT = BakeWithVCT;
         CBuffer.Data.VoxelResX = VoxelResX;
         CBuffer.Data.VoxelResY = VoxelResY;

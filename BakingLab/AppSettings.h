@@ -333,6 +333,8 @@ namespace AppSettings
     extern BoolSetting WeightProbesByNormal;
     extern BoolSetting WeightProbesByVisibility;
     extern FloatSetting DistanceFilterSharpness;
+    extern IntSetting ProbeIntegrationSamples;
+    extern IntSetting ProbeDistanceIntegrationSamples;
     extern BoolSetting BakeWithVCT;
     extern IntSetting VoxelResX;
     extern IntSetting VoxelResY;
@@ -368,6 +370,7 @@ namespace AppSettings
     extern Button SaveEXRScreenshot;
     extern BoolSetting ShowSunIntensity;
     extern BoolSetting AlwaysRegenerateProbes;
+    extern BoolSetting AlwaysRevoxelize;
     extern FloatSetting SceneBoundsOffsetX;
     extern FloatSetting SceneBoundsOffsetY;
     extern FloatSetting SceneBoundsOffsetZ;
@@ -432,6 +435,8 @@ namespace AppSettings
         bool32 WeightProbesByNormal;
         bool32 WeightProbesByVisibility;
         float DistanceFilterSharpness;
+        int32 ProbeIntegrationSamples;
+        int32 ProbeDistanceIntegrationSamples;
         bool32 BakeWithVCT;
         int32 VoxelResX;
         int32 VoxelResY;

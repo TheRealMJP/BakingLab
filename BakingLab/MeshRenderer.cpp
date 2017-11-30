@@ -789,6 +789,12 @@ void MeshRenderer::RenderSunShadowMap(ID3D11DeviceContext* context, const Camera
     // Compute the split distances based on the partitioning mode
     float CascadeSplits[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
+    if(camera.IsOrthographic())
+    {
+        for(uint32 i = 0; i < NumCascades; ++i)
+            CascadeSplits[i] = Lerp(MinDistance, MaxDistance, (i + 1.0f) / NumCascades);
+    }
+    else
     {
         float lambda = 1.0f;
 

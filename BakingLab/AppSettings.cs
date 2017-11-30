@@ -713,6 +713,14 @@ public class Settings
         [MinValue(1.0f)]
         [MaxValue(20.0f)]
         float DistanceFilterSharpness = 10.0f;
+
+        [MinValue(1)]
+        [MaxValue(64)]
+        int ProbeIntegrationSamples = 32;
+
+        [MinValue(1)]
+        [MaxValue(64)]
+        int ProbeDistanceIntegrationSamples = 32;
     }
 
     [ExpandGroup(true)]
@@ -892,6 +900,9 @@ public class Settings
 
         [UseAsShaderConstant(false)]
         bool AlwaysRegenerateProbes = false;
+
+        [UseAsShaderConstant(false)]
+        bool AlwaysRevoxelize = false;
 
         [MinValue(-100.0f)]
         [MaxValue(100.0f)]

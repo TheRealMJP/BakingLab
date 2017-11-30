@@ -63,7 +63,6 @@ struct RenderTarget3D
     DXGI_FORMAT Format;
     bool32 AutoGenMipMaps = false;
 
-
     void Initialize(ID3D11Device* device,
                     uint32 width,
                     uint32 height,

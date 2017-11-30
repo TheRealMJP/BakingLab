@@ -91,6 +91,10 @@ protected:
     ComputeShaderPtr probeIntegrateVolumeMap;
     ComputeShaderPtr probeIntegrateDistanceVolumeMap;
 
+    RenderTarget3D voxelTextures[6];
+    ComputeShaderPtr clearVoxelTextures;
+    uint64 currVoxelIdx = 0;
+
     struct ResolveConstants
     {
         uint32 SampleRadius;
@@ -125,7 +129,7 @@ protected:
     void CreateRenderTargets();
 
     void RenderProbes(MeshBakerStatus& status);
-    void VoxelizeScene();
+    void VoxelizeScene(MeshBakerStatus& status);
     void RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* secondRT,
                      const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
                      bool32 renderAreaLight, bool32 enableSkySun, bool32 probeRendering);

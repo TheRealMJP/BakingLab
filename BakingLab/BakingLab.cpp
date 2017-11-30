@@ -478,6 +478,8 @@ void BakingLab::Initialize()
     probeIntegrateVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateVolumeMap");
     probeIntegrateDistanceVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistanceVolumeMap");
 
+    clearVoxelTextures = CompileCSFromFile(device, L"ClearVoxelTextures.hlsl", "ClearVoxelTextures");
+
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
     integrateConstants.Initialize(device);
@@ -702,7 +704,8 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed() ||
        AppSettings::AlwaysRegenerateProbes.Changed() || AppSettings::SceneBoundsOffsetX.Changed() ||
        AppSettings::SceneBoundsOffsetY.Changed() || AppSettings::SceneBoundsOffsetZ.Changed() ||
-       AppSettings::DistanceFilterSharpness.Changed())
+       AppSettings::DistanceFilterSharpness.Changed() || AppSettings::ProbeIntegrationSamples.Changed() ||
+       AppSettings::ProbeDistanceIntegrationSamples.Changed())
         currProbeIdx = 0;
 
     if(currProbeIdx >= numProbes)
@@ -710,6 +713,9 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
         status.ProbeBakeProgress = 1.0f;
         return;
     }
+
+    if(AppSettings::UseProbes == false)
+        return;
 
     bool32 prevUseProbes = AppSettings::UseProbes;
     AppSettings::UseProbes.SetValue(false);
@@ -831,11 +837,48 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
         currProbeIdx = 0;
 }
 
-void BakingLab::VoxelizeScene()
+void BakingLab::VoxelizeScene(MeshBakerStatus& status)
 {
+    ID3D11Device* device = deviceManager.Device();
+    ID3D11DeviceContext* context = deviceManager.ImmediateContext();
+
+    bool reVoxelize = false;
+
+    if(status.BakingInvalidated || AppSettings::AlwaysRevoxelize)
+        reVoxelize = true;
+
+    if(voxelTextures[0].Texture == nullptr || AppSettings::VoxelResX.Changed() || AppSettings::VoxelResY.Changed() || AppSettings::VoxelResZ.Changed())
+    {
+        reVoxelize = true;
+        for(uint64 i = 0; i < 6; ++i)
+            voxelTextures[i].Initialize(device, AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ,
+                                        DXGI_FORMAT_R16G16B16A16_FLOAT, 1, false, false, true);
+    }
+
+    if(reVoxelize == false)
+        return;
+
+    currVoxelIdx = 0;
+
     PIXEvent pixEvent(L"Voxelize Scene");
 
-    OrthographicCamera voxelCameraZ(currSceneMin.x, currSceneMin.y, currSceneMax.x, currSceneMax.y, 0.0f, currSceneMax.z - currSceneMax.z);
+    {
+        SetCSShader(context, clearVoxelTextures);
+
+        ID3D11UnorderedAccessView* uavs[6];
+        for(uint64 i = 0; i < 6; ++i)
+            uavs[i] = voxelTextures[i].UAView;
+        context->CSSetUnorderedAccessViews(0, 6, uavs, nullptr);
+
+
+        context->Dispatch(DispatchSize(4, AppSettings::VoxelResX), DispatchSize(4, AppSettings::VoxelResY), DispatchSize(4, AppSettings::VoxelResZ));
+
+        for(uint64 i = 0; i < 6; ++i)
+            uavs[i] = nullptr;
+        context->CSSetUnorderedAccessViews(0, 6, uavs, nullptr);
+    }
+
+    OrthographicCamera voxelCameraZ(currSceneMin.x, currSceneMin.y, currSceneMax.x, currSceneMax.y, 0.0f, currSceneMax.z - currSceneMin.z);
     voxelCameraZ.SetPosition(Float3((currSceneMin.x + currSceneMax.x) / 2.0f, (currSceneMin.y + currSceneMax.y) / 2.0f, currSceneMin.z));
 
     OrthographicCamera voxelCameraX = voxelCameraZ;
@@ -846,13 +889,37 @@ void BakingLab::VoxelizeScene()
     voxelCameraY.SetPosition(Float3((currSceneMin.x + currSceneMax.x) / 2.0f, currSceneMin.y, (currSceneMin.z + currSceneMax.z) / 2.0f));
     voxelCameraY.SetOrientation(Quaternion::FromAxisAngle(Float3(1.0f, 0.0f, 0.0f), -Pi_2));
 
-    ID3D11DeviceContext* context = deviceManager.ImmediateContext();
-
     if(AppSettings::EnableSun)
         meshRenderer.RenderSunShadowMap(context, voxelCameraZ, false);
 
     if(AppSettings::EnableAreaLight)
         meshRenderer.RenderAreaLightShadowMap(context, voxelCameraZ);
+
+    for(uint64 i = 0; i < 3; ++i)
+    {
+        OrthographicCamera* voxelCamera = nullptr;
+
+        if(i == 0)
+        {
+            voxelCamera = &voxelCameraX;
+            SetViewport(context, AppSettings::VoxelResZ, AppSettings::VoxelResY);
+        }
+        else if(i == 1)
+        {
+            voxelCamera = &voxelCameraY;
+            SetViewport(context, AppSettings::VoxelResX, AppSettings::VoxelResZ);
+        }
+        else if(i == 2)
+        {
+            voxelCamera = &voxelCameraZ;
+            SetViewport(context, AppSettings::VoxelResX, AppSettings::VoxelResY);
+        }
+
+        ID3D11UnorderedAccessView* uavs[2] = { voxelTextures[i].UAView, voxelTextures[i + 3].UAView };
+        context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, 2, uavs, nullptr);
+
+        meshRenderer.RenderMainPass(context, *voxelCamera, status, false, true);
+    }
 }
 
 void BakingLab::Render(const Timer& timer)
@@ -866,6 +933,8 @@ void BakingLab::Render(const Timer& timer)
                                               context, &sceneModels[AppSettings::CurrentScene]);
     status.SceneMinBounds = currSceneMin;
     status.SceneMaxBounds = currSceneMax;
+
+    VoxelizeScene(status);
 
     RenderProbes(status);
 

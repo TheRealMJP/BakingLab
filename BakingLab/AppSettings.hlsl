@@ -58,6 +58,8 @@ cbuffer AppSettings : register(b7)
     bool WeightProbesByNormal;
     bool WeightProbesByVisibility;
     float DistanceFilterSharpness;
+    int ProbeIntegrationSamples;
+    int ProbeDistanceIntegrationSamples;
     bool BakeWithVCT;
     int VoxelResX;
     int VoxelResY;
