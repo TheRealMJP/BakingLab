@@ -875,15 +875,18 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
 
     ClearCSOutputs(context);
 
-    OrthographicCamera voxelCameraZ(currSceneMin.x, currSceneMin.y, currSceneMax.x, currSceneMax.y, 0.0f, currSceneMax.z - currSceneMin.z);
-    voxelCameraZ.SetPosition(Float3((currSceneMin.x + currSceneMax.x) / 2.0f, (currSceneMin.y + currSceneMax.y) / 2.0f, currSceneMin.z));
+    Float3 sceneCenter = (currSceneMin + currSceneMax) / 2.0f;
+    Float3 sceneHalfExtents = (currSceneMax - currSceneMin) / 2.0f;
+
+    OrthographicCamera voxelCameraZ(-sceneHalfExtents.x, -sceneHalfExtents.y, sceneHalfExtents.x, sceneHalfExtents.y, 0.0f, sceneHalfExtents.z * 2.0f);
+    voxelCameraZ.SetPosition(Float3(sceneCenter.x, sceneCenter.y, currSceneMin.z));
 
     OrthographicCamera voxelCameraX = voxelCameraZ;
-    voxelCameraX.SetPosition(Float3(currSceneMin.x, (currSceneMin.y + currSceneMax.y) / 2.0f, (currSceneMin.z + currSceneMax.z) / 2.0f));
+    voxelCameraX.SetPosition(Float3(currSceneMin.x, sceneCenter.y, sceneCenter.z));
     voxelCameraX.SetOrientation(Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), Pi_2));
 
     OrthographicCamera voxelCameraY = voxelCameraZ;
-    voxelCameraY.SetPosition(Float3((currSceneMin.x + currSceneMax.x) / 2.0f, currSceneMin.y, (currSceneMin.z + currSceneMax.z) / 2.0f));
+    voxelCameraY.SetPosition(Float3(sceneCenter.x, currSceneMin.y, sceneCenter.z));
     voxelCameraY.SetOrientation(Quaternion::FromAxisAngle(Float3(1.0f, 0.0f, 0.0f), -Pi_2));
 
     if(AppSettings::EnableSun)

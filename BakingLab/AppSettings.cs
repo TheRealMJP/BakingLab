@@ -672,7 +672,7 @@ public class Settings
         SolveModes SolveMode = SolveModes.NNLS;
     }
 
-    [ExpandGroup(true)]
+    [ExpandGroup(false)]
     public class Probes
     {
         bool UseProbes = false;
@@ -872,7 +872,7 @@ public class Settings
         float BloomBlurSigma = 2.5f;
     }
 
-    [ExpandGroup(false)]
+    [ExpandGroup(true)]
     public class Debug
     {
         [UseAsShaderConstant(false)]

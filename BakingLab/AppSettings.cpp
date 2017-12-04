@@ -707,7 +707,7 @@ namespace AppSettings
 
         TwHelper::SetOpened(tweakBar, "Baking", false);
 
-        TwHelper::SetOpened(tweakBar, "Probes", true);
+        TwHelper::SetOpened(tweakBar, "Probes", false);
 
         TwHelper::SetOpened(tweakBar, "VCT", true);
 
@@ -717,7 +717,7 @@ namespace AppSettings
 
         TwHelper::SetOpened(tweakBar, "Post Processing", false);
 
-        TwHelper::SetOpened(tweakBar, "Debug", false);
+        TwHelper::SetOpened(tweakBar, "Debug", true);
 
         CBuffer.Initialize(device);
     }
