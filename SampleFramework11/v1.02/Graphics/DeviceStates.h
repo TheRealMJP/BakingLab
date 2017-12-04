@@ -65,6 +65,7 @@ protected:
     ID3D11RasterizerStatePtr noCullNoMS;
     ID3D11RasterizerStatePtr noCullScissor;
     ID3D11RasterizerStatePtr wireframe;
+    ID3D11RasterizerState2Ptr noCullConservative;
 
 public:
 
@@ -79,6 +80,7 @@ public:
     ID3D11RasterizerState* NoCullNoMS() { return noCullNoMS; };
     ID3D11RasterizerState* NoCullScissor() { return noCullScissor; };
     ID3D11RasterizerState* Wireframe() { return wireframe; };
+    ID3D11RasterizerState2* NoCullConservative() { return noCullConservative; };
 
     static D3D11_RASTERIZER_DESC NoCullDesc();
     static D3D11_RASTERIZER_DESC FrontFaceCullDesc();
@@ -89,6 +91,7 @@ public:
     static D3D11_RASTERIZER_DESC NoCullNoMSDesc();
     static D3D11_RASTERIZER_DESC NoCullScissorDesc();
     static D3D11_RASTERIZER_DESC WireframeDesc();
+    static D3D11_RASTERIZER_DESC2 NoCullConservativeDesc();
 };
 
 

@@ -78,6 +78,9 @@ typedef uint32_t bool32;
 
 #include <dxgi.h>
 #include <d3d11.h>
+#include <d3d11_1.h>
+#include <d3d11_2.h>
+#include <d3d11_3.h>
 #include <D3Dcompiler.h>
 #include <d3d9.h>
 

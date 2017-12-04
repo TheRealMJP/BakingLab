@@ -31,6 +31,7 @@ _COM_SMARTPTR_TYPEDEF(ID3D11Debug, __uuidof(ID3D11Debug));
 _COM_SMARTPTR_TYPEDEF(ID3D11BlendState, __uuidof(ID3D11BlendState));
 _COM_SMARTPTR_TYPEDEF(ID3D11DepthStencilState, __uuidof(ID3D11DepthStencilState));
 _COM_SMARTPTR_TYPEDEF(ID3D11RasterizerState, __uuidof(ID3D11RasterizerState));
+_COM_SMARTPTR_TYPEDEF(ID3D11RasterizerState2, __uuidof(ID3D11RasterizerState2));
 _COM_SMARTPTR_TYPEDEF(ID3D11SamplerState, __uuidof(ID3D11SamplerState));
 
 // Resources

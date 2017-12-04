@@ -745,7 +745,11 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
     float blendFactor[4] = {1, 1, 1, 1};
     context->OMSetBlendState(blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
     context->OMSetDepthStencilState(depthStencilStates.DepthEnabled(), 0);
-    context->RSSetState(rasterizerStates.NoCull());
+
+    if(voxelizing && 0)
+        context->RSSetState(rasterizerStates.NoCullConservative());
+    else
+        context->RSSetState(rasterizerStates.NoCull());
 
     ID3D11SamplerState* sampStates[] = {
         samplerStates.Anisotropic(),

@@ -179,6 +179,12 @@ void RasterizerStates::Initialize(ID3D11Device* device)
     DXCall(device->CreateRasterizerState(&NoCullNoMSDesc(), &noCullNoMS));
     DXCall(device->CreateRasterizerState(&NoCullScissorDesc(), &noCullScissor));
     DXCall(device->CreateRasterizerState(&WireframeDesc(), &wireframe));
+
+    ID3D11Device3* device3 = nullptr;
+    device->QueryInterface(IID_PPV_ARGS(&device3));
+    DXCall(device3->CreateRasterizerState2(&NoCullConservativeDesc(), &noCullConservative));
+    device3->Release();
+    device3 = nullptr;
 }
 
 D3D11_RASTERIZER_DESC RasterizerStates::NoCullDesc()
@@ -343,6 +349,24 @@ D3D11_RASTERIZER_DESC RasterizerStates::WireframeDesc()
     return rastDesc;
 }
 
+D3D11_RASTERIZER_DESC2 RasterizerStates::NoCullConservativeDesc()
+{
+    D3D11_RASTERIZER_DESC2 rastDesc = { };
+    rastDesc.AntialiasedLineEnable = false;
+    rastDesc.CullMode = D3D11_CULL_NONE;
+    rastDesc.DepthBias = 0;
+    rastDesc.DepthBiasClamp = 0.0f;
+    rastDesc.DepthClipEnable = true;
+    rastDesc.FillMode = D3D11_FILL_SOLID;
+    rastDesc.FrontCounterClockwise = false;
+    rastDesc.MultisampleEnable = true;
+    rastDesc.ScissorEnable = false;
+    rastDesc.SlopeScaledDepthBias = 0;
+    rastDesc.ConservativeRaster = D3D11_CONSERVATIVE_RASTERIZATION_MODE_ON;
+
+    return rastDesc;
+}
+
 void DepthStencilStates::Initialize(ID3D11Device* device)
 {
     DXCall(device->CreateDepthStencilState(&DepthDisabledDesc(), &depthDisabled));
@@ -351,6 +375,7 @@ void DepthStencilStates::Initialize(ID3D11Device* device)
     DXCall(device->CreateDepthStencilState(&DepthWriteEnabledDesc(), &depthWriteEnabled));
     DXCall(device->CreateDepthStencilState(&ReverseDepthWriteEnabledDesc(), &revDepthWriteEnabled));
     DXCall(device->CreateDepthStencilState(&DepthStencilWriteEnabledDesc(), &depthStencilWriteEnabled));
+    DXCall(device->CreateDepthStencilState(&StencilEnabledDesc(), &stencilEnabled));
     DXCall(device->CreateDepthStencilState(&StencilEnabledDesc(), &stencilEnabled));
 }
 
