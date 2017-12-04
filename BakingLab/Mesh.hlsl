@@ -33,7 +33,7 @@ cbuffer VSConstants : register(b0)
     float4x4 PrevWorldViewProjection;
 }
 
-cbuffer PSConstants : register(b0)
+cbuffer PSConstants : register(b1)
 {
     float3 SunDirectionWS;
     float CosSunAngularRadius;
@@ -151,7 +151,12 @@ VSOutput VS(in VSInput input, in uint VertexID : SV_VertexID)
 
     // Calc the clip-space position
     output.PositionCS = mul(float4(positionOS, 1.0f), WorldViewProjection);
-    output.DepthVS = mul(float4(output.PositionWS, 1.0f), View).z;
+
+    #if Voxelize_
+        output.DepthVS = output.PositionWS.z - SceneMinBounds.z;
+    #else
+        output.DepthVS = output.PositionCS.w;
+    #endif
 
 	// Rotate the normal into world space
     output.NormalWS = normalize(mul(input.NormalOS, (float3x3)World));

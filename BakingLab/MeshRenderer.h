@@ -87,7 +87,10 @@ protected:
 
     std::vector<ID3D11InputLayoutPtr> meshInputLayouts;
     VertexShaderPtr meshVS;
-    PixelShaderPtr meshPS[3];
+    VertexShaderPtr meshVSVoxelize;
+    PixelShaderPtr meshPS;
+    PixelShaderPtr meshPSProbes;
+    PixelShaderPtr meshPSVoxelize;
 
     std::vector<ID3D11InputLayoutPtr> meshDepthInputLayouts;
     VertexShaderPtr meshDepthVS;

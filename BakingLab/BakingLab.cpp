@@ -54,7 +54,8 @@ static const Float2 SceneCameraRotations[] = { Float2(0.0f, 0.0f), Float2(0.0f, 
 static const float SceneAlbedoScales[] = { 0.5f, 0.5f, 1.0f };
 
 static const Uint3 SceneDefaultProbeRes[] = { Uint3(4, 4, 4), Uint3(5, 3, 5), Uint3(5, 5, 5) };
-static const float SceneDefaultBoundsScales[] { 1.5f, 1.65f, 1.0f };
+// static const float SceneDefaultBoundsScales[] = { 1.5f, 1.65f, 1.0f };
+static const float SceneDefaultBoundsScales[] = { 1.0f, 1.0f, 1.0f };
 
 StaticAssert_(ArraySize_(ScenePaths) >= uint64(Scenes::NumValues));
 StaticAssert_(ArraySize_(SceneCameraPositions) >= uint64(Scenes::NumValues));
@@ -878,16 +879,16 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     Float3 sceneCenter = (currSceneMin + currSceneMax) / 2.0f;
     Float3 sceneHalfExtents = (currSceneMax - currSceneMin) / 2.0f;
 
-    OrthographicCamera voxelCameraZ(-sceneHalfExtents.x, -sceneHalfExtents.y, sceneHalfExtents.x, sceneHalfExtents.y, 0.0f, sceneHalfExtents.z * 2.0f);
-    voxelCameraZ.SetPosition(Float3(sceneCenter.x, sceneCenter.y, currSceneMin.z));
-
-    OrthographicCamera voxelCameraX = voxelCameraZ;
+    OrthographicCamera voxelCameraX(-sceneHalfExtents.z, -sceneHalfExtents.y, sceneHalfExtents.z, sceneHalfExtents.y, 0.0f, sceneHalfExtents.x * 2.0f);
     voxelCameraX.SetPosition(Float3(currSceneMin.x, sceneCenter.y, sceneCenter.z));
     voxelCameraX.SetOrientation(Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), Pi_2));
 
-    OrthographicCamera voxelCameraY = voxelCameraZ;
+    OrthographicCamera voxelCameraY(-sceneHalfExtents.x, -sceneHalfExtents.z, sceneHalfExtents.x, sceneHalfExtents.z, 0.0f, sceneHalfExtents.y * 2.0f);
     voxelCameraY.SetPosition(Float3(sceneCenter.x, currSceneMin.y, sceneCenter.z));
     voxelCameraY.SetOrientation(Quaternion::FromAxisAngle(Float3(1.0f, 0.0f, 0.0f), -Pi_2));
+
+    OrthographicCamera voxelCameraZ(-sceneHalfExtents.x, -sceneHalfExtents.y, sceneHalfExtents.x, sceneHalfExtents.y, 0.0f, sceneHalfExtents.z * 2.0f);
+    voxelCameraZ.SetPosition(Float3(sceneCenter.x, sceneCenter.y, currSceneMin.z));
 
     if(AppSettings::EnableSun)
         meshRenderer.RenderSunShadowMap(context, voxelCameraZ, false);

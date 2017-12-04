@@ -360,17 +360,18 @@ void MeshRenderer::LoadShaders()
         opts.Add("ProbeRendering_", 0);
         opts.Add("Voxelize_", 0);
         meshVS = CompileVSFromFile(device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
-        meshPS[0] = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
+        meshPS = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
 
         opts.Reset();
         opts.Add("ProbeRendering_", 1);
         opts.Add("Voxelize_", 0);
-        meshPS[1] = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
+        meshPSProbes = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
 
         opts.Reset();
         opts.Add("ProbeRendering_", 0);
         opts.Add("Voxelize_", 1);
-        meshPS[2] = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
+        meshVSVoxelize = CompileVSFromFile(device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
+        meshPSVoxelize = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
     }
 
     areaLightVS = CompileVSFromFile(device, L"AreaLight.hlsl", "VS", "vs_5_0");
@@ -767,6 +768,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
     meshVSConstants.Data.PrevWorldViewProjection = Float4x4::Transpose(prevVP);
     meshVSConstants.ApplyChanges(context);
     meshVSConstants.SetVS(context, 0);
+    meshVSConstants.SetPS(context, 0);
 
     meshPSConstants.Data.SunDirectionWS = AppSettings::SunDirection;
     meshPSConstants.Data.SunIlluminance = AppSettings::SunIlluminance();
@@ -783,21 +785,30 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
     meshPSConstants.Data.SceneMinBounds = status.SceneMinBounds;
     meshPSConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
     meshPSConstants.ApplyChanges(context);
-    meshPSConstants.SetPS(context, 0);
+    meshPSConstants.SetVS(context, 1);
+    meshPSConstants.SetPS(context, 1);
 
     // Set shaders
     context->DSSetShader(nullptr, nullptr, 0);
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
-    context->VSSetShader(meshVS, nullptr, 0);
 
-    uint32 psIdx = 0;
+
+    ID3D11VertexShader* vs = meshVS;
+    ID3D11PixelShader* ps = meshPS;
     if(voxelizing)
-        psIdx = 2;
+    {
+        ps = meshPSVoxelize;
+        vs = meshVSVoxelize;
+    }
     else if(probeRendering)
-        psIdx = 1;
+    {
+        vs = meshVS;
+        ps = meshPSProbes;
+    }
 
-    context->PSSetShader(meshPS[psIdx], nullptr, 0);
+    context->VSSetShader(vs, nullptr, 0);
+    context->PSSetShader(ps, nullptr, 0);
 
     // Draw all meshes
     for(uint64 meshIdx = 0; meshIdx < sceneModel->Meshes().size(); ++meshIdx)
