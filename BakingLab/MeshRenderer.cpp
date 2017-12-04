@@ -235,6 +235,122 @@ static void GenerateSphere(uint64 NumUSlices, uint64 NumVSlices, ID3D11Device* d
     DXCall(device->CreateBuffer(&bufferDesc, &initData, &idxBuffer));
 }
 
+const uint32 NumBoxVerts = 24;
+const uint32 NumBoxIndices = 36;
+
+static void GenerateBox(ID3D11Device* device, ID3D11BufferPtr& vtxBuffer, ID3D11BufferPtr& idxBuffer)
+{
+    std::vector<Float3> boxVerts(NumBoxVerts);
+    std::vector<uint16> boxIndices(NumBoxIndices, 0);
+
+    uint64 vIdx = 0;
+
+    // Top
+    boxVerts[vIdx++] = Float3(-0.5f, 0.5f, 0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, 0.5f, 0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, 0.5f, -0.5f);
+    boxVerts[vIdx++] = Float3(-0.5f, 0.5f, -0.5f);
+
+    // Bottom
+    boxVerts[vIdx++] = Float3(-0.5f, -0.5f, -0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, -0.5f, -0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, -0.5f, 0.5f);
+    boxVerts[vIdx++] = Float3(-0.5f, -0.5f, 0.5f);
+
+    // Front
+    boxVerts[vIdx++] = Float3(-0.5f, 0.5f, -0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, 0.5f, -0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, -0.5f, -0.5f);
+    boxVerts[vIdx++] = Float3(-0.5f, -0.5f, -0.5f);
+
+    // Back
+    boxVerts[vIdx++] = Float3(0.5f, 0.5f, 0.5f);
+    boxVerts[vIdx++] = Float3(-0.5f, 0.5f, 0.5f);
+    boxVerts[vIdx++] = Float3(-0.5f, -0.5f, 0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, -0.5f, 0.5f);
+
+    // Left
+    boxVerts[vIdx++] = Float3(-0.5f, 0.5f, 0.5f);
+    boxVerts[vIdx++] = Float3(-0.5f, 0.5f, -0.5f);
+    boxVerts[vIdx++] = Float3(-0.5f, -0.5f, -0.5f);
+    boxVerts[vIdx++] = Float3(-0.5f, -0.5f, 0.5f);
+
+    // Right
+    boxVerts[vIdx++] = Float3(0.5f, 0.5f, -0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, 0.5f, 0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, -0.5f, 0.5f);
+    boxVerts[vIdx++] = Float3(0.5f, -0.5f, -0.5f);
+
+    uint64 iIdx = 0;
+
+    // Top
+    boxIndices[iIdx++] = 0;
+    boxIndices[iIdx++] = 1;
+    boxIndices[iIdx++] = 2;
+    boxIndices[iIdx++] = 2;
+    boxIndices[iIdx++] = 3;
+    boxIndices[iIdx++] = 0;
+
+    // Bottom
+    boxIndices[iIdx++] = 4 + 0;
+    boxIndices[iIdx++] = 4 + 1;
+    boxIndices[iIdx++] = 4 + 2;
+    boxIndices[iIdx++] = 4 + 2;
+    boxIndices[iIdx++] = 4 + 3;
+    boxIndices[iIdx++] = 4 + 0;
+
+    // Front
+    boxIndices[iIdx++] = 8 + 0;
+    boxIndices[iIdx++] = 8 + 1;
+    boxIndices[iIdx++] = 8 + 2;
+    boxIndices[iIdx++] = 8 + 2;
+    boxIndices[iIdx++] = 8 + 3;
+    boxIndices[iIdx++] = 8 + 0;
+
+    // Back
+    boxIndices[iIdx++] = 12 + 0;
+    boxIndices[iIdx++] = 12 + 1;
+    boxIndices[iIdx++] = 12 + 2;
+    boxIndices[iIdx++] = 12 + 2;
+    boxIndices[iIdx++] = 12 + 3;
+    boxIndices[iIdx++] = 12 + 0;
+
+    // Left
+    boxIndices[iIdx++] = 16 + 0;
+    boxIndices[iIdx++] = 16 + 1;
+    boxIndices[iIdx++] = 16 + 2;
+    boxIndices[iIdx++] = 16 + 2;
+    boxIndices[iIdx++] = 16 + 3;
+    boxIndices[iIdx++] = 16 + 0;
+
+    // Right
+    boxIndices[iIdx++] = 20 + 0;
+    boxIndices[iIdx++] = 20 + 1;
+    boxIndices[iIdx++] = 20 + 2;
+    boxIndices[iIdx++] = 20 + 2;
+    boxIndices[iIdx++] = 20 + 3;
+    boxIndices[iIdx++] = 20 + 0;
+
+    D3D11_BUFFER_DESC bufferDesc;
+    bufferDesc.ByteWidth = sizeof(Float3) * NumBoxVerts;
+    bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    bufferDesc.CPUAccessFlags = 0;
+    bufferDesc.MiscFlags = 0;
+    bufferDesc.StructureByteStride = 0;
+    bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+
+    D3D11_SUBRESOURCE_DATA initData;
+    initData.pSysMem = boxVerts.data();
+    initData.SysMemPitch = 0;
+    initData.SysMemSlicePitch = 0;
+    DXCall(device->CreateBuffer(&bufferDesc, &initData, &vtxBuffer));
+
+    bufferDesc.ByteWidth = sizeof(uint16) * NumBoxIndices;
+    bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    initData.pSysMem = boxIndices.data();
+    DXCall(device->CreateBuffer(&bufferDesc, &initData, &idxBuffer));
+}
+
 void MeshRenderer::LoadShaders()
 {
     // Load the mesh shaders
@@ -265,6 +381,9 @@ void MeshRenderer::LoadShaders()
 
     probeVisualizerVS = CompileVSFromFile(device, L"ProbeVisualizer.hlsl", "VS", "vs_5_0");
     probeVisualizerPS = CompilePSFromFile(device, L"ProbeVisualizer.hlsl", "PS", "ps_5_0");
+
+    voxelVisualizerVS = CompileVSFromFile(device, L"VoxelVisualizer.hlsl", "VS", "vs_5_0");
+    voxelVisualizerPS = CompilePSFromFile(device, L"VoxelVisualizer.hlsl", "PS", "ps_5_0");
 
     fullScreenVS = CompileVSFromFile(device, L"EVSMConvert.hlsl", "FullScreenVS");
 
@@ -327,6 +446,7 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
     visualizerConstants.Initialize(device);
     evsmConstants.Initialize(device);
     reductionConstants.Initialize(device);
+    voxelVisualizerConstants.Initialize(device);
 
     shSpecularLookupA = LoadTexture(device, L"..\\Content\\Textures\\SHSpecularA.dds");
     shSpecularLookupB = LoadTexture(device, L"..\\Content\\Textures\\SHSpecularB.dds");
@@ -351,6 +471,8 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
 
     GenerateSphere(16, 8, device, sphereVB, sphereIB, numSphereIndices);
 
+    GenerateBox(device, voxelVisualizerVB, voxelVisualizerIB);
+
     D3D11_INPUT_ELEMENT_DESC elements[1];
     elements[0].AlignedByteOffset = 0;
     elements[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
@@ -368,6 +490,9 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
 
     DXCall(device->CreateInputLayout(elements, 1, areaLightVS->ByteCode->GetBufferPointer(),
                                      areaLightVS->ByteCode->GetBufferSize(), &areaLightInputLayout));
+
+    DXCall(device->CreateInputLayout(elements, 1, voxelVisualizerVS->ByteCode->GetBufferPointer(),
+                                     voxelVisualizerVS->ByteCode->GetBufferSize(), &voxelVisualizerIL));
 
     SetModel(model);
 }
@@ -445,11 +570,11 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, const DepthStencilB
     reductionConstants.ApplyChanges(context);
     reductionConstants.SetCS(context, 0);
 
-    ID3D11RenderTargetView* rtvs[1] = { NULL };
-    context->OMSetRenderTargets(1, rtvs, NULL);
+    ID3D11RenderTargetView* rtvs[1] = { nullptr };
+    context->OMSetRenderTargets(1, rtvs, nullptr);
 
     ID3D11UnorderedAccessView* uavs[1] = { depthReductionTargets[0].UAView };
-    context->CSSetUnorderedAccessViews(0, 1, uavs, NULL);
+    context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
 
     ID3D11ShaderResourceView* srvs[1] = { depthTarget.SRView };
     context->CSSetShaderResources(0, 1, srvs);
@@ -457,19 +582,19 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, const DepthStencilB
     const bool msaa = depthTarget.MultiSamples > 1;
 
     ID3D11ComputeShader* shader = depthReductionInitialCS[msaa ? 1 : 0];
-    context->CSSetShader(shader, NULL, 0);
+    context->CSSetShader(shader, nullptr, 0);
 
     uint32 dispatchX = depthReductionTargets[0].Width;
     uint32 dispatchY = depthReductionTargets[0].Height;
     context->Dispatch(dispatchX, dispatchY, 1);
 
-    uavs[0] = NULL;
-    context->CSSetUnorderedAccessViews(0, 1, uavs, NULL);
+    uavs[0] = nullptr;
+    context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
 
-    srvs[0] = NULL;
+    srvs[0] = nullptr;
     context->CSSetShaderResources(0, 1, srvs);
 
-    context->CSSetShader(depthReductionCS, NULL, 0);
+    context->CSSetShader(depthReductionCS, nullptr, 0);
 
     for(uint32 i = 1; i < depthReductionTargets.size(); ++i)
     {
@@ -480,7 +605,7 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, const DepthStencilB
         reductionConstants.ApplyChanges(context);
 
         uavs[0] = depthReductionTargets[i].UAView;
-        context->CSSetUnorderedAccessViews(0, 1, uavs, NULL);
+        context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
 
         srvs[0] = srcTexture.SRView;
         context->CSSetShaderResources(0, 1, srvs);
@@ -489,10 +614,10 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, const DepthStencilB
         dispatchY = depthReductionTargets[i].Height;
         context->Dispatch(dispatchX, dispatchY, 1);
 
-        uavs[0] = NULL;
-        context->CSSetUnorderedAccessViews(0, 1, uavs, NULL);
+        uavs[0] = nullptr;
+        context->CSSetUnorderedAccessViews(0, 1, uavs, nullptr);
 
-        srvs[0] = NULL;
+        srvs[0] = nullptr;
         context->CSSetShaderResources(0, 1, srvs);
     }
 
@@ -528,12 +653,12 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
     context->OMSetBlendState(blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
     context->RSSetState(rasterizerStates.NoCull());
     context->OMSetDepthStencilState(depthStencilStates.DepthDisabled(), 0);
-    ID3D11Buffer* vbs[1] = { NULL };
+    ID3D11Buffer* vbs[1] = { nullptr };
     uint32 strides[1] = { 0 };
     uint32 offsets[1] = { 0 };
     context->IASetVertexBuffers(0, 1, vbs, strides, offsets);
-    context->IASetIndexBuffer(NULL, DXGI_FORMAT_R32_UINT, 0);
-    context->IASetInputLayout(NULL);
+    context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, 0);
+    context->IASetInputLayout(nullptr);
 
     SetViewport(context, sunVSM.Width, sunVSM.Height);
 
@@ -546,18 +671,18 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
     evsmConstants.ApplyChanges(context);
     evsmConstants.SetPS(context, 0);
 
-    context->VSSetShader(fullScreenVS, NULL, 0);
-    context->PSSetShader(evsmConvertPS, NULL, 0);
+    context->VSSetShader(fullScreenVS, nullptr, 0);
+    context->PSSetShader(evsmConvertPS, nullptr, 0);
 
     ID3D11RenderTargetView* rtvs[1] = { sunVSM.RTVArraySlices[cascadeIdx] };
-    context->OMSetRenderTargets(1, rtvs, NULL);
+    context->OMSetRenderTargets(1, rtvs, nullptr);
 
     ID3D11ShaderResourceView* srvs[1] = { sunShadowDepthMap.SRView };
     context->PSSetShaderResources(0, 1, srvs);
 
     context->Draw(3, 0);
 
-    srvs[0] = NULL;
+    srvs[0] = nullptr;
     context->PSSetShaderResources(0, 1, srvs);
 
     const float FilterSizeU = std::max(FilterSize * cascadeScale.x, 1.0f);
@@ -572,16 +697,16 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
         uint32 sampleRadiusU = static_cast<uint32>((FilterSizeU / 2) + 0.499f);
 
         rtvs[0] = tempVSM.RTView;
-        context->OMSetRenderTargets(1, rtvs, NULL);
+        context->OMSetRenderTargets(1, rtvs, nullptr);
 
         srvs[0] = sunVSM.SRVArraySlices[cascadeIdx];
         context->PSSetShaderResources(0, 1, srvs);
 
-        context->PSSetShader(evsmBlurH, NULL, 0);
+        context->PSSetShader(evsmBlurH, nullptr, 0);
 
         context->Draw(3, 0);
 
-        srvs[0] = NULL;
+        srvs[0] = nullptr;
         context->PSSetShaderResources(0, 1, srvs);
 
         // Vertical pass
@@ -591,16 +716,16 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
         uint32 sampleRadiusV = static_cast<uint32>((FilterSizeV / 2) + 0.499f);
 
         rtvs[0] = sunVSM.RTVArraySlices[cascadeIdx];
-        context->OMSetRenderTargets(1, rtvs, NULL);
+        context->OMSetRenderTargets(1, rtvs, nullptr);
 
         srvs[0] = tempVSM.SRView;
         context->PSSetShaderResources(0, 1, srvs);
 
-        context->PSSetShader(evsmBlurV, NULL, 0);
+        context->PSSetShader(evsmBlurV, nullptr, 0);
 
         context->Draw(3, 0);
 
-        srvs[0] = NULL;
+        srvs[0] = nullptr;
         context->PSSetShaderResources(0, 1, srvs);
     }
 
@@ -720,7 +845,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
         }
     }
 
-    ID3D11ShaderResourceView* nullSRVs[10] = { NULL };
+    ID3D11ShaderResourceView* nullSRVs[10] = { nullptr };
     context->PSSetShaderResources(0, ArraySize_(nullSRVs), nullSRVs);
 }
 
@@ -833,7 +958,7 @@ void MeshRenderer::RenderSunShadowMap(ID3D11DeviceContext* context, const Camera
 
         // Set the shadow map as the depth target
         ID3D11DepthStencilView* dsv = sunShadowDepthMap.DSView;
-        ID3D11RenderTargetView* nullRenderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
+        ID3D11RenderTargetView* nullRenderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { nullptr };
         context->OMSetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, nullRenderTargets, dsv);
         context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
 
@@ -983,7 +1108,7 @@ void MeshRenderer::RenderAreaLightShadowMap(ID3D11DeviceContext* context, const 
 
         // Set the shadow map as the depth target
         ID3D11DepthStencilView* dsv = areaLightShadowMap.ArraySlices[face];
-        ID3D11RenderTargetView* nullRenderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
+        ID3D11RenderTargetView* nullRenderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { nullptr };
         context->OMSetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, nullRenderTargets, dsv);
         context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 0.0f, 0);
 
@@ -1162,4 +1287,49 @@ void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Cam
 
     ID3D11ShaderResourceView* nullSRVs[2] = { };
     context->PSSetShaderResources(0, ArraySize_(nullSRVs), nullSRVs);
+}
+
+void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status)
+{
+    PIXEvent event(L"Voxel Visualizer");
+
+    // Set constant buffers
+    voxelVisualizerConstants.Data.ViewProjection = Float4x4::Transpose(camera.ViewProjectionMatrix());
+    voxelVisualizerConstants.Data.SceneMinBounds = status.SceneMinBounds;
+    voxelVisualizerConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
+    voxelVisualizerConstants.ApplyChanges(context);
+    voxelVisualizerConstants.SetVS(context, 0);
+    voxelVisualizerConstants.SetPS(context, 0);
+
+    // Set shaders
+    context->VSSetShader(voxelVisualizerVS , nullptr, 0);
+    context->PSSetShader(voxelVisualizerPS, nullptr, 0);
+    context->DSSetShader(nullptr, nullptr, 0);
+    context->HSSetShader(nullptr, nullptr, 0);
+    context->GSSetShader(nullptr, nullptr, 0);
+
+    // Set states
+    float blendFactor[4] = {1, 1, 1, 1};
+    context->OMSetBlendState(blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
+    context->OMSetDepthStencilState(depthStencilStates.DepthWriteEnabled(), 0);
+    context->RSSetState(rasterizerStates.BackFaceCull());
+
+    ID3D11ShaderResourceView* srvs[1] = { status.VoxelRadiance };
+
+    context->VSSetShaderResources(0, 1, srvs);
+
+    // Draw a bx for each voxel
+    ID3D11Buffer* vertexBuffers[1] = { voxelVisualizerVB };
+    uint32 vertexStrides[1] = { sizeof(Float3) };
+    uint32 offsets[1] = { 0 };
+    context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+    context->IASetIndexBuffer(voxelVisualizerIB, DXGI_FORMAT_R16_UINT, 0);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    context->IASetInputLayout(voxelVisualizerIL);
+
+    const uint32 numVoxels = AppSettings::VoxelResX * AppSettings::VoxelResY * AppSettings::VoxelResZ;
+    context->DrawIndexedInstanced(NumBoxIndices, numVoxels, 0, 0, 0);
+
+    srvs[0] = nullptr;
+    context->VSSetShaderResources(0, 1, srvs);
 }

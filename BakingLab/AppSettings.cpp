@@ -291,6 +291,7 @@ namespace AppSettings
     BoolSetting ShowBakeDataVisualizer;
     BoolSetting ShowProbeVisualizer;
     BoolSetting ViewIndirectSpecular;
+    BoolSetting VisualizeVoxels;
     Button SaveLightSettings;
     Button LoadLightSettings;
     Button SaveEXRScreenshot;
@@ -573,13 +574,13 @@ namespace AppSettings
         BakeWithVCT.Initialize(tweakBar, "BakeWithVCT", "VCT", "Bake With VCT", "", false);
         Settings.AddSetting(&BakeWithVCT);
 
-        VoxelResX.Initialize(tweakBar, "VoxelResX", "VCT", "Voxel Res X", "", 32, 1, 2048);
+        VoxelResX.Initialize(tweakBar, "VoxelResX", "VCT", "Voxel Resolution (X)", "", 32, 1, 2048);
         Settings.AddSetting(&VoxelResX);
 
-        VoxelResY.Initialize(tweakBar, "VoxelResY", "VCT", "Voxel Res Y", "", 32, 1, 2048);
+        VoxelResY.Initialize(tweakBar, "VoxelResY", "VCT", "Voxel Resolution (Y)", "", 32, 1, 2048);
         Settings.AddSetting(&VoxelResY);
 
-        VoxelResZ.Initialize(tweakBar, "VoxelResZ", "VCT", "Voxel Res Z", "", 32, 1, 2048);
+        VoxelResZ.Initialize(tweakBar, "VoxelResZ", "VCT", "Voxel Resolution (Z)", "", 32, 1, 2048);
         Settings.AddSetting(&VoxelResZ);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
@@ -659,6 +660,9 @@ namespace AppSettings
 
         ViewIndirectSpecular.Initialize(tweakBar, "ViewIndirectSpecular", "Debug", "View Indirect Specular", "", false);
         Settings.AddSetting(&ViewIndirectSpecular);
+
+        VisualizeVoxels.Initialize(tweakBar, "VisualizeVoxels", "Debug", "Visualize Voxels", "", false);
+        Settings.AddSetting(&VisualizeVoxels);
 
         SaveLightSettings.Initialize(tweakBar, "SaveLightSettings", "Debug", "Save Light Settings", "Saves the lighting settings to a file");
         Settings.AddSetting(&SaveLightSettings);

@@ -58,6 +58,8 @@ public:
                                    const MeshBakerStatus& status);
     void RenderProbeVisualizer(ID3D11DeviceContext* context, const Camera& camera,
                                const MeshBakerStatus& status);
+    void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Camera& camera,
+                                             const MeshBakerStatus& status);
 
 protected:
 
@@ -129,6 +131,12 @@ protected:
 
     ID3D11ShaderResourceViewPtr shSpecularLookupA;
     ID3D11ShaderResourceViewPtr shSpecularLookupB;
+
+    VertexShaderPtr voxelVisualizerVS;
+    PixelShaderPtr voxelVisualizerPS;
+    ID3D11BufferPtr voxelVisualizerVB;
+    ID3D11BufferPtr voxelVisualizerIB;
+    ID3D11InputLayoutPtr voxelVisualizerIL;
 
     // Constant buffers
     struct MeshVSConstants
@@ -203,10 +211,18 @@ protected:
         Float4Align Float3 SceneMaxBounds;
     };
 
+    struct VoxelVisualizerConstants
+    {
+        Float4x4 ViewProjection;
+        Float4Align Float3 SceneMinBounds;
+        Float4Align Float3 SceneMaxBounds;
+    };
+
     ConstantBuffer<MeshVSConstants> meshVSConstants;
     ConstantBuffer<MeshPSConstants> meshPSConstants;
     ConstantBuffer<AreaLightConstants> areaLightConstants;
     ConstantBuffer<VisualizerConstants> visualizerConstants;
     ConstantBuffer<EVSMConstants> evsmConstants;
     ConstantBuffer<ReductionConstants> reductionConstants;
+    ConstantBuffer<VoxelVisualizerConstants> voxelVisualizerConstants;
 };

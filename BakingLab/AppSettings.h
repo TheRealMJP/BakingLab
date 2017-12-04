@@ -365,6 +365,7 @@ namespace AppSettings
     extern BoolSetting ShowBakeDataVisualizer;
     extern BoolSetting ShowProbeVisualizer;
     extern BoolSetting ViewIndirectSpecular;
+    extern BoolSetting VisualizeVoxels;
     extern Button SaveLightSettings;
     extern Button LoadLightSettings;
     extern Button SaveEXRScreenshot;

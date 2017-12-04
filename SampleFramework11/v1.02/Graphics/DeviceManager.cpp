@@ -109,7 +109,7 @@ void DeviceManager::Initialize(HWND outputWindow)
         flags |= D3D11_CREATE_DEVICE_DEBUG;
     #endif
 
-    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_1 };
+    D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_12_1 };
 
     DXCall(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags,
                                          featureLevels, ArraySize_(featureLevels), D3D11_SDK_VERSION, &desc, &swapChain,

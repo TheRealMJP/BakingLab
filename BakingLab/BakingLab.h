@@ -73,6 +73,7 @@ protected:
     Float2 prevJitter;
     uint64 frameCount = 0;
     FirstPersonCamera unJitteredCamera;
+    bool enableTAA = false;
 
     RenderTarget2D probeCaptureMap;
     RenderTarget2D probeDistanceCaptureMap;
@@ -91,8 +92,8 @@ protected:
     ComputeShaderPtr probeIntegrateVolumeMap;
     ComputeShaderPtr probeIntegrateDistanceVolumeMap;
 
-    RenderTarget3D voxelTextures[6];
-    ComputeShaderPtr clearVoxelTextures;
+    RenderTarget3D voxelRadiance;
+    ComputeShaderPtr clearVoxelRadiance;
     uint64 currVoxelIdx = 0;
 
     struct ResolveConstants
@@ -132,7 +133,7 @@ protected:
     void VoxelizeScene(MeshBakerStatus& status);
     void RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* secondRT,
                      const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
-                     bool32 renderAreaLight, bool32 enableSkySun, bool32 probeRendering);
+                     bool32 renderAreaLight, bool32 showVoxelVisualizer, bool32 enableSkySun, bool32 probeRendering);
     void RenderAA();
     void RenderBackgroundVelocity();
     void RenderHUD(const Timer& timer, float groundTruthProgress, float bakeProgress,

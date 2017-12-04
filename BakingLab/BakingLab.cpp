@@ -478,7 +478,7 @@ void BakingLab::Initialize()
     probeIntegrateVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateVolumeMap");
     probeIntegrateDistanceVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistanceVolumeMap");
 
-    clearVoxelTextures = CompileCSFromFile(device, L"ClearVoxelTextures.hlsl", "ClearVoxelTextures");
+    clearVoxelRadiance = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "ClearVoxelRadiance");
 
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
@@ -585,8 +585,14 @@ void BakingLab::Update(const Timer& timer)
     camera.SetFieldOfView(AppSettings::VerticalFOV(camera.AspectRatio()));
     unJitteredCamera = camera;
 
+    enableTAA = AppSettings::EnableTemporalAA &&
+                AppSettings::VisualizeVoxels == false &&
+                AppSettings::ShowProbeVisualizer == false &&
+                AppSettings::ShowBakeDataVisualizer == false &&
+                AppSettings::ShowGroundTruth == false;
+
     Float2 jitter = 0.0f;
-    if(AppSettings::EnableTemporalAA && AppSettings::EnableLuminancePicker == false && AppSettings::JitterMode != JitterModes::None)
+    if(enableTAA && AppSettings::EnableLuminancePicker == false && AppSettings::JitterMode != JitterModes::None)
     {
         if(AppSettings::JitterMode == JitterModes::Uniform2x)
         {
@@ -750,7 +756,7 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
 
         probeCam.SetOrientation(orientation);
         RenderScene(status, probeCaptureMap.RTVArraySlices[i], probeDistanceCaptureMap.RTVArraySlices[i], probeDepthBuffer, probeCam,
-                    false, false, AppSettings::BakeDirectAreaLight, false, true);
+                    false, false, AppSettings::BakeDirectAreaLight, false, false, true);
     }
 
     AppSettings::UseProbes.SetValue(prevUseProbes);
@@ -847,12 +853,11 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     if(status.BakingInvalidated || AppSettings::AlwaysRevoxelize)
         reVoxelize = true;
 
-    if(voxelTextures[0].Texture == nullptr || AppSettings::VoxelResX.Changed() || AppSettings::VoxelResY.Changed() || AppSettings::VoxelResZ.Changed())
+    if(voxelRadiance.Texture == nullptr || AppSettings::VoxelResX.Changed() || AppSettings::VoxelResY.Changed() || AppSettings::VoxelResZ.Changed())
     {
         reVoxelize = true;
-        for(uint64 i = 0; i < 6; ++i)
-            voxelTextures[i].Initialize(device, AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ,
-                                        DXGI_FORMAT_R16G16B16A16_FLOAT, 1, false, false, true);
+        voxelRadiance.Initialize(device, AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ,
+                                 DXGI_FORMAT_R16G16B16A16_FLOAT, 1, false, false, true);
     }
 
     if(reVoxelize == false)
@@ -862,21 +867,13 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
 
     PIXEvent pixEvent(L"Voxelize Scene");
 
-    {
-        SetCSShader(context, clearVoxelTextures);
+    // Clear the voxel radiance texture
+    SetCSShader(context, clearVoxelRadiance);
+    SetCSOutputs(context, voxelRadiance.UAView);
 
-        ID3D11UnorderedAccessView* uavs[6];
-        for(uint64 i = 0; i < 6; ++i)
-            uavs[i] = voxelTextures[i].UAView;
-        context->CSSetUnorderedAccessViews(0, 6, uavs, nullptr);
+    context->Dispatch(DispatchSize(4, AppSettings::VoxelResX), DispatchSize(4, AppSettings::VoxelResY), DispatchSize(4, AppSettings::VoxelResZ));
 
-
-        context->Dispatch(DispatchSize(4, AppSettings::VoxelResX), DispatchSize(4, AppSettings::VoxelResY), DispatchSize(4, AppSettings::VoxelResZ));
-
-        for(uint64 i = 0; i < 6; ++i)
-            uavs[i] = nullptr;
-        context->CSSetUnorderedAccessViews(0, 6, uavs, nullptr);
-    }
+    ClearCSOutputs(context);
 
     OrthographicCamera voxelCameraZ(currSceneMin.x, currSceneMin.y, currSceneMax.x, currSceneMax.y, 0.0f, currSceneMax.z - currSceneMin.z);
     voxelCameraZ.SetPosition(Float3((currSceneMin.x + currSceneMax.x) / 2.0f, (currSceneMin.y + currSceneMax.y) / 2.0f, currSceneMin.z));
@@ -894,6 +891,9 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
 
     if(AppSettings::EnableAreaLight)
         meshRenderer.RenderAreaLightShadowMap(context, voxelCameraZ);
+
+    ID3D11UnorderedAccessView* uavs[] = { voxelRadiance.UAView };
+    context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, ArraySize_(uavs), uavs, nullptr);
 
     for(uint64 i = 0; i < 3; ++i)
     {
@@ -915,9 +915,6 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
             SetViewport(context, AppSettings::VoxelResX, AppSettings::VoxelResY);
         }
 
-        ID3D11UnorderedAccessView* uavs[2] = { voxelTextures[i].UAView, voxelTextures[i + 3].UAView };
-        context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, 2, uavs, nullptr);
-
         meshRenderer.RenderMainPass(context, *voxelCamera, status, false, true);
     }
 }
@@ -937,6 +934,8 @@ void BakingLab::Render(const Timer& timer)
     VoxelizeScene(status);
 
     RenderProbes(status);
+
+    status.VoxelRadiance = voxelRadiance.SRView;
 
     if(AppSettings::ShowGroundTruth)
     {
@@ -967,7 +966,7 @@ void BakingLab::Render(const Timer& timer)
 
         RenderScene(status, colorTargetMSAA.RTView, velocityTargetMSAA.RTView, depthBuffer, camera,
                     AppSettings::ShowBakeDataVisualizer, AppSettings::ShowProbeVisualizer,
-                    AppSettings::EnableAreaLight, true, false);
+                    AppSettings::EnableAreaLight, AppSettings::VisualizeVoxels, true, false);
         RenderBackgroundVelocity();
     }
 
@@ -995,7 +994,7 @@ void BakingLab::Render(const Timer& timer)
 
 void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* secondRT,
                             const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
-                            bool32 renderAreaLight, bool32 enableSkySun, bool32 probeRendering)
+                            bool32 renderAreaLight, bool32 showVoxelVisualizer, bool32 enableSkySun, bool32 probeRendering)
 {
     PIXEvent event(L"Render Scene");
 
@@ -1031,13 +1030,22 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
     context->ClearRenderTargetView(colorTarget, clearColor);
     context->ClearRenderTargetView(secondRT, secondClearColor);
 
-    meshRenderer.RenderMainPass(context, cam, status, probeRendering, false);
+    if(showVoxelVisualizer)
+    {
+        context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-    if(showBakeDataVisualizer)
-        meshRenderer.RenderBakeDataVisualizer(context, cam, status);
+        meshRenderer.RenderVoxelVisualizer(context, cam, status);
+    }
+    else
+    {
+        meshRenderer.RenderMainPass(context, cam, status, probeRendering, false);
 
-    if(showProbeVisualizer)
-        meshRenderer.RenderProbeVisualizer(context, cam, status);
+        if(showBakeDataVisualizer)
+            meshRenderer.RenderBakeDataVisualizer(context, cam, status);
+
+        if(showProbeVisualizer)
+            meshRenderer.RenderProbeVisualizer(context, cam, status);
+    }
 
     if(renderAreaLight)
         meshRenderer.RenderAreaLight(context, cam);
@@ -1081,7 +1089,7 @@ void BakingLab::RenderAA()
 
     resolveConstants.Data.TextureSize = Float2(float(colorTargetMSAA.Width), float(colorTargetMSAA.Height));
     resolveConstants.Data.SampleRadius = SampleRadius;
-    resolveConstants.Data.EnableTemporalAA = AppSettings::EnableTemporalAA && AppSettings::ShowGroundTruth == false;
+    resolveConstants.Data.EnableTemporalAA = enableTAA;
     resolveConstants.ApplyChanges(context);
     resolveConstants.SetPS(context, 0);
 

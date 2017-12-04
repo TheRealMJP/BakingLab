@@ -730,14 +730,17 @@ public class Settings
 
         [MinValue(1)]
         [MaxValue(2048)]
+        [DisplayName("Voxel Resolution (X)")]
         int VoxelResX = 32;
 
         [MinValue(1)]
         [MaxValue(2048)]
+        [DisplayName("Voxel Resolution (Y)")]
         int VoxelResY = 32;
 
         [MinValue(1)]
         [MaxValue(2048)]
+        [DisplayName("Voxel Resolution (Z)")]
         int VoxelResZ = 32;
     }
 
@@ -882,6 +885,9 @@ public class Settings
         bool ShowProbeVisualizer = false;
 
         bool ViewIndirectSpecular = false;
+
+        [UseAsShaderConstant(false)]
+        bool VisualizeVoxels = false;
 
         [DisplayName("Save Light Settings")]
         [HelpText("Saves the lighting settings to a file")]

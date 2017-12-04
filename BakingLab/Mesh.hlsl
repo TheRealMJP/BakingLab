@@ -79,7 +79,7 @@ SamplerState LinearSampler : register(s2);
 SamplerComparisonState PCFSampler : register(s3);
 
 #if Voxelize_
-    RWTexture3D<float4> VoxelTextures[2] : register(u0);
+    RasterizerOrderedTexture3D<float4> VoxelRadiance : register(u0);
 #endif
 
 //=================================================================================================
@@ -740,10 +740,11 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         float3 voxelRadiance = clamp(irradiance * surface.DiffuseAlbedo * InvPi, 0.0f, FP16Max);
         float3 voxelUVW = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
         uint3 voxelCoord = uint3(voxelUVW * float3(VoxelResX, VoxelResY, VoxelResZ));
-        if(isFrontFace)
-            VoxelTextures[0][voxelCoord] = float4(voxelRadiance, 1.0f);
-        else
-            VoxelTextures[1][voxelCoord] = float4(voxelRadiance, 1.0f);
+
+        float3 prevVoxelRadiance = VoxelRadiance[voxelCoord].xyz;
+        float prevVoxelCount = VoxelRadiance[voxelCoord].w;
+        float3 newVoxelRadiance = lerp(prevVoxelRadiance, voxelRadiance, 1.0f / (prevVoxelCount + 1.0f));
+        VoxelRadiance[voxelCoord] = float4(newVoxelRadiance, prevVoxelCount + 1.0f);
     #else
         PSOutput output;
         output.Lighting = clamp(float4(lighting, illuminance), 0.0f, FP16Max);

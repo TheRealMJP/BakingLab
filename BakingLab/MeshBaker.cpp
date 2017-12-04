@@ -1545,7 +1545,8 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         || AppSettings::Turbidity.Changed() || AppSettings::HasSunDirChanged()
         || AppSettings::SunTintColor.Changed() || AppSettings::SunIntensityScale.Changed()
         || AppSettings::SunSize.Changed() || AppSettings::NormalizeSunIntensity.Changed()
-        || AppSettings::DiffuseAlbedoScale.Changed() || AppSettings::EnableAlbedoMaps.Changed())
+        || AppSettings::DiffuseAlbedoScale.Changed() || AppSettings::EnableAlbedoMaps.Changed()
+        || AppSettings::CurrentScene.Changed())
     {
         InterlockedIncrement64(&renderTag);
         InterlockedIncrement64(&bakeTag);
