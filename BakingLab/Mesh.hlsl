@@ -744,7 +744,8 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
     #if Voxelize_
         float3 voxelRadiance = clamp(irradiance * surface.DiffuseAlbedo * InvPi, 0.0f, FP16Max);
         float3 voxelUVW = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
-        uint3 voxelCoord = uint3(voxelUVW * float3(VoxelResX, VoxelResY, VoxelResZ));
+        int3 voxelCoord = int3(voxelUVW * float3(VoxelResX, VoxelResY, VoxelResZ));
+        voxelCoord = clamp(voxelCoord, 0, int3(VoxelResX, VoxelResY, VoxelResZ) - 1);
 
         float3 prevVoxelRadiance = VoxelRadiance[voxelCoord].xyz;
         float prevVoxelCount = VoxelRadiance[voxelCoord].w;

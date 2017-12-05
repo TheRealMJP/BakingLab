@@ -176,6 +176,13 @@ static const char* ScenesLabels[3] =
     "Sponza",
 };
 
+static const char* VoxelVisualizerModesLabels[3] =
+{
+    "None",
+    "Geometry",
+    "RayMarch",
+};
+
 namespace AppSettings
 {
     BoolSetting EnableSun;
@@ -291,7 +298,7 @@ namespace AppSettings
     BoolSetting ShowBakeDataVisualizer;
     BoolSetting ShowProbeVisualizer;
     BoolSetting ViewIndirectSpecular;
-    BoolSetting VisualizeVoxels;
+    VoxelVisualizerModesSetting VoxelVisualizerMode;
     Button SaveLightSettings;
     Button LoadLightSettings;
     Button SaveEXRScreenshot;
@@ -661,8 +668,8 @@ namespace AppSettings
         ViewIndirectSpecular.Initialize(tweakBar, "ViewIndirectSpecular", "Debug", "View Indirect Specular", "", false);
         Settings.AddSetting(&ViewIndirectSpecular);
 
-        VisualizeVoxels.Initialize(tweakBar, "VisualizeVoxels", "Debug", "Visualize Voxels", "", false);
-        Settings.AddSetting(&VisualizeVoxels);
+        VoxelVisualizerMode.Initialize(tweakBar, "VoxelVisualizerMode", "Debug", "Voxel Visualizer Mode", "", VoxelVisualizerModes::None, 3, VoxelVisualizerModesLabels);
+        Settings.AddSetting(&VoxelVisualizerMode);
 
         SaveLightSettings.Initialize(tweakBar, "SaveLightSettings", "Debug", "Save Light Settings", "Saves the lighting settings to a file");
         Settings.AddSetting(&SaveLightSettings);

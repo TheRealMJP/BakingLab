@@ -587,7 +587,7 @@ void BakingLab::Update(const Timer& timer)
     unJitteredCamera = camera;
 
     enableTAA = AppSettings::EnableTemporalAA &&
-                AppSettings::VisualizeVoxels == false &&
+                AppSettings::VoxelVisualizerMode == VoxelVisualizerModes::None &&
                 AppSettings::ShowProbeVisualizer == false &&
                 AppSettings::ShowBakeDataVisualizer == false &&
                 AppSettings::ShowGroundTruth == false;
@@ -970,7 +970,8 @@ void BakingLab::Render(const Timer& timer)
 
         RenderScene(status, colorTargetMSAA.RTView, velocityTargetMSAA.RTView, depthBuffer, camera,
                     AppSettings::ShowBakeDataVisualizer, AppSettings::ShowProbeVisualizer,
-                    AppSettings::EnableAreaLight, AppSettings::VisualizeVoxels, true, false);
+                    AppSettings::EnableAreaLight, AppSettings::VoxelVisualizerMode != VoxelVisualizerModes::None,
+                    true, false);
         RenderBackgroundVelocity();
     }
 
@@ -1036,9 +1037,7 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
 
     if(showVoxelVisualizer)
     {
-        context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-        meshRenderer.RenderVoxelVisualizer(context, cam, status);
+       context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
     }
     else
     {
@@ -1074,6 +1073,9 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
         skybox.RenderEnvironmentMap(context, envMaps[AppSettings::SkyMode - AppSettings::CubeMapStart],
                                     cam.ViewMatrix(), cam.ProjectionMatrix(), 1.0f);
     }
+
+    if(showVoxelVisualizer)
+        meshRenderer.RenderVoxelVisualizer(context, cam, status);
 }
 
 void BakingLab::RenderAA()

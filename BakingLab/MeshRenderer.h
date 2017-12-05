@@ -135,11 +135,16 @@ protected:
     ID3D11ShaderResourceViewPtr shSpecularLookupA;
     ID3D11ShaderResourceViewPtr shSpecularLookupB;
 
-    VertexShaderPtr voxelVisualizerVS;
-    PixelShaderPtr voxelVisualizerPS;
+    VertexShaderPtr voxelGeoVS;
+    PixelShaderPtr voxelGeoPS;
+    ID3D11InputLayoutPtr voxelGeoIL;
+
+    VertexShaderPtr voxelRayMarchVS;
+    PixelShaderPtr voxelRayMarchPS;
+    ID3D11InputLayoutPtr voxelRayMarchIL;
+
     ID3D11BufferPtr voxelVisualizerVB;
     ID3D11BufferPtr voxelVisualizerIB;
-    ID3D11InputLayoutPtr voxelVisualizerIL;
 
     // Constant buffers
     struct MeshVSConstants
@@ -219,6 +224,7 @@ protected:
         Float4x4 ViewProjection;
         Float4Align Float3 SceneMinBounds;
         Float4Align Float3 SceneMaxBounds;
+        Float4Align Float3 CameraPos;
     };
 
     ConstantBuffer<MeshVSConstants> meshVSConstants;

@@ -246,6 +246,17 @@ enum class Scenes
 
 typedef EnumSettingT<Scenes> ScenesSetting;
 
+enum class VoxelVisualizerModes
+{
+    None = 0,
+    Geometry = 1,
+    RayMarch = 2,
+
+    NumValues
+};
+
+typedef EnumSettingT<VoxelVisualizerModes> VoxelVisualizerModesSetting;
+
 namespace AppSettings
 {
     static const float BaseSunSize = 0.2700f;
@@ -365,7 +376,7 @@ namespace AppSettings
     extern BoolSetting ShowBakeDataVisualizer;
     extern BoolSetting ShowProbeVisualizer;
     extern BoolSetting ViewIndirectSpecular;
-    extern BoolSetting VisualizeVoxels;
+    extern VoxelVisualizerModesSetting VoxelVisualizerMode;
     extern Button SaveLightSettings;
     extern Button LoadLightSettings;
     extern Button SaveEXRScreenshot;

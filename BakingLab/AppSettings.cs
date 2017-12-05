@@ -312,6 +312,13 @@ enum ProbeModes
     L2_SH,
 }
 
+enum VoxelVisualizerModes
+{
+    None,
+    Geometry,
+    RayMarch
+};
+
 public class Settings
 {
     const float BaseSunSize = 0.27f;
@@ -887,7 +894,7 @@ public class Settings
         bool ViewIndirectSpecular = false;
 
         [UseAsShaderConstant(false)]
-        bool VisualizeVoxels = false;
+        VoxelVisualizerModes VoxelVisualizerMode = VoxelVisualizerModes.None;
 
         [DisplayName("Save Light Settings")]
         [HelpText("Saves the lighting settings to a file")]

@@ -202,6 +202,10 @@ static const int Scenes_Box = 0;
 static const int Scenes_WhiteRoom = 1;
 static const int Scenes_Sponza = 2;
 
+static const int VoxelVisualizerModes_None = 0;
+static const int VoxelVisualizerModes_Geometry = 1;
+static const int VoxelVisualizerModes_RayMarch = 2;
+
 static const float BaseSunSize = 0.2700f;
 static const int MaxSGCount = 12;
 static const int MaxBasisCount = 12;
