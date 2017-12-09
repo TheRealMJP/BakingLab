@@ -480,7 +480,7 @@ void BakingLab::Initialize()
     probeIntegrateDistanceVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistanceVolumeMap");
 
     clearVoxelRadiance = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "ClearVoxelRadiance");
-    fixVoxelRadianceOccupancy = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "FixVoxelRadianceOccupancy");
+    fixVoxelOpacity = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "FixVoxelOpacity");
     generateVoxelMips = CompileCSFromFile(device, L"GenerateVoxelMips.hlsl", "GenerateVoxelMips");
 
     resolveConstants.Initialize(device);
@@ -931,8 +931,8 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
 
     context->OMSetRenderTargets(0, nullptr, nullptr);
 
-    // Clamp the occupancy to [0, 1]
-    SetCSShader(context, fixVoxelRadianceOccupancy);
+    // Clamp the opacity to [0, 1]
+    SetCSShader(context, fixVoxelOpacity);
     SetCSOutputs(context, voxelRadiance.UAView);
 
     context->Dispatch(voxelDispatchSize.x, voxelDispatchSize.y, voxelDispatchSize.z);
