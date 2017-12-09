@@ -22,6 +22,7 @@ cbuffer Constants : register(b0)
     float3 SceneMinBounds;
     float3 SceneMaxBounds;
     float3 CameraPos;
+    float3 MipVoxelRes;
 }
 
 Texture3D<float4> VoxelRadiance : register(t0);
@@ -133,7 +134,7 @@ float IntersectRayBox(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
 //=================================================================================================
 float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
 {
-    const float3 voxelRes = float3(VoxelResX, VoxelResY, VoxelResZ);
+    const float3 voxelRes = MipVoxelRes;
     const float3 sceneSize = SceneMaxBounds - SceneMinBounds;
     const float3 voxelSize = sceneSize / voxelRes;
 
@@ -155,7 +156,7 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
         if(any(abs(uvw * 2.0f - 1.0f) > 1.0001f) || opacity >= 0.999f)
             break;
 
-        float4 voxelSample = VoxelRadiance.SampleLevel(PointSampler, uvw, 0.0f);
+        float4 voxelSample = VoxelRadiance.SampleLevel(PointSampler, uvw, float(VoxelVisualizerMipLevel));
         voxelSample.w = saturate(voxelSample.w);
 
         radiance += (1.0f - opacity) * voxelSample.xyz * voxelSample.w;

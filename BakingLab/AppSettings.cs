@@ -896,6 +896,10 @@ public class Settings
         [UseAsShaderConstant(false)]
         VoxelVisualizerModes VoxelVisualizerMode = VoxelVisualizerModes.None;
 
+        [MinValue(0)]
+        [MaxValue(16)]
+        int VoxelVisualizerMipLevel = 0;
+
         [DisplayName("Save Light Settings")]
         [HelpText("Saves the lighting settings to a file")]
         Button SaveLightSettings;

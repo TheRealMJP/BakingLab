@@ -299,6 +299,7 @@ namespace AppSettings
     BoolSetting ShowProbeVisualizer;
     BoolSetting ViewIndirectSpecular;
     VoxelVisualizerModesSetting VoxelVisualizerMode;
+    IntSetting VoxelVisualizerMipLevel;
     Button SaveLightSettings;
     Button LoadLightSettings;
     Button SaveEXRScreenshot;
@@ -671,6 +672,9 @@ namespace AppSettings
         VoxelVisualizerMode.Initialize(tweakBar, "VoxelVisualizerMode", "Debug", "Voxel Visualizer Mode", "", VoxelVisualizerModes::None, 3, VoxelVisualizerModesLabels);
         Settings.AddSetting(&VoxelVisualizerMode);
 
+        VoxelVisualizerMipLevel.Initialize(tweakBar, "VoxelVisualizerMipLevel", "Debug", "Voxel Visualizer Mip Level", "", 0, 0, 16);
+        Settings.AddSetting(&VoxelVisualizerMipLevel);
+
         SaveLightSettings.Initialize(tweakBar, "SaveLightSettings", "Debug", "Save Light Settings", "Saves the lighting settings to a file");
         Settings.AddSetting(&SaveLightSettings);
 
@@ -819,6 +823,7 @@ namespace AppSettings
         CBuffer.Data.BloomMagnitude = BloomMagnitude;
         CBuffer.Data.BloomBlurSigma = BloomBlurSigma;
         CBuffer.Data.ViewIndirectSpecular = ViewIndirectSpecular;
+        CBuffer.Data.VoxelVisualizerMipLevel = VoxelVisualizerMipLevel;
 
         CBuffer.ApplyChanges(context);
         CBuffer.SetVS(context, 7);

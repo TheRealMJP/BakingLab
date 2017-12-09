@@ -171,8 +171,6 @@ void RenderTarget3D::Initialize(ID3D11Device* device,
                                 uint32 depth,
                                 DXGI_FORMAT format,
                                 uint32 numMipLevels,
-                                bool32 autoGenMipMaps,
-                                bool32 createRTV,
                                 bool32 createUAV)
 {
     D3D11_TEXTURE3D_DESC desc = { };
@@ -180,23 +178,17 @@ void RenderTarget3D::Initialize(ID3D11Device* device,
     desc.Height = height;
     desc.Depth = depth;
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    if(createRTV | autoGenMipMaps)
-        desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
     if(createUAV)
         desc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
 
     desc.CPUAccessFlags = 0;
     desc.Format = format;
     desc.MipLevels = numMipLevels;
-    desc.MiscFlags = (autoGenMipMaps && numMipLevels != 1) ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
     desc.Usage = D3D11_USAGE_DEFAULT;
 
     DXCall(device->CreateTexture3D(&desc, nullptr, &Texture));
 
     DXCall(device->CreateShaderResourceView(Texture, nullptr, &SRView));
-
-    if(createRTV)
-        DXCall(device->CreateRenderTargetView(Texture, nullptr, &RTView));
 
     if(createUAV)
         DXCall(device->CreateUnorderedAccessView(Texture, nullptr, &UAView));
@@ -206,7 +198,36 @@ void RenderTarget3D::Initialize(ID3D11Device* device,
     Depth = depth;
     NumMipLevels = numMipLevels;
     Format = format;
-    AutoGenMipMaps = autoGenMipMaps;
+
+    MipSRVs.Init(numMipLevels);
+    if(createUAV)
+        MipUAVs.Init(numMipLevels);
+
+    uint32 mipDepth = depth;
+    for(uint32 mipLevel = 0; mipLevel < numMipLevels; ++mipLevel)
+    {
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = { };
+        srvDesc.Format = format;
+        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+        srvDesc.Texture3D.MostDetailedMip = mipLevel;
+        srvDesc.Texture3D.MipLevels = 1;
+
+        DXCall(device->CreateShaderResourceView(Texture, &srvDesc, &MipSRVs[mipLevel]));
+
+        if(createUAV)
+        {
+            D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = { };
+            uavDesc.Format = format;
+            uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE3D;
+            uavDesc.Texture3D.MipSlice = mipLevel;
+            uavDesc.Texture3D.FirstWSlice = 0;
+            uavDesc.Texture3D.WSize = mipDepth;
+
+            DXCall(device->CreateUnorderedAccessView(Texture, &uavDesc, &MipUAVs[mipLevel]));
+        }
+
+        mipDepth = mipDepth > 1 ? mipDepth / 2: 1;
+    }
 };
 
 // == DepthStencilBuffer ==========================================================================

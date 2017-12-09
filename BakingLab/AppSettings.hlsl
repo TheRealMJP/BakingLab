@@ -79,6 +79,7 @@ cbuffer AppSettings : register(b7)
     float BloomMagnitude;
     float BloomBlurSigma;
     bool ViewIndirectSpecular;
+    int VoxelVisualizerMipLevel;
 }
 
 static const int SunDirectionTypes_UnitVector = 0;

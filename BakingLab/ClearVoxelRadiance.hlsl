@@ -15,3 +15,11 @@ void ClearVoxelRadiance(in uint3 voxelCoord : SV_DispatchThreadID)
 {
     VoxelRadiance[voxelCoord] = 0.0f;
 }
+
+[numthreads(4, 4, 4)]
+void FixVoxelRadianceOccupancy(in uint3 voxelCoord : SV_DispatchThreadID)
+{
+    float4 voxel = VoxelRadiance[voxelCoord];
+    voxel.w = saturate(voxel.w);
+    VoxelRadiance[voxelCoord] = voxel;
+}

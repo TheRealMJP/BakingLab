@@ -117,10 +117,24 @@ inline void DebugPrint(const std::wstring& str)
 }
 
 // Returns the number of mip levels given a texture size
-inline UINT NumMipLevels(UINT width, UINT height)
+inline uint32 NumMipLevels(uint32 width, uint32 height)
 {
-    UINT numMips = 0;
-    UINT size = std::max(width, height);
+    uint32 numMips = 0;
+    uint32 size = std::max(width, height);
+    while (1U << numMips <= size)
+        ++numMips;
+
+    if (1U << numMips < size)
+        ++numMips;
+
+    return numMips;
+}
+
+inline uint32 NumMipLevels(uint32 width, uint32 height, uint32 depth)
+{
+    uint32 numMips = 0;
+    uint32 size = std::max(width, height);
+    size = std::max(size, depth);
     while (1U << numMips <= size)
         ++numMips;
 

@@ -1319,6 +1319,12 @@ void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Cam
     voxelVisualizerConstants.Data.SceneMinBounds = status.SceneMinBounds;
     voxelVisualizerConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
     voxelVisualizerConstants.Data.CameraPos = camera.Position();
+
+    Uint3 mipVoxelRes = Uint3(AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ);
+    for(int32 i = 0; i < AppSettings::VoxelVisualizerMipLevel; ++i)
+        mipVoxelRes = Uint3(Max(mipVoxelRes.x / 2, 1u), Max(mipVoxelRes.y / 2, 1u), Max(mipVoxelRes.z / 2, 1u));
+    voxelVisualizerConstants.Data.MipVoxelRes = Float3(float(mipVoxelRes.x), float(mipVoxelRes.y), float(mipVoxelRes.z));
+
     voxelVisualizerConstants.ApplyChanges(context);
     voxelVisualizerConstants.SetVS(context, 0);
     voxelVisualizerConstants.SetPS(context, 0);

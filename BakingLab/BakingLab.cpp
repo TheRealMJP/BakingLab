@@ -480,10 +480,13 @@ void BakingLab::Initialize()
     probeIntegrateDistanceVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistanceVolumeMap");
 
     clearVoxelRadiance = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "ClearVoxelRadiance");
+    fixVoxelRadianceOccupancy = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "FixVoxelRadianceOccupancy");
+    generateVoxelMips = CompileCSFromFile(device, L"GenerateVoxelMips.hlsl", "GenerateVoxelMips");
 
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
     integrateConstants.Initialize(device);
+    generateMipConstants.Initialize(device);
 
     // Init the post processor
     postProcessor.Initialize(device);
@@ -701,9 +704,9 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
             for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
             {
                 probeVolumeMaps[i].Initialize(device, AppSettings::ProbeResX, AppSettings::ProbeResY, AppSettings::ProbeResZ,
-                                              DXGI_FORMAT_R16G16B16A16_FLOAT, 1, false, false, true);
+                                              DXGI_FORMAT_R16G16B16A16_FLOAT, 1, true);
                 probeDistanceVolumeMaps[i].Initialize(device, AppSettings::ProbeResX, AppSettings::ProbeResY, AppSettings::ProbeResZ,
-                                                      DXGI_FORMAT_R16G16_UNORM, 1, false, false, true);
+                                                      DXGI_FORMAT_R16G16_UNORM, 1, true);
             }
         }
     }
@@ -857,8 +860,9 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     if(voxelRadiance.Texture == nullptr || AppSettings::VoxelResX.Changed() || AppSettings::VoxelResY.Changed() || AppSettings::VoxelResZ.Changed())
     {
         reVoxelize = true;
+        const uint32 numMips = NumMipLevels(AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ);
         voxelRadiance.Initialize(device, AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ,
-                                 DXGI_FORMAT_R16G16B16A16_FLOAT, 1, false, false, true);
+                                 DXGI_FORMAT_R16G16B16A16_FLOAT, numMips, true);
     }
 
     if(reVoxelize == false)
@@ -872,7 +876,10 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     SetCSShader(context, clearVoxelRadiance);
     SetCSOutputs(context, voxelRadiance.UAView);
 
-    context->Dispatch(DispatchSize(4, AppSettings::VoxelResX), DispatchSize(4, AppSettings::VoxelResY), DispatchSize(4, AppSettings::VoxelResZ));
+    Uint3 voxelDispatchSize = Uint3(DispatchSize(4, AppSettings::VoxelResX),
+                                    DispatchSize(4, AppSettings::VoxelResY),
+                                    DispatchSize(4, AppSettings::VoxelResZ));
+    context->Dispatch(voxelDispatchSize.x, voxelDispatchSize.y, voxelDispatchSize.z);
 
     ClearCSOutputs(context);
 
@@ -921,6 +928,43 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
 
         meshRenderer.RenderMainPass(context, *voxelCamera, status, false, true);
     }
+
+    context->OMSetRenderTargets(0, nullptr, nullptr);
+
+    // Clamp the occupancy to [0, 1]
+    SetCSShader(context, fixVoxelRadianceOccupancy);
+    SetCSOutputs(context, voxelRadiance.UAView);
+
+    context->Dispatch(voxelDispatchSize.x, voxelDispatchSize.y, voxelDispatchSize.z);
+
+    ClearCSOutputs(context);
+
+    SetCSShader(context, generateVoxelMips);
+    SetCSSamplers(context, samplerStates.LinearClamp());
+
+    const uint32 numMips = voxelRadiance.NumMipLevels;
+    Uint3 srcMipSize = Uint3(AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ);
+    for(uint32 dstMipLevel = 1; dstMipLevel < numMips; ++dstMipLevel)
+    {
+        SetCSInputs(context, voxelRadiance.MipSRVs[dstMipLevel - 1]);
+        SetCSOutputs(context, voxelRadiance.MipUAVs[dstMipLevel]);
+
+        Uint3 dstMipSize = srcMipSize;
+        dstMipSize.x = Max(dstMipSize.x / 2, 1u);
+        dstMipSize.y = Max(dstMipSize.y / 2, 1u);
+        dstMipSize.z = Max(dstMipSize.z / 2, 1u);
+
+        generateMipConstants.Data.SrcMipTexelSize = Float3(1.0f / srcMipSize.x, 1.0f / srcMipSize.y, 1.0f / srcMipSize.z);
+        generateMipConstants.Data.DstMipTexelSize = Float3(1.0f / dstMipSize.x, 1.0f / dstMipSize.y, 1.0f / dstMipSize.z);
+        generateMipConstants.ApplyChanges(context);
+        generateMipConstants.SetCS(context, 0);
+
+        context->Dispatch(DispatchSize(4, dstMipSize.x), DispatchSize(4, dstMipSize.y), DispatchSize(4, dstMipSize.z));
+
+        srcMipSize = dstMipSize;
+
+        ClearCSOutputs(context);
+    }
 }
 
 void BakingLab::Render(const Timer& timer)
@@ -940,6 +984,9 @@ void BakingLab::Render(const Timer& timer)
     RenderProbes(status);
 
     status.VoxelRadiance = voxelRadiance.SRView;
+
+    if(AppSettings::VoxelVisualizerMipLevel >= int32(voxelRadiance.NumMipLevels))
+        AppSettings::VoxelVisualizerMipLevel.SetValue(voxelRadiance.NumMipLevels - 1);
 
     if(AppSettings::ShowGroundTruth)
     {
@@ -1226,7 +1273,7 @@ void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float b
         spriteRenderer.RenderText(font, progressText.c_str(), transform);
     }
 
-    if(probeBakeProgress < 1.0f)
+    if(probeBakeProgress < 1.0f && AppSettings::UseProbes)
     {
         float percent = Round(probeBakeProgress * 10000.0f);
         percent /= 100.0f;

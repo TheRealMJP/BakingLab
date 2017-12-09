@@ -13,6 +13,7 @@
 
 #include "..\\InterfacePointers.h"
 #include "..\\Utility.h"
+#include "..\\Containers.h"
 
 namespace SampleFramework11
 {
@@ -53,7 +54,6 @@ struct RenderTarget2D
 struct RenderTarget3D
 {
     ID3D11Texture3DPtr Texture;
-    ID3D11RenderTargetViewPtr RTView;
     ID3D11ShaderResourceViewPtr SRView;
     ID3D11UnorderedAccessViewPtr UAView;
     uint32 Width = 0;
@@ -61,7 +61,8 @@ struct RenderTarget3D
     uint32 Depth = 0;
     uint32 NumMipLevels = 0;
     DXGI_FORMAT Format;
-    bool32 AutoGenMipMaps = false;
+    FixedArray<ID3D11ShaderResourceViewPtr> MipSRVs;
+    FixedArray<ID3D11UnorderedAccessViewPtr> MipUAVs;
 
     void Initialize(ID3D11Device* device,
                     uint32 width,
@@ -69,8 +70,6 @@ struct RenderTarget3D
                     uint32 depth,
                     DXGI_FORMAT format,
                     uint32 numMipLevels,
-                    bool32 autoGenMipMaps,
-                    bool32 createRTV,
                     bool32 createUAV);
 };
 

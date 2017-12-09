@@ -94,6 +94,8 @@ protected:
 
     RenderTarget3D voxelRadiance;
     ComputeShaderPtr clearVoxelRadiance;
+    ComputeShaderPtr fixVoxelRadianceOccupancy;
+    ComputeShaderPtr generateVoxelMips;
     uint64 currVoxelIdx = 0;
 
     struct ResolveConstants
@@ -117,9 +119,16 @@ protected:
         uint32 OutputProbeIdx;
     };
 
+    struct GenerateMipConstants
+    {
+        Float4Align Float3 SrcMipTexelSize;
+        Float4Align Float3 DstMipTexelSize;
+    };
+
     ConstantBuffer<ResolveConstants> resolveConstants;
     ConstantBuffer<BackgroundVelocityConstants> backgroundVelocityConstants;
     ConstantBuffer<IntegrateConstants> integrateConstants;
+    ConstantBuffer<GenerateMipConstants> generateMipConstants;
 
     virtual void Initialize() override;
     virtual void Render(const Timer& timer) override;

@@ -377,6 +377,7 @@ namespace AppSettings
     extern BoolSetting ShowProbeVisualizer;
     extern BoolSetting ViewIndirectSpecular;
     extern VoxelVisualizerModesSetting VoxelVisualizerMode;
+    extern IntSetting VoxelVisualizerMipLevel;
     extern Button SaveLightSettings;
     extern Button LoadLightSettings;
     extern Button SaveEXRScreenshot;
@@ -468,6 +469,7 @@ namespace AppSettings
         float BloomMagnitude;
         float BloomBlurSigma;
         bool32 ViewIndirectSpecular;
+        int32 VoxelVisualizerMipLevel;
     };
 
     extern ConstantBuffer<AppSettingsCBuffer> CBuffer;
