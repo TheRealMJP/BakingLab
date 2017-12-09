@@ -386,8 +386,17 @@ void MeshRenderer::LoadShaders()
     voxelGeoVS = CompileVSFromFile(device, L"VoxelVisualizer.hlsl", "GeoVS", "vs_5_0");
     voxelGeoPS = CompilePSFromFile(device, L"VoxelVisualizer.hlsl", "GeoPS", "ps_5_0");
 
-    voxelRayMarchVS = CompileVSFromFile(device, L"VoxelVisualizer.hlsl", "RayMarchVS", "vs_5_0");
-    voxelRayMarchPS = CompilePSFromFile(device, L"VoxelVisualizer.hlsl", "RayMarchPS", "ps_5_0");
+    {
+        CompileOptions opts;
+        opts.Add("FirstMip_", 1);
+
+        voxelRayMarchVS = CompileVSFromFile(device, L"VoxelVisualizer.hlsl", "RayMarchVS", "vs_5_0", opts);
+        voxelRayMarchFirstMipPS = CompilePSFromFile(device, L"VoxelVisualizer.hlsl", "RayMarchPS", "ps_5_0", opts);
+
+        opts.Reset();
+        opts.Add("FirstMip_", 0);
+        voxelRayMarchPS = CompilePSFromFile(device, L"VoxelVisualizer.hlsl", "RayMarchPS", "ps_5_0", opts);
+    }
 
     fullScreenVS = CompileVSFromFile(device, L"EVSMConvert.hlsl", "FullScreenVS");
 
@@ -1334,7 +1343,10 @@ void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Cam
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
 
-    ID3D11ShaderResourceView* srvs[] = { status.VoxelRadiance };
+    ID3D11ShaderResourceView* srvs[7] = { status.VoxelRadiance };
+    for(uint64 i = 0; i < 6; ++i)
+        srvs[i + 1] = status.VoxelRadianceMips[i];
+
     context->VSSetShaderResources(0, ArraySize_(srvs), srvs);
     context->PSSetShaderResources(0, ArraySize_(srvs), srvs);
 
@@ -1376,12 +1388,13 @@ void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Cam
         context->IASetInputLayout(voxelRayMarchIL);
 
         context->VSSetShader(voxelRayMarchVS , nullptr, 0);
-        context->PSSetShader(voxelRayMarchPS, nullptr, 0);
+        context->PSSetShader(AppSettings::VoxelVisualizerMipLevel == 0 ? voxelRayMarchFirstMipPS : voxelRayMarchPS, nullptr, 0);
 
         context->DrawIndexedInstanced(NumBoxIndices, 1, 0, 0, 0);
     }
 
-    srvs[0] = nullptr;
+    for(uint64 i = 0; i < ArraySize_(srvs); ++i)
+        srvs[i] = nullptr;
     context->VSSetShaderResources(0, ArraySize_(srvs), srvs);
     context->PSSetShaderResources(0, ArraySize_(srvs), srvs);
 }

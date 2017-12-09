@@ -140,6 +140,7 @@ protected:
     ID3D11InputLayoutPtr voxelGeoIL;
 
     VertexShaderPtr voxelRayMarchVS;
+    PixelShaderPtr voxelRayMarchFirstMipPS;
     PixelShaderPtr voxelRayMarchPS;
     ID3D11InputLayoutPtr voxelRayMarchIL;
 

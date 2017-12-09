@@ -26,6 +26,7 @@ cbuffer Constants : register(b0)
 }
 
 Texture3D<float4> VoxelRadiance : register(t0);
+Texture3D<float4> VoxelRadianceMips[6] : register(t1);
 SamplerState PointSampler : register(s0);
 
 struct VSOutputGeo
@@ -141,10 +142,12 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
     const float3 pixelPosVoxelSpace = ((input.PositionWS - SceneMinBounds) / sceneSize) * voxelRes;
     const float3 cameraPosVoxelSpace = ((CameraPos - SceneMinBounds) / sceneSize) * voxelRes;
     const float3 viewDir = normalize(pixelPosVoxelSpace - cameraPosVoxelSpace);
-    const float bias = 0.01f;
+    const float bias = 0.0001f;
 
     float dist = max(IntersectRayBox_(cameraPosVoxelSpace, viewDir, 0.0f, voxelRes), 0.0f);
     float3 currPos = cameraPosVoxelSpace + viewDir * (dist + bias);
+
+    const float mipLevel = VoxelVisualizerMipLevel - 1.0f;
 
     const uint MaxSteps = 1024;
 
@@ -156,14 +159,34 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
         if(any(abs(uvw * 2.0f - 1.0f) > 1.0001f) || opacity >= 0.999f)
             break;
 
-        float4 voxelSample = VoxelRadiance.SampleLevel(PointSampler, uvw, float(VoxelVisualizerMipLevel));
-        voxelSample.w = saturate(voxelSample.w);
+        const float3 currVoxelMin = floor(currPos);
+        const float3 currVoxelMax = currVoxelMin + 1.0f;
+        const float3 currVoxelCenter = (currVoxelMin + currVoxelMax) / 2.0f;
+
+        #if FirstMip_
+            float4 voxelSample = VoxelRadiance.SampleLevel(PointSampler, uvw, 0.0f);
+        #else
+            float3 voxelToPos = currPos - currVoxelCenter;
+            float largestComponent = max(max(abs(voxelToPos.x), abs(voxelToPos.y)), abs(voxelToPos.z));
+
+            float4 voxelSample = 0.0f;
+            if(largestComponent == voxelToPos.x)
+                voxelSample = VoxelRadianceMips[0].SampleLevel(PointSampler, uvw, mipLevel);
+            else if(largestComponent == -voxelToPos.x)
+                voxelSample = VoxelRadianceMips[1].SampleLevel(PointSampler, uvw, mipLevel);
+            else if(largestComponent == voxelToPos.y)
+                voxelSample = VoxelRadianceMips[2].SampleLevel(PointSampler, uvw, mipLevel);
+            else if(largestComponent == -voxelToPos.y)
+                voxelSample = VoxelRadianceMips[3].SampleLevel(PointSampler, uvw, mipLevel);
+            else if(largestComponent == voxelToPos.z)
+                voxelSample = VoxelRadianceMips[4].SampleLevel(PointSampler, uvw, mipLevel);
+            else if(largestComponent == -voxelToPos.z)
+                voxelSample = VoxelRadianceMips[5].SampleLevel(PointSampler, uvw, mipLevel);
+        #endif
 
         radiance += (1.0f - opacity) * voxelSample.xyz * voxelSample.w;
         opacity += (1.0f - opacity) * voxelSample.w;
 
-        const float3 currVoxelMin = floor(currPos);
-        const float3 currVoxelMax = currVoxelMin + 1.0f;
         const float distToNextVoxel = IntersectRayBox(currPos, viewDir, currVoxelMin, currVoxelMax);
 
         currPos += viewDir * (distToNextVoxel + bias);

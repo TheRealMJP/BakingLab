@@ -93,10 +93,13 @@ protected:
     ComputeShaderPtr probeIntegrateDistanceVolumeMap;
 
     RenderTarget3D voxelRadiance;
+    RenderTarget3D voxelRadianceMips[6];
     ComputeShaderPtr clearVoxelRadiance;
     ComputeShaderPtr fixVoxelOpacity;
+    ComputeShaderPtr generateFirstVoxelMip;
     ComputeShaderPtr generateVoxelMips;
     uint64 currVoxelIdx = 0;
+    uint32 numVoxelMips = 0;
 
     struct ResolveConstants
     {
