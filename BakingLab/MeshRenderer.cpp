@@ -866,6 +866,12 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
             context->PSSetShaderResources(0, ArraySize_(psTextures), psTextures);
 
             uint32 offset = ArraySize_(psTextures);
+            context->PSSetShaderResources(offset, 1, &status.VoxelRadiance);
+
+            offset += 1;
+            context->PSSetShaderResources(offset, ArraySize_(status.VoxelRadianceMips), status.VoxelRadianceMips);
+
+            offset += ArraySize_(status.VoxelRadianceMips);
             context->PSSetShaderResources(offset, ArraySize_(status.ProbeVolumeMaps), status.ProbeVolumeMaps);
 
             offset += ArraySize_(status.ProbeVolumeMaps);
@@ -875,7 +881,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
         }
     }
 
-    ID3D11ShaderResourceView* nullSRVs[10] = { nullptr };
+    ID3D11ShaderResourceView* nullSRVs[32] = { nullptr };
     context->PSSetShaderResources(0, ArraySize_(nullSRVs), nullSRVs);
 }
 

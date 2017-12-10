@@ -70,6 +70,8 @@ Texture3D<float4> SHSpecularLookupA : register(t7);
 Texture3D<float2> SHSpecularLookupB : register(t8);
 TextureCubeArray<float4> ProbeIrradianceCubeMaps : register(t9);
 TextureCubeArray<float2> ProbeDistanceCubeMaps : register(t10);
+Texture3D<float4> VoxelRadiance : register(t11);
+Texture3D<float4> VoxelRadianceMips[6] : register(t12);
 Texture3D<float4> ProbeVolumeMaps[MaxBasisCount];
 Texture3D<float2> ProbeDistanceVolumeMaps[MaxBasisCount];
 
@@ -79,7 +81,7 @@ SamplerState LinearSampler : register(s2);
 SamplerComparisonState PCFSampler : register(s3);
 
 #if Voxelize_
-    RasterizerOrderedTexture3D<float4> VoxelRadiance : register(u0);
+    RasterizerOrderedTexture3D<float4> VoxelRadianceOutput : register(u0);
 #endif
 
 //=================================================================================================
@@ -623,6 +625,99 @@ void ComputeIndirectFromProbeVolumeMaps(in SurfaceContext surface, out float3 in
     indirectIrradiance = EvaluateProbeIrradiance(basis, surface.NormalWS);
 }
 
+// Convert to normalized [0, 1] space mapping to the voxel grid
+float3 ToVoxelSpace(in float3 x)
+{
+    return (x - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds);
+}
+
+float3 ComputeVoxelAO(in SurfaceContext surface)
+{
+    const float3 coneDirections[6] =
+    {
+        float3(0, 0, 1),
+        float3(0, 0.866f, 0.5f),
+        float3(0.8236f, 0.2676f, 0.5f),
+        float3(0.51f, -0.7f, 0.5f),
+        float3(-0.5f, -0.7f, 0.5f),
+        float3(-0.82f, 0.5f, 0.267f),
+    };
+
+    const float coneWeights[6] = { Pi / 4, (3 * Pi) / 20, (3 * Pi) / 20, (3 * Pi) / 20, (3 * Pi) / 20, (3 * Pi) / 20 };
+
+    const float coneSpread = 0.325f;
+
+    const float3 voxelRes = float3(VoxelResX, VoxelResY, VoxelResZ) * 0.5f;
+    const float3 voxelTexelSize = rcp(voxelRes);
+
+    const float MaxMipLevel = 9.0f;
+
+    float3 occlusion = 0.0f;
+    float weightSum = 0.0f;
+
+    [unroll]
+    for(uint coneIdx = 0; coneIdx < 6; ++ coneIdx)
+    {
+        const float3 coneDirWS = mul(coneDirections[coneIdx], surface.TangentToWorld);
+        const float3 startPosWS = surface.PositionWS + surface.VtxNormalWS * 0.01f;
+
+        const float3 startPosVS = ToVoxelSpace(startPosWS);
+        const float3 coneDirVS = normalize(ToVoxelSpace(startPosWS + coneDirWS) - startPosVS);
+
+        float traceDistance = 0.01f;
+
+        float coneOcclusion = 0.0f;
+
+        const uint MaxIterations = 32;
+        uint numIterations = 0;
+
+        while(coneOcclusion < 1.0f && numIterations < MaxIterations)
+        {
+            const float3 tracePos = startPosVS + traceDistance * coneDirVS;
+            if(any(tracePos > 1.0f) || any(abs(tracePos < 0.0f)))
+                break;
+
+            const float3 uvw = tracePos;
+
+            const float mipLevel = log2(1.0f + coneSpread * 2.0f * traceDistance / voxelTexelSize.x);
+            const float mipLevel2 = (mipLevel + 1) * (mipLevel + 1);
+
+            float4 voxelSample = 0.0f;
+            float3 weights = coneDirVS * coneDirVS;
+
+            [unroll]
+            for(uint i = 0; i < 3; ++i)
+            {
+                if(coneDirVS[i] >= 0.0f)
+                    voxelSample += VoxelRadianceMips[i * 2 + 0].SampleLevel(LinearSampler, uvw, min(mipLevel, MaxMipLevel)) * weights[i];
+                else
+                    voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(LinearSampler, uvw, min(mipLevel, MaxMipLevel)) * weights[i];
+            }
+
+            // float4 voxelSample = VoxelRadiance.SampleLevel(LinearSampler, uvw, 0.0f);
+
+            coneOcclusion += (1.0f - coneOcclusion) * voxelSample.w;
+
+            traceDistance += mipLevel2 * voxelTexelSize.x;
+
+            ++numIterations;
+        }
+
+        occlusion += coneOcclusion * coneWeights[coneIdx];
+        weightSum += coneWeights[coneIdx];
+
+        // occlusion = traceDistance;
+        // occlusion = numIterations;
+
+        // occlusion = VoxelRadiance.SampleLevel(LinearSampler, startPosVS, 0.0f).w;
+    }
+
+    occlusion /= weightSum;
+
+    return saturate(1.0f - occlusion);
+    // return occlusion;
+}
+
 //=================================================================================================
 // Pixel Shader
 //=================================================================================================
@@ -747,10 +842,10 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         int3 voxelCoord = int3(voxelUVW * float3(VoxelResX, VoxelResY, VoxelResZ));
         voxelCoord = clamp(voxelCoord, 0, int3(VoxelResX, VoxelResY, VoxelResZ) - 1);
 
-        float3 prevVoxelRadiance = VoxelRadiance[voxelCoord].xyz;
-        float prevVoxelCount = VoxelRadiance[voxelCoord].w;
+        float3 prevVoxelRadiance = VoxelRadianceOutput[voxelCoord].xyz;
+        float prevVoxelCount = VoxelRadianceOutput[voxelCoord].w;
         float3 newVoxelRadiance = lerp(prevVoxelRadiance, voxelRadiance, 1.0f / (prevVoxelCount + 1.0f));
-        VoxelRadiance[voxelCoord] = float4(newVoxelRadiance, prevVoxelCount + 1.0f);
+        VoxelRadianceOutput[voxelCoord] = float4(newVoxelRadiance, prevVoxelCount + 1.0f);
     #else
         PSOutput output;
         output.Lighting = clamp(float4(lighting, illuminance), 0.0f, FP16Max);
@@ -769,6 +864,8 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
             output.Velocity = input.PositionSS.xy - prevPositionSS;
             output.Velocity -= JitterOffset;
             output.Velocity /= RTSize;
+
+            output.Lighting.xyz = ComputeVoxelAO(surface) * 8;
         #endif
 
         return output;

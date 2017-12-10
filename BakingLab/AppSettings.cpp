@@ -582,13 +582,13 @@ namespace AppSettings
         BakeWithVCT.Initialize(tweakBar, "BakeWithVCT", "VCT", "Bake With VCT", "", false);
         Settings.AddSetting(&BakeWithVCT);
 
-        VoxelResX.Initialize(tweakBar, "VoxelResX", "VCT", "Voxel Resolution (X)", "", 32, 1, 2048);
+        VoxelResX.Initialize(tweakBar, "VoxelResX", "VCT", "Voxel Resolution (X)", "", 64, 1, 2048);
         Settings.AddSetting(&VoxelResX);
 
-        VoxelResY.Initialize(tweakBar, "VoxelResY", "VCT", "Voxel Resolution (Y)", "", 32, 1, 2048);
+        VoxelResY.Initialize(tweakBar, "VoxelResY", "VCT", "Voxel Resolution (Y)", "", 64, 1, 2048);
         Settings.AddSetting(&VoxelResY);
 
-        VoxelResZ.Initialize(tweakBar, "VoxelResZ", "VCT", "Voxel Resolution (Z)", "", 32, 1, 2048);
+        VoxelResZ.Initialize(tweakBar, "VoxelResZ", "VCT", "Voxel Resolution (Z)", "", 64, 1, 2048);
         Settings.AddSetting(&VoxelResZ);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);

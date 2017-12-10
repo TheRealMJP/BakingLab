@@ -738,17 +738,17 @@ public class Settings
         [MinValue(1)]
         [MaxValue(2048)]
         [DisplayName("Voxel Resolution (X)")]
-        int VoxelResX = 32;
+        int VoxelResX = 64;
 
         [MinValue(1)]
         [MaxValue(2048)]
         [DisplayName("Voxel Resolution (Y)")]
-        int VoxelResY = 32;
+        int VoxelResY = 64;
 
         [MinValue(1)]
         [MaxValue(2048)]
         [DisplayName("Voxel Resolution (Z)")]
-        int VoxelResZ = 32;
+        int VoxelResZ = 64;
     }
 
     [ExpandGroup(false)]
