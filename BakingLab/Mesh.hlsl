@@ -79,6 +79,7 @@ SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
 SamplerState LinearSampler : register(s2);
 SamplerComparisonState PCFSampler : register(s3);
+SamplerState PointSampler : register(s4);
 
 #if Voxelize_
     RasterizerOrderedTexture3D<float4> VoxelRadianceOutput : register(u0);
@@ -694,7 +695,7 @@ float3 ComputeVoxelAO(in SurfaceContext surface)
                     voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(LinearSampler, uvw, min(mipLevel, MaxMipLevel)) * weights[i];
             }
 
-            // float4 voxelSample = VoxelRadiance.SampleLevel(LinearSampler, uvw, 0.0f);
+            // voxelSample = VoxelRadiance.SampleLevel(LinearSampler, uvw, 0.0f);
 
             coneOcclusion += (1.0f - coneOcclusion) * voxelSample.w;
 
@@ -714,8 +715,9 @@ float3 ComputeVoxelAO(in SurfaceContext surface)
 
     occlusion /= weightSum;
 
-    return saturate(1.0f - occlusion);
-    // return occlusion;
+    occlusion = saturate(1.0f - occlusion);
+
+    return occlusion;
 }
 
 //=================================================================================================

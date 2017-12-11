@@ -772,6 +772,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
         evsmSampler,
         samplerStates.LinearClamp(),
         samplerStates.ReversedShadowMapPCF(),
+        samplerStates.Point(),
     };
 
     context->PSSetSamplers(0, ArraySize_(sampStates), sampStates);
