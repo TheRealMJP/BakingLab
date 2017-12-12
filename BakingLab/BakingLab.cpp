@@ -55,7 +55,7 @@ static const float SceneAlbedoScales[] = { 0.5f, 0.5f, 1.0f };
 
 static const Uint3 SceneDefaultProbeRes[] = { Uint3(4, 4, 4), Uint3(5, 3, 5), Uint3(5, 5, 5) };
 // static const float SceneDefaultBoundsScales[] = { 1.5f, 1.65f, 1.0f };
-static const float SceneDefaultBoundsScales[] = { 1.0f, 1.0f, 1.0f };
+static const float SceneDefaultBoundsScales[] = { 1.1f, 1.1f, 1.1f };
 
 StaticAssert_(ArraySize_(ScenePaths) >= uint64(Scenes::NumValues));
 StaticAssert_(ArraySize_(SceneCameraPositions) >= uint64(Scenes::NumValues));
@@ -480,7 +480,20 @@ void BakingLab::Initialize()
     probeIntegrateDistanceVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistanceVolumeMap");
 
     clearVoxelRadiance = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "ClearVoxelRadiance");
-    fixVoxelOpacity = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "FixVoxelOpacity");
+
+    {
+        CompileOptions opts;
+        opts.Add("Axis_", 0);
+        fillVoxelHolesX = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "FillVoxelHoles", "cs_5_0", opts);
+
+        opts.Reset();
+        opts.Add("Axis_", 1);
+        fillVoxelHolesY = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "FillVoxelHoles", "cs_5_0", opts);
+
+        opts.Reset();
+        opts.Add("Axis_", 2);
+        fillVoxelHolesZ = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "FillVoxelHoles", "cs_5_0", opts);
+    }
 
     {
         CompileOptions opts;
@@ -948,11 +961,19 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
 
     context->OMSetRenderTargets(0, nullptr, nullptr);
 
-    // Clamp the opacity to [0, 1]
-    SetCSShader(context, fixVoxelOpacity);
+    // Fill the interioriors with opaque voxels
+    SetCSShader(context, fillVoxelHolesX);
     SetCSOutputs(context, voxelRadiance.UAView);
 
-    context->Dispatch(voxelDispatchSize.x, voxelDispatchSize.y, voxelDispatchSize.z);
+    context->Dispatch(DispatchSize(8, AppSettings::VoxelResY), DispatchSize(8, AppSettings::VoxelResZ), 1);
+
+    SetCSShader(context, fillVoxelHolesY);
+
+    context->Dispatch(DispatchSize(8, AppSettings::VoxelResX), DispatchSize(8, AppSettings::VoxelResZ), 1);
+
+    SetCSShader(context, fillVoxelHolesZ);
+
+    context->Dispatch(DispatchSize(8, AppSettings::VoxelResX), DispatchSize(8, AppSettings::VoxelResY), 1);
 
     ClearCSOutputs(context);
 

@@ -95,7 +95,9 @@ protected:
     RenderTarget3D voxelRadiance;
     RenderTarget3D voxelRadianceMips[6];
     ComputeShaderPtr clearVoxelRadiance;
-    ComputeShaderPtr fixVoxelOpacity;
+    ComputeShaderPtr fillVoxelHolesX;
+    ComputeShaderPtr fillVoxelHolesY;
+    ComputeShaderPtr fillVoxelHolesZ;
     ComputeShaderPtr generateFirstVoxelMip;
     ComputeShaderPtr generateVoxelMips;
     uint64 currVoxelIdx = 0;

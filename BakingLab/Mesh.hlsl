@@ -660,7 +660,7 @@ float3 ComputeVoxelAO(in SurfaceContext surface)
     for(uint coneIdx = 0; coneIdx < 6; ++ coneIdx)
     {
         const float3 coneDirWS = mul(coneDirections[coneIdx], surface.TangentToWorld);
-        const float3 startPosWS = surface.PositionWS + surface.VtxNormalWS * 0.01f;
+        const float3 startPosWS = surface.PositionWS + surface.VtxNormalWS * 0.1f;
 
         const float3 startPosVS = ToVoxelSpace(startPosWS);
         const float3 coneDirVS = normalize(ToVoxelSpace(startPosWS + coneDirWS) - startPosVS);
@@ -669,7 +669,7 @@ float3 ComputeVoxelAO(in SurfaceContext surface)
 
         float coneOcclusion = 0.0f;
 
-        const uint MaxIterations = 32;
+        const uint MaxIterations = 3;
         uint numIterations = 0;
 
         while(coneOcclusion < 1.0f && numIterations < MaxIterations)
@@ -680,7 +680,7 @@ float3 ComputeVoxelAO(in SurfaceContext surface)
 
             const float3 uvw = tracePos;
 
-            const float mipLevel = log2(1.0f + coneSpread * 2.0f * traceDistance / voxelTexelSize.x);
+            const float mipLevel = min(log2(1.0f + coneSpread * 2.0f * traceDistance / voxelTexelSize.x), MaxMipLevel);
             const float mipLevel2 = (mipLevel + 1) * (mipLevel + 1);
 
             float4 voxelSample = 0.0f;
@@ -690,9 +690,9 @@ float3 ComputeVoxelAO(in SurfaceContext surface)
             for(uint i = 0; i < 3; ++i)
             {
                 if(coneDirVS[i] >= 0.0f)
-                    voxelSample += VoxelRadianceMips[i * 2 + 0].SampleLevel(LinearSampler, uvw, min(mipLevel, MaxMipLevel)) * weights[i];
+                    voxelSample += VoxelRadianceMips[i * 2 + 0].SampleLevel(LinearSampler, uvw, mipLevel) * weights[i];
                 else
-                    voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(LinearSampler, uvw, min(mipLevel, MaxMipLevel)) * weights[i];
+                    voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(LinearSampler, uvw, mipLevel) * weights[i];
             }
 
             // voxelSample = VoxelRadiance.SampleLevel(LinearSampler, uvw, 0.0f);

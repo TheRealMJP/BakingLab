@@ -45,10 +45,10 @@ VSOutputGeo GeoVS(in float3 VertexPosition : POSITION, in uint InstanceID : SV_I
                                    (voxelIdx / VoxelResX) % VoxelResY,
                                    voxelIdx / (VoxelResX * VoxelResY));
 
-    const float3 voxelRadiance = VoxelRadiance[voxelCoord].xyz;
-    const float voxelOccupancy = VoxelRadiance[voxelCoord].w;
+    float3 voxelRadiance = VoxelRadiance[voxelCoord].xyz;
+    const float voxelOpacity = VoxelRadiance[voxelCoord].w;
 
-    if(voxelOccupancy <= 0.0f)
+    if(voxelOpacity <= 0.0f)
     {
         VSOutputGeo output;
         output.PositionCS = float4(-10000.0f, -10000.0f, -10000.0f, 1.0f);
@@ -137,12 +137,14 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
 {
     const float3 voxelRes = MipVoxelRes;
     const float3 sceneSize = SceneMaxBounds - SceneMinBounds;
-    const float3 voxelSize = sceneSize / voxelRes;
+    const float3 voxelSize = 1.0f / voxelRes;
 
     const float3 pixelPosVoxelSpace = ((input.PositionWS - SceneMinBounds) / sceneSize) * voxelRes;
     const float3 cameraPosVoxelSpace = ((CameraPos - SceneMinBounds) / sceneSize) * voxelRes;
     const float3 viewDir = normalize(pixelPosVoxelSpace - cameraPosVoxelSpace);
-    const float bias = 0.0001f;
+    const float bias = voxelSize.x * 0.25f;
+
+    // const float opacityCorrection = voxelSize.x / rcp(VoxelResX);
 
     float dist = max(IntersectRayBox_(cameraPosVoxelSpace, viewDir, 0.0f, voxelRes), 0.0f);
     float3 currPos = cameraPosVoxelSpace + viewDir * (dist + bias);
@@ -184,7 +186,10 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
                 voxelSample = VoxelRadianceMips[5].SampleLevel(PointSampler, uvw, mipLevel);
         #endif
 
-        radiance += (1.0f - opacity) * voxelSample.xyz * voxelSample.w;
+        voxelSample.w = saturate(voxelSample.w);
+        // voxelSample.w = pow(1.0f - voxelSample.w, opacityCorrection);
+
+        radiance += (1.0f - opacity) * voxelSample.xyz;
         opacity += (1.0f - opacity) * voxelSample.w;
 
         const float distToNextVoxel = IntersectRayBox(currPos, viewDir, currVoxelMin, currVoxelMax);
