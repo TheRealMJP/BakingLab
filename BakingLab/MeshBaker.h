@@ -75,6 +75,7 @@ struct MeshBakerStatus
     Float3 SceneMaxBounds;
     bool32 BakingInvalidated = false;
     float ProbeBakeProgress = 0.0f;
+    SH9Color SkySH;
 };
 
 class MeshBaker

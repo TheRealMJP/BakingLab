@@ -15,6 +15,7 @@
 #include "..\\SF11_Math.h"
 #include "ShaderCompilation.h"
 #include "GraphicsTypes.h"
+#include "SH.h"
 
 // HosekSky forward declares
 struct ArHosekSkyModelState;
@@ -33,6 +34,7 @@ struct SkyCache
     Float3 Albedo;
     float Elevation = 0.0f;
     ID3D11ShaderResourceViewPtr CubeMap;
+    SH9Color SHProjection;
 
     void Init(Float3 sunDirection, Float3 groundAlbedo, float turbidity);
     void Shutdown();
@@ -75,6 +77,9 @@ public:
                          Float3 scake = Float3(1.0f, 1.0f, 1.0f));
 
     static Float3 SampleSky(const SkyCache& cache, Float3 sampleDir);
+
+    const SkyCache& GetSkyCache() const { return skyCache; }
+    void UpdateSkyCache(ID3D11Device* device, Float3 sunDirection, Float3 groundAlbedo, float turbidity);
 
 protected:
 

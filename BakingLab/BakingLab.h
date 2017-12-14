@@ -39,6 +39,8 @@ protected:
     SampleFramework11::SpriteRenderer spriteRenderer;
     Skybox skybox;
     ID3D11ShaderResourceViewPtr envMaps[AppSettings::NumCubeMaps];
+    SH9Color envMapSH[AppSettings::NumCubeMaps];
+    bool32 computedEnvMapSH[AppSettings::NumCubeMaps] = { };
 
     PostProcessor postProcessor;
     DepthStencilBuffer depthBuffer;

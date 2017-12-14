@@ -1030,12 +1030,35 @@ void BakingLab::Render(const Timer& timer)
     if(AppSettings::MSAAMode.Changed())
         CreateRenderTargets();
 
-    ID3D11DeviceContextPtr context = deviceManager.ImmediateContext();
+    ID3D11Device* device = deviceManager.Device();
+    ID3D11DeviceContext* context = deviceManager.ImmediateContext();
 
     MeshBakerStatus status = meshBaker.Update(unJitteredCamera, colorTargetMSAA.Width, colorTargetMSAA.Height,
                                               context, &sceneModels[AppSettings::CurrentScene]);
     status.SceneMinBounds = currSceneMin;
     status.SceneMaxBounds = currSceneMax;
+    status.SkySH = SH9Color();
+
+    if(AppSettings::SkyMode == SkyModes::Procedural)
+    {
+        skybox.UpdateSkyCache(device, AppSettings::SunDirection, AppSettings::GroundAlbedo, AppSettings::Turbidity);
+        status.SkySH = skybox.GetSkyCache().SHProjection;
+    }
+    else if(AppSettings::SkyMode == SkyModes::Simple)
+    {
+        status.SkySH = SH9Color();
+        status.SkySH.Coefficients[0] =  AppSettings::SkyColor.Value() * (1.0f / 0.282095f);
+    }
+    else if(AppSettings::SkyMode >= AppSettings::CubeMapStart)
+    {
+        const uint64 envMapIdx = AppSettings::SkyMode - AppSettings::CubeMapStart;
+        if(computedEnvMapSH[envMapIdx] == false)
+        {
+            envMapSH[envMapIdx] = ProjectCubemapToSH(device, envMaps[envMapIdx]);
+            computedEnvMapSH[envMapIdx] = true;
+        }
+        status.SkySH = envMapSH[envMapIdx];
+    }
 
     VoxelizeScene(status);
 

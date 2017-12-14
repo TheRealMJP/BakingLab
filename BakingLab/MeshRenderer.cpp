@@ -800,6 +800,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
     meshPSConstants.Data.SGSharpness = status.SGSharpness;
     meshPSConstants.Data.SceneMinBounds = status.SceneMinBounds;
     meshPSConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
+    meshPSConstants.Data.SkySH = status.SkySH;
     meshPSConstants.ApplyChanges(context);
     meshPSConstants.SetVS(context, 1);
     meshPSConstants.SetPS(context, 1);

@@ -315,57 +315,9 @@ void Skybox::RenderSky(ID3D11DeviceContext* context,
     PIXEvent pixEvent(L"Skybox Render Sky");
 
     // Update the cache, if necessary
-    skyCache.Init(sunDirection, groundAlbedo, turbidity);
-
-    if(skyCache.CubeMap == nullptr)
-    {
-        const uint64 CubeMapRes = 128;
-        std::vector<Half4> texels;
-        texels.resize(CubeMapRes * CubeMapRes * 6);
-
-        for(uint64 s = 0; s < 6; ++s)
-        {
-            for(uint64 y = 0; y < CubeMapRes; ++y)
-            {
-                for(uint64 x = 0; x < CubeMapRes; ++x)
-                {
-                    Float3 dir = MapXYSToDirection(x, y, s, CubeMapRes, CubeMapRes);
-                    Float3 radiance = SampleSky(skyCache, dir);
-
-                    uint64 idx = (s * CubeMapRes * CubeMapRes) + (y * CubeMapRes) + x;
-                    texels[idx] = Half4(Float4(radiance, 1.0f));
-                }
-            }
-        }
-
-        D3D11_TEXTURE2D_DESC desc;
-        desc.Width = uint32(CubeMapRes);
-        desc.Height = uint32(CubeMapRes);
-        desc.ArraySize = 6;
-        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = 0;
-        desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-        desc.MipLevels = 1;
-        desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-        desc.SampleDesc.Count = 1;
-        desc.SampleDesc.Quality = 0;
-        desc.Usage = D3D11_USAGE_IMMUTABLE;
-
-        D3D11_SUBRESOURCE_DATA resData[6];
-        for(uint64 i = 0; i < 6; ++i)
-        {
-            resData[i].pSysMem = &texels[i * CubeMapRes * CubeMapRes];
-            resData[i].SysMemPitch = sizeof(texels[0]) * CubeMapRes;
-            resData[i].SysMemSlicePitch = 0;
-        }
-
-        ID3D11DevicePtr device;
-        context->GetDevice(&device);
-
-        ID3D11Texture2DPtr texture;
-        DXCall(device->CreateTexture2D(&desc, resData, &texture));
-        DXCall(device->CreateShaderResourceView(texture, nullptr, &skyCache.CubeMap));
-    }
+    ID3D11DevicePtr device;
+    context->GetDevice(&device);
+    UpdateSkyCache(device, sunDirection, groundAlbedo, turbidity);
 
     // Set the pixel shader constants
     bool enableSun = sunSize > 0.0f && sunColor.x > 0.0f && sunColor.y > 0.0f && sunColor.z > 0.0f;
@@ -421,6 +373,75 @@ Float3 Skybox::SampleSky(const SkyCache& cache, Float3 sampleDir)
     radiance *= FP16Scale;
 
     return radiance;
+}
+
+void Skybox::UpdateSkyCache(ID3D11Device* device, Float3 sunDirection, Float3 groundAlbedo, float turbidity)
+{
+    skyCache.Init(sunDirection, groundAlbedo, turbidity);
+
+    if(skyCache.CubeMap == nullptr)
+    {
+        const uint64 CubeMapRes = 128;
+        std::vector<Half4> texels;
+        texels.resize(CubeMapRes * CubeMapRes * 6);
+
+        skyCache.SHProjection = SH9Color();
+        float weightSum = 0.0f;
+
+        for(uint64 s = 0; s < 6; ++s)
+        {
+            for(uint64 y = 0; y < CubeMapRes; ++y)
+            {
+                for(uint64 x = 0; x < CubeMapRes; ++x)
+                {
+                    Float3 dir = MapXYSToDirection(x, y, s, CubeMapRes, CubeMapRes);
+                    Float3 radiance = SampleSky(skyCache, dir);
+
+                    uint64 idx = (s * CubeMapRes * CubeMapRes) + (y * CubeMapRes) + x;
+                    texels[idx] = Half4(Float4(radiance, 1.0f));
+
+                    float u = (x + 0.5f) / CubeMapRes;
+                    float v = (y + 0.5f) / CubeMapRes;
+
+                    // Account for cubemap texel distribution
+                    u = u * 2.0f - 1.0f;
+                    v = v * 2.0f - 1.0f;
+                    const float temp = 1.0f + u * u + v * v;
+                    const float weight = 4.0f / (sqrt(temp) * temp);
+
+                    skyCache.SHProjection += ProjectOntoSH9Color(dir, radiance) * weight;
+                    weightSum += weight;
+                }
+            }
+        }
+
+        skyCache.SHProjection *= (4.0f * 3.14159f) / weightSum;
+
+        D3D11_TEXTURE2D_DESC desc;
+        desc.Width = uint32(CubeMapRes);
+        desc.Height = uint32(CubeMapRes);
+        desc.ArraySize = 6;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        desc.CPUAccessFlags = 0;
+        desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        desc.MipLevels = 1;
+        desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+
+        D3D11_SUBRESOURCE_DATA resData[6];
+        for(uint64 i = 0; i < 6; ++i)
+        {
+            resData[i].pSysMem = &texels[i * CubeMapRes * CubeMapRes];
+            resData[i].SysMemPitch = sizeof(texels[0]) * CubeMapRes;
+            resData[i].SysMemSlicePitch = 0;
+        }
+
+        ID3D11Texture2DPtr texture;
+        DXCall(device->CreateTexture2D(&desc, resData, &texture));
+        DXCall(device->CreateShaderResourceView(texture, nullptr, &skyCache.CubeMap));
+    }
 }
 
 }
