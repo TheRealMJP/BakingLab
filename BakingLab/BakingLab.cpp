@@ -684,7 +684,7 @@ void BakingLab::Update(const Timer& timer)
         }
     }
 
-    numVoxelMips = NumMipLevels(AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ);
+    numVoxelMips = NumMipLevels(AppSettings::VoxelResolution, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
     if(AppSettings::VoxelVisualizerMipLevel >= int32(numVoxelMips))
         AppSettings::VoxelVisualizerMipLevel.SetValue(numVoxelMips - 1);
 
@@ -883,16 +883,16 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     if(status.BakingInvalidated || AppSettings::AlwaysRevoxelize)
         reVoxelize = true;
 
-    if(voxelRadiance.Texture == nullptr || AppSettings::VoxelResX.Changed() || AppSettings::VoxelResY.Changed() || AppSettings::VoxelResZ.Changed())
+    if(voxelRadiance.Texture == nullptr || AppSettings::VoxelResolution.Changed())
     {
         reVoxelize = true;
-        voxelRadiance.Initialize(device, AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ,
+        voxelRadiance.Initialize(device, AppSettings::VoxelResolution, AppSettings::VoxelResolution, AppSettings::VoxelResolution,
                                  DXGI_FORMAT_R16G16B16A16_FLOAT, 1, true);
 
-        Uint3 voxelMipSize = Uint3(Max(AppSettings::VoxelResX / 2, 1), Max(AppSettings::VoxelResY / 2, 1), Max(AppSettings::VoxelResZ / 2, 1));
-        uint32 numMips = Max(numVoxelMips / 2, 1u);
+        uint32 voxelMipSize = Max<uint32>(AppSettings::VoxelResolution / 2, 1u);
+        uint32 numMips = Max(numVoxelMips - 1, 1u);
         for(uint64 i = 0; i < 6; ++i)
-            voxelRadianceMips[i].Initialize(device, voxelMipSize.x, voxelMipSize.y, voxelMipSize.z, DXGI_FORMAT_R16G16B16A16_FLOAT, numMips, true);
+            voxelRadianceMips[i].Initialize(device, voxelMipSize, voxelMipSize, voxelMipSize, DXGI_FORMAT_R16G16B16A16_FLOAT, numMips, true);
     }
 
     if(reVoxelize == false)
@@ -906,10 +906,8 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     SetCSShader(context, clearVoxelRadiance);
     SetCSOutputs(context, voxelRadiance.UAView);
 
-    Uint3 voxelDispatchSize = Uint3(DispatchSize(4, AppSettings::VoxelResX),
-                                    DispatchSize(4, AppSettings::VoxelResY),
-                                    DispatchSize(4, AppSettings::VoxelResZ));
-    context->Dispatch(voxelDispatchSize.x, voxelDispatchSize.y, voxelDispatchSize.z);
+    const uint32 voxelDispatchSize = DispatchSize(4, AppSettings::VoxelResolution);
+    context->Dispatch(voxelDispatchSize, voxelDispatchSize, voxelDispatchSize);
 
     ClearCSOutputs(context);
 
@@ -943,17 +941,17 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
         if(i == 0)
         {
             voxelCamera = &voxelCameraX;
-            SetViewport(context, AppSettings::VoxelResZ, AppSettings::VoxelResY);
+            SetViewport(context, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
         }
         else if(i == 1)
         {
             voxelCamera = &voxelCameraY;
-            SetViewport(context, AppSettings::VoxelResX, AppSettings::VoxelResZ);
+            SetViewport(context, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
         }
         else if(i == 2)
         {
             voxelCamera = &voxelCameraZ;
-            SetViewport(context, AppSettings::VoxelResX, AppSettings::VoxelResY);
+            SetViewport(context, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
         }
 
         meshRenderer.RenderMainPass(context, *voxelCamera, status, false, true);
@@ -965,22 +963,22 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     SetCSShader(context, fillVoxelHolesX);
     SetCSOutputs(context, voxelRadiance.UAView);
 
-    context->Dispatch(DispatchSize(8, AppSettings::VoxelResY), DispatchSize(8, AppSettings::VoxelResZ), 1);
+    context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
 
     SetCSShader(context, fillVoxelHolesY);
 
-    context->Dispatch(DispatchSize(8, AppSettings::VoxelResX), DispatchSize(8, AppSettings::VoxelResZ), 1);
+    context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
 
     SetCSShader(context, fillVoxelHolesZ);
 
-    context->Dispatch(DispatchSize(8, AppSettings::VoxelResX), DispatchSize(8, AppSettings::VoxelResY), 1);
+    context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
 
     ClearCSOutputs(context);
 
     SetCSSamplers(context, samplerStates.Point());
 
     const uint32 numMips = voxelRadianceMips[0].NumMipLevels;
-    Uint3 srcMipSize = Uint3(AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ);
+    uint32 srcMipSize = AppSettings::VoxelResolution;
     for(uint32 srcMipLevel = 0; srcMipLevel < numMips; ++srcMipLevel)
     {
         ID3D11ShaderResourceView* srvs[6] = { };
@@ -1005,17 +1003,14 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
         context->CSSetShaderResources(0, 6, srvs);
         context->CSSetUnorderedAccessViews(0, 6, uavs, nullptr);
 
-        Uint3 dstMipSize = srcMipSize;
-        dstMipSize.x = Max(dstMipSize.x / 2, 1u);
-        dstMipSize.y = Max(dstMipSize.y / 2, 1u);
-        dstMipSize.z = Max(dstMipSize.z / 2, 1u);
+        uint32 dstMipSize = Max(srcMipSize / 2, 1u);
 
-        generateMipConstants.Data.SrcMipTexelSize = Float3(1.0f / srcMipSize.x, 1.0f / srcMipSize.y, 1.0f / srcMipSize.z);
-        generateMipConstants.Data.DstMipTexelSize = Float3(1.0f / dstMipSize.x, 1.0f / dstMipSize.y, 1.0f / dstMipSize.z);
+        generateMipConstants.Data.SrcMipTexelSize = 1.0f / srcMipSize;
+        generateMipConstants.Data.DstMipTexelSize = 1.0f / dstMipSize;
         generateMipConstants.ApplyChanges(context);
         generateMipConstants.SetCS(context, 0);
 
-        context->Dispatch(DispatchSize(4, dstMipSize.x), DispatchSize(4, dstMipSize.y), DispatchSize(4, dstMipSize.z));
+        context->Dispatch(DispatchSize(4, dstMipSize), DispatchSize(4, dstMipSize), DispatchSize(4, dstMipSize));
 
         srcMipSize = dstMipSize;
 

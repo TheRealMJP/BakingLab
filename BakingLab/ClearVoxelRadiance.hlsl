@@ -24,15 +24,15 @@ void FillVoxelHoles(in uint2 planeCoord : SV_DispatchThreadID)
     #if Axis_ == 0
         uint3 voxelCoord = uint3(0, planeCoord.x, planeCoord.y);
         const uint3 marchDir = uint3(1, 0, 0);
-        const uint voxelsToMarch = VoxelResX;
+        const uint voxelsToMarch = VoxelResolution;
     #elif Axis_ == 1
         uint3 voxelCoord = uint3(planeCoord.x, 0, planeCoord.y);
         const uint3 marchDir = uint3(0, 1, 0);
-        const uint voxelsToMarch = VoxelResY;
+        const uint voxelsToMarch = VoxelResolution;
     #else
         uint3 voxelCoord = uint3(planeCoord.x, planeCoord.y, 0);
         const uint3 marchDir = uint3(0, 0, 1);
-        const uint voxelsToMarch = VoxelResZ;
+        const uint voxelsToMarch = VoxelResolution;
     #endif
 
     bool inside = false;

@@ -347,9 +347,7 @@ namespace AppSettings
     extern IntSetting ProbeIntegrationSamples;
     extern IntSetting ProbeDistanceIntegrationSamples;
     extern BoolSetting BakeWithVCT;
-    extern IntSetting VoxelResX;
-    extern IntSetting VoxelResY;
-    extern IntSetting VoxelResZ;
+    extern IntSetting VoxelResolution;
     extern ScenesSetting CurrentScene;
     extern BoolSetting EnableDiffuse;
     extern BoolSetting EnableSpecular;
@@ -451,9 +449,7 @@ namespace AppSettings
         int32 ProbeIntegrationSamples;
         int32 ProbeDistanceIntegrationSamples;
         bool32 BakeWithVCT;
-        int32 VoxelResX;
-        int32 VoxelResY;
-        int32 VoxelResZ;
+        int32 VoxelResolution;
         bool32 EnableDiffuse;
         bool32 EnableSpecular;
         bool32 EnableDirectLighting;

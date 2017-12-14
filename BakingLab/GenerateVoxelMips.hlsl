@@ -10,8 +10,8 @@
 
 cbuffer GenerateMipConstants : register(b0)
 {
-    float3 SrcMipTexelSize;
-    float3 DstMipTexelSize;
+    float SrcMipTexelSize;
+    float DstMipTexelSize;
 }
 
 Texture3D<float4> SourceMips[6] : register(t0);

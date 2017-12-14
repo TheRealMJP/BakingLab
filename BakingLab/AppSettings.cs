@@ -735,20 +735,10 @@ public class Settings
     {
         bool BakeWithVCT = false;
 
-        [MinValue(1)]
+        [MinValue(2)]
         [MaxValue(2048)]
-        [DisplayName("Voxel Resolution (X)")]
-        int VoxelResX = 64;
-
-        [MinValue(1)]
-        [MaxValue(2048)]
-        [DisplayName("Voxel Resolution (Y)")]
-        int VoxelResY = 64;
-
-        [MinValue(1)]
-        [MaxValue(2048)]
-        [DisplayName("Voxel Resolution (Z)")]
-        int VoxelResZ = 64;
+        [DisplayName("Voxel Resolution")]
+        int VoxelResolution = 64;
     }
 
     [ExpandGroup(false)]

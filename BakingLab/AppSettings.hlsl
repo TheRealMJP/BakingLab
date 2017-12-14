@@ -61,9 +61,7 @@ cbuffer AppSettings : register(b7)
     int ProbeIntegrationSamples;
     int ProbeDistanceIntegrationSamples;
     bool BakeWithVCT;
-    int VoxelResX;
-    int VoxelResY;
-    int VoxelResZ;
+    int VoxelResolution;
     bool EnableDiffuse;
     bool EnableSpecular;
     bool EnableDirectLighting;

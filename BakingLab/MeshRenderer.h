@@ -226,7 +226,7 @@ protected:
         Float4Align Float3 SceneMinBounds;
         Float4Align Float3 SceneMaxBounds;
         Float4Align Float3 CameraPos;
-        Float4Align Float3 MipVoxelRes;
+        float MipVoxelRes;
     };
 
     ConstantBuffer<MeshVSConstants> meshVSConstants;

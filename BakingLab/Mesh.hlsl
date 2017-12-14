@@ -648,7 +648,7 @@ float3 ComputeVoxelAO(in SurfaceContext surface)
 
     const float coneSpread = 0.325f;
 
-    const float3 voxelRes = float3(VoxelResX, VoxelResY, VoxelResZ) * 0.5f;
+    const float3 voxelRes = VoxelResolution * 0.5f;
     const float3 voxelTexelSize = rcp(voxelRes);
 
     const float MaxMipLevel = 9.0f;
@@ -669,7 +669,7 @@ float3 ComputeVoxelAO(in SurfaceContext surface)
 
         float coneOcclusion = 0.0f;
 
-        const uint MaxIterations = 3;
+        const uint MaxIterations = 2;
         uint numIterations = 0;
 
         while(coneOcclusion < 1.0f && numIterations < MaxIterations)
@@ -841,8 +841,8 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
     #if Voxelize_
         float3 voxelRadiance = clamp(irradiance * surface.DiffuseAlbedo * InvPi, 0.0f, FP16Max);
         float3 voxelUVW = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
-        int3 voxelCoord = int3(voxelUVW * float3(VoxelResX, VoxelResY, VoxelResZ));
-        voxelCoord = clamp(voxelCoord, 0, int3(VoxelResX, VoxelResY, VoxelResZ) - 1);
+        int3 voxelCoord = int3(voxelUVW * VoxelResolution);
+        voxelCoord = clamp(voxelCoord, 0, VoxelResolution - 1);
 
         float3 prevVoxelRadiance = VoxelRadianceOutput[voxelCoord].xyz;
         float prevVoxelCount = VoxelRadianceOutput[voxelCoord].w;

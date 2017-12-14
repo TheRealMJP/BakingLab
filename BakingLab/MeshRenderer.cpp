@@ -1336,10 +1336,10 @@ void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Cam
     voxelVisualizerConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
     voxelVisualizerConstants.Data.CameraPos = camera.Position();
 
-    Uint3 mipVoxelRes = Uint3(AppSettings::VoxelResX, AppSettings::VoxelResY, AppSettings::VoxelResZ);
+    uint32 mipVoxelRes = AppSettings::VoxelResolution;
     for(int32 i = 0; i < AppSettings::VoxelVisualizerMipLevel; ++i)
-        mipVoxelRes = Uint3(Max(mipVoxelRes.x / 2, 1u), Max(mipVoxelRes.y / 2, 1u), Max(mipVoxelRes.z / 2, 1u));
-    voxelVisualizerConstants.Data.MipVoxelRes = Float3(float(mipVoxelRes.x), float(mipVoxelRes.y), float(mipVoxelRes.z));
+        mipVoxelRes = Max(mipVoxelRes / 2, 1u);
+    voxelVisualizerConstants.Data.MipVoxelRes = float(mipVoxelRes);
 
     voxelVisualizerConstants.ApplyChanges(context);
     voxelVisualizerConstants.SetVS(context, 0);
@@ -1381,7 +1381,7 @@ void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Cam
         context->VSSetShader(voxelGeoVS , nullptr, 0);
         context->PSSetShader(voxelGeoPS, nullptr, 0);
 
-        const uint32 numVoxels = AppSettings::VoxelResX * AppSettings::VoxelResY * AppSettings::VoxelResZ;
+        const uint32 numVoxels = AppSettings::VoxelResolution * AppSettings::VoxelResolution * AppSettings::VoxelResolution;
         context->DrawIndexedInstanced(NumBoxIndices, numVoxels, 0, 0, 0);
     }
     else if(AppSettings::VoxelVisualizerMode == VoxelVisualizerModes::RayMarch)

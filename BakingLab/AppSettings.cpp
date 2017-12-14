@@ -269,9 +269,7 @@ namespace AppSettings
     IntSetting ProbeIntegrationSamples;
     IntSetting ProbeDistanceIntegrationSamples;
     BoolSetting BakeWithVCT;
-    IntSetting VoxelResX;
-    IntSetting VoxelResY;
-    IntSetting VoxelResZ;
+    IntSetting VoxelResolution;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -582,14 +580,8 @@ namespace AppSettings
         BakeWithVCT.Initialize(tweakBar, "BakeWithVCT", "VCT", "Bake With VCT", "", false);
         Settings.AddSetting(&BakeWithVCT);
 
-        VoxelResX.Initialize(tweakBar, "VoxelResX", "VCT", "Voxel Resolution (X)", "", 64, 1, 2048);
-        Settings.AddSetting(&VoxelResX);
-
-        VoxelResY.Initialize(tweakBar, "VoxelResY", "VCT", "Voxel Resolution (Y)", "", 64, 1, 2048);
-        Settings.AddSetting(&VoxelResY);
-
-        VoxelResZ.Initialize(tweakBar, "VoxelResZ", "VCT", "Voxel Resolution (Z)", "", 64, 1, 2048);
-        Settings.AddSetting(&VoxelResZ);
+        VoxelResolution.Initialize(tweakBar, "VoxelResolution", "VCT", "Voxel Resolution", "", 64, 2, 2048);
+        Settings.AddSetting(&VoxelResolution);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
@@ -805,9 +797,7 @@ namespace AppSettings
         CBuffer.Data.ProbeIntegrationSamples = ProbeIntegrationSamples;
         CBuffer.Data.ProbeDistanceIntegrationSamples = ProbeDistanceIntegrationSamples;
         CBuffer.Data.BakeWithVCT = BakeWithVCT;
-        CBuffer.Data.VoxelResX = VoxelResX;
-        CBuffer.Data.VoxelResY = VoxelResY;
-        CBuffer.Data.VoxelResZ = VoxelResZ;
+        CBuffer.Data.VoxelResolution = VoxelResolution;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;

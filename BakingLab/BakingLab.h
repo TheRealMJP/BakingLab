@@ -126,8 +126,8 @@ protected:
 
     struct GenerateMipConstants
     {
-        Float4Align Float3 SrcMipTexelSize;
-        Float4Align Float3 DstMipTexelSize;
+        float SrcMipTexelSize;
+        float DstMipTexelSize;
     };
 
     ConstantBuffer<ResolveConstants> resolveConstants;

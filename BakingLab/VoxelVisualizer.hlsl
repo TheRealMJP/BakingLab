@@ -22,7 +22,7 @@ cbuffer Constants : register(b0)
     float3 SceneMinBounds;
     float3 SceneMaxBounds;
     float3 CameraPos;
-    float3 MipVoxelRes;
+    float MipVoxelRes;
 }
 
 Texture3D<float4> VoxelRadiance : register(t0);
@@ -41,9 +41,9 @@ struct VSOutputGeo
 VSOutputGeo GeoVS(in float3 VertexPosition : POSITION, in uint InstanceID : SV_InstanceID)
 {
     const uint voxelIdx = InstanceID;
-    const uint3 voxelCoord = uint3(voxelIdx % VoxelResX,
-                                   (voxelIdx / VoxelResX) % VoxelResY,
-                                   voxelIdx / (VoxelResX * VoxelResY));
+    const uint3 voxelCoord = uint3(voxelIdx % VoxelResolution,
+                                   (voxelIdx / VoxelResolution) % VoxelResolution,
+                                   voxelIdx / (VoxelResolution * VoxelResolution));
 
     float3 voxelRadiance = VoxelRadiance[voxelCoord].xyz;
     const float voxelOpacity = VoxelRadiance[voxelCoord].w;
@@ -56,12 +56,12 @@ VSOutputGeo GeoVS(in float3 VertexPosition : POSITION, in uint InstanceID : SV_I
         return output;
     }
 
-    const float3 uvw = float3((voxelCoord.x + 0.5f) / VoxelResX,
-                              (voxelCoord.y + 0.5f) / VoxelResY,
-                              (voxelCoord.z + 0.5f) / VoxelResZ);
+    const float3 uvw = float3((voxelCoord.x + 0.5f) / VoxelResolution,
+                              (voxelCoord.y + 0.5f) / VoxelResolution,
+                              (voxelCoord.z + 0.5f) / VoxelResolution);
 
     const float3 sceneSize = (SceneMaxBounds - SceneMinBounds);
-    const float3 voxelSize = sceneSize / float3(VoxelResX, VoxelResY, VoxelResZ);
+    const float3 voxelSize = sceneSize / float(VoxelResolution);
 
     const float3 voxelCenter = SceneMinBounds + sceneSize * uvw;
     const float3 vtxPositionWS = voxelCenter + VertexPosition * voxelSize;
@@ -135,16 +135,16 @@ float IntersectRayBox(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
 //=================================================================================================
 float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
 {
-    const float3 voxelRes = MipVoxelRes;
+    const float voxelRes = MipVoxelRes;
     const float3 sceneSize = SceneMaxBounds - SceneMinBounds;
-    const float3 voxelSize = 1.0f / voxelRes;
+    const float voxelSize = 1.0f / voxelRes;
 
     const float3 pixelPosVoxelSpace = ((input.PositionWS - SceneMinBounds) / sceneSize) * voxelRes;
     const float3 cameraPosVoxelSpace = ((CameraPos - SceneMinBounds) / sceneSize) * voxelRes;
     const float3 viewDir = normalize(pixelPosVoxelSpace - cameraPosVoxelSpace);
-    const float bias = voxelSize.x * 0.25f;
+    const float bias = voxelSize * 0.25f;
 
-    // const float opacityCorrection = voxelSize.x / rcp(VoxelResX);
+    // const float opacityCorrection = voxelSize / rcp(VoxelResolution);
 
     float dist = max(IntersectRayBox_(cameraPosVoxelSpace, viewDir, 0.0f, voxelRes), 0.0f);
     float3 currPos = cameraPosVoxelSpace + viewDir * (dist + bias);
