@@ -81,6 +81,7 @@ SamplerState EVSMSampler : register(s1);
 SamplerState LinearSampler : register(s2);
 SamplerComparisonState PCFSampler : register(s3);
 SamplerState PointSampler : register(s4);
+SamplerState LinearBorderSampler : register(s4);
 
 #if Voxelize_
     RasterizerOrderedTexture3D<float4> VoxelRadianceOutput : register(u0);
@@ -652,16 +653,18 @@ float ComputeVoxelAO(in SurfaceContext surface)
     const float voxelRes = VoxelResolution * 0.5f;
     const float voxelTexelSize = rcp(voxelRes);
 
-    const float MaxMipLevel = 9.0f;
+    const float MaxMipLevel = 12.0f;
 
-    float occlusion = 0.0f;
+    float visibility = 0.0f;
     float weightSum = 0.0f;
+
+    const SamplerState voxelSampler = LinearSampler;
 
     [unroll]
     for(uint coneIdx = 0; coneIdx < 6; ++ coneIdx)
     {
         const float3 coneDirWS = mul(coneDirections[coneIdx], surface.TangentToWorld);
-        const float3 startPosWS = surface.PositionWS + surface.VtxNormalWS * 0.2f;
+        const float3 startPosWS = surface.PositionWS + surface.VtxNormalWS * 0.05f;
 
         const float3 startPosVS = ToVoxelSpace(startPosWS);
         const float3 coneDirVS = normalize(ToVoxelSpace(startPosWS + coneDirWS) - startPosVS);
@@ -670,14 +673,14 @@ float ComputeVoxelAO(in SurfaceContext surface)
 
         float coneOcclusion = 0.0f;
 
-        const uint MaxIterations = 2;
+        const uint MaxIterations = -1;
         uint numIterations = 0;
 
-        while(coneOcclusion < 1.0f && numIterations < MaxIterations)
+        while(coneOcclusion < 1.0f && numIterations < MaxIterations && traceDistance < 0.5f)
         {
             const float3 tracePos = startPosVS + traceDistance * coneDirVS;
-            if(any(tracePos > 1.0f) || any(abs(tracePos < 0.0f)))
-                break;
+            /*if(any(tracePos > 1.0f) || any(tracePos < 0.0f))
+                break;*/
 
             const float3 uvw = tracePos;
 
@@ -691,12 +694,13 @@ float ComputeVoxelAO(in SurfaceContext surface)
             for(uint i = 0; i < 3; ++i)
             {
                 if(coneDirVS[i] >= 0.0f)
-                    voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(LinearSampler, uvw, mipLevel) * weights[i];
+                    voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(voxelSampler, uvw, mipLevel) * weights[i];
                 else
-                    voxelSample += VoxelRadianceMips[i * 2 + 0].SampleLevel(LinearSampler, uvw, mipLevel) * weights[i];
+                    voxelSample += VoxelRadianceMips[i * 2 + 0].SampleLevel(voxelSampler, uvw, mipLevel) * weights[i];
             }
 
-            // voxelSample = VoxelRadiance.SampleLevel(LinearSampler, uvw, 0.0f);
+            // voxelSample = VoxelRadiance.SampleLevel(voxelSampler, uvw, 0.0f);
+            // voxelSample = VoxelRadianceMips[0].SampleLevel(voxelSampler, uvw, mipLevel);
 
             coneOcclusion += (1.0f - coneOcclusion) * voxelSample.w;
 
@@ -705,15 +709,15 @@ float ComputeVoxelAO(in SurfaceContext surface)
             ++numIterations;
         }
 
-        occlusion += coneOcclusion * coneWeights[coneIdx];
+        visibility += saturate(1.0f - coneOcclusion) * coneWeights[coneIdx];
         weightSum += coneWeights[coneIdx];
+
+        // visibility = (numIterations == 4) * coneWeights[coneIdx] * 0.2f;
     }
 
-    occlusion /= weightSum;
+    visibility /= weightSum;
 
-    occlusion = saturate(1.0f - occlusion);
-
-    return occlusion;
+    return saturate(visibility);
 }
 
 float3 ComputeVoxelIrradiance(in SurfaceContext surface)
@@ -735,16 +739,18 @@ float3 ComputeVoxelIrradiance(in SurfaceContext surface)
     const float voxelRes = VoxelResolution * 0.5f;
     const float voxelTexelSize = rcp(voxelRes);
 
-    const float MaxMipLevel = 4.0f;
+    const float MaxMipLevel = 12.0f;
 
     float3 irradiance = 0.0f;
     float weightSum = 0.0f;
+
+    const SamplerState voxelSampler = LinearSampler;
 
     [unroll]
     for(uint coneIdx = 0; coneIdx < 6; ++ coneIdx)
     {
         const float3 coneDirWS = mul(coneDirections[coneIdx], surface.TangentToWorld);
-        const float3 startPosWS = surface.PositionWS + surface.VtxNormalWS * 0.45f;
+        const float3 startPosWS = surface.PositionWS + surface.VtxNormalWS * 0.55f;
 
         const float3 startPosVS = ToVoxelSpace(startPosWS);
         const float3 coneDirVS = normalize(ToVoxelSpace(startPosWS + coneDirWS) - startPosVS);
@@ -754,14 +760,14 @@ float3 ComputeVoxelIrradiance(in SurfaceContext surface)
         float3 coneIrradiance = 0.0f;
         float coneOcclusion = 0.0f;
 
-        const uint MaxIterations = 4;
+        const uint MaxIterations = 6;
         uint numIterations = 0;
 
-        while(coneOcclusion < 1.0f && numIterations < MaxIterations)
+        while(coneOcclusion < 1.0f && numIterations < MaxIterations && traceDistance < 0.75f)
         {
             const float3 tracePos = startPosVS + traceDistance * coneDirVS;
-            if(any(tracePos > 1.0f) || any(abs(tracePos < 0.0f)))
-                break;
+            /*if(any(tracePos > 1.0f) || any(tracePos < 0.0f))
+                break;*/
 
             const float3 uvw = tracePos;
 
@@ -775,12 +781,12 @@ float3 ComputeVoxelIrradiance(in SurfaceContext surface)
             for(uint i = 0; i < 3; ++i)
             {
                 if(coneDirVS[i] >= 0.0f)
-                    voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(LinearSampler, uvw, mipLevel) * weights[i];
+                    voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(voxelSampler, uvw, mipLevel) * weights[i];
                 else
-                    voxelSample += VoxelRadianceMips[i * 2 + 0].SampleLevel(LinearSampler, uvw, mipLevel) * weights[i];
+                    voxelSample += VoxelRadianceMips[i * 2 + 0].SampleLevel(voxelSampler, uvw, mipLevel) * weights[i];
             }
 
-            // voxelSample = VoxelRadiance.SampleLevel(LinearSampler, uvw, 0.0f);
+            // voxelSample = VoxelRadiance.SampleLevel(voxelSampler, uvw, 0.0f);
 
             coneIrradiance += (1.0f - coneOcclusion) * voxelSample.xyz;
             coneOcclusion += (1.0f - coneOcclusion) * voxelSample.w;
