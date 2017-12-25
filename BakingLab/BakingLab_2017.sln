@@ -1,9 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BakingLab_2013", "BakingLab_2013.vcxproj", "{1D9C887B-E727-438B-8977-A0E7363B1FC6}"
+# Visual Studio 15
+VisualStudioVersion = 15.0.26403.0
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BakingLab", "BakingLab_2017.vcxproj", "{1D9C887B-E727-438B-8977-A0E7363B1FC6}"
 	ProjectSection(ProjectDependencies) = postProject
 		{A01DD775-61A4-42F1-9B2A-772E50456A68} = {A01DD775-61A4-42F1-9B2A-772E50456A68}
 		{C61F717F-FF92-4D36-930E-1F49C198CBEE} = {C61F717F-FF92-4D36-930E-1F49C198CBEE}
