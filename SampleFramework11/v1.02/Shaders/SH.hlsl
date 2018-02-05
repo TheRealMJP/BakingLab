@@ -64,9 +64,9 @@ SH4 ProjectOntoSH4(in float3 dir, in float intensity, in float A0, in float A1)
     sh.c[0] = 0.282095f * A0 * intensity;
 
     // Band 1
-    sh.c[1] = 0.488603f * dir.y * A1 * intensity;
+    sh.c[1] = -0.488603f * dir.y * A1 * intensity;
     sh.c[2] = 0.488603f * dir.z * A1 * intensity;
-    sh.c[3] = 0.488603f * dir.x * A1 * intensity;
+    sh.c[3] = -0.488603f * dir.x * A1 * intensity;
 
     return sh;
 }
@@ -79,9 +79,9 @@ SH4Color ProjectOntoSH4Color(in float3 dir, in float3 color, in float A0, in flo
     sh.c[0] = 0.282095f * A0 * color;
 
     // Band 1
-    sh.c[1] = 0.488603f * dir.y * A1 * color;
+    sh.c[1] = -0.488603f * dir.y * A1 * color;
     sh.c[2] = 0.488603f * dir.z * A1 * color;
-    sh.c[3] = 0.488603f * dir.x * A1 * color;
+    sh.c[3] = -0.488603f * dir.x * A1 * color;
 
     return sh;
 }
@@ -308,15 +308,15 @@ SH9 ProjectOntoSH9(in float3 n, in float intensity, in float A0, in float A1, in
     sh.c[0] = 0.282095f * A0 * intensity;
 
     // Band 1
-    sh.c[1] = 0.488603f * n.y * A1 * intensity;
+    sh.c[1] = -0.488603f * n.y * A1 * intensity;
     sh.c[2] = 0.488603f * n.z * A1 * intensity;
-    sh.c[3] = 0.488603f * n.x * A1 * intensity;
+    sh.c[3] = -0.488603f * n.x * A1 * intensity;
 
     // Band 2
     sh.c[4] = 1.092548f * n.x * n.y * A2 * intensity;
-    sh.c[5] = 1.092548f * n.y * n.z * A2 * intensity;
+    sh.c[5] = -1.092548f * n.y * n.z * A2 * intensity;
     sh.c[6] = 0.315392f * (3.0f * n.z * n.z - 1.0f) * A2 * intensity;
-    sh.c[7] = 1.092548f * n.x * n.z * A2 * intensity;
+    sh.c[7] = -1.092548f * n.x * n.z * A2 * intensity;
     sh.c[8] = 0.546274f * (n.x * n.x - n.y * n.y) * A2 * intensity;
 
     return sh;
@@ -330,15 +330,15 @@ SH9Color ProjectOntoSH9Color(in float3 n, in float3 color, in float A0, in float
     sh.c[0] = 0.282095f * A0 * color;
 
     // Band 1
-    sh.c[1] = 0.488603f * n.y * A1 * color;
+    sh.c[1] = -0.488603f * n.y * A1 * color;
     sh.c[2] = 0.488603f * n.z * A1 * color;
-    sh.c[3] = 0.488603f * n.x * A1 * color;
+    sh.c[3] = -0.488603f * n.x * A1 * color;
 
     // Band 2
     sh.c[4] = 1.092548f * n.x * n.y * A2 * color;
-    sh.c[5] = 1.092548f * n.y * n.z * A2 * color;
+    sh.c[5] = -1.092548f * n.y * n.z * A2 * color;
     sh.c[6] = 0.315392f * (3.0f * n.z * n.z - 1.0f) * A2 * color;
-    sh.c[7] = 1.092548f * n.x * n.z * A2 * color;
+    sh.c[7] = -1.092548f * n.x * n.z * A2 * color;
     sh.c[8] = 0.546274f * (n.x * n.x - n.y * n.y) * A2 * color;
 
     return sh;
@@ -516,14 +516,14 @@ SH9 RotateSH9(in SH9 sh, in float3x3 rotation)
 {
     const float r00 = rotation._m00;
     const float r10 = rotation._m01;
-    const float r20 = -rotation._m02;
+    const float r20 = rotation._m02;
 
     const float r01 = rotation._m10;
     const float r11 = rotation._m11;
-    const float r21 = -rotation._m12;
+    const float r21 = rotation._m12;
 
-    const float r02 = -rotation._m20;
-    const float r12 = -rotation._m21;
+    const float r02 = rotation._m20;
+    const float r12 = rotation._m21;
     const float r22 = rotation._m22;
 
     SH9 result;
@@ -562,29 +562,29 @@ SH9 RotateSH9(in SH9 sh, in float3x3 rotation)
     float r[25];
     r[0] = r11 * r00 + r01 * r10;
     r[1] = -r01 * r12 - r11 * r02;
-    r[2] =  v173 * r02 * r12;
+    r[2] = v173 * r02 * r12;
     r[3] = -r10 * r02 - r00 * r12;
     r[4] = r00 * r10 - r01 * r11;
-    r[5] = - r11 * r20 - r21 * r10;
+    r[5] = -r11 * r20 - r21 * r10;
     r[6] = r11 * r22 + r21 * r12;
     r[7] = -v173 * r22 * r12;
     r[8] = r20 * r12 + r10 * r22;
     r[9] = -r10 * r20 + r11 * r21;
-    r[10] = -v577 * (t41 + t43) + v115 * r21 * r20;
-    r[11] = v577 * (t48 + t50) - v115 * r21 * r22;
-    r[12] = -0.5000000000e0f * (t55 + t58) + t57;
+    r[10] = -v577* (t41 + t43) + v115 * r21 * r20;
+    r[11] = v577* (t48 + t50) - v115 * r21 * r22;
+    r[12] = -0.5f * (t55 + t58) + t57;
     r[13] = v577 * (t61 + t63) - v115 * r20 * r22;
-    r[14] =  v288 * (t70 - t68 + t72 - t74) - v577 * (t76 - t78);
-    r[15] = -r01 * r20 -  r21 * r00;
+    r[14] = v288 * (t70 - t68 + t72 - t74) - v577 * (t76 - t78);
+    r[15] = -r01 * r20 - r21 * r00;
     r[16] = r01 * r22 + r21 * r02;
     r[17] = -v173 * r22 * r02;
     r[18] = r00 * r22 + r20 * r02;
     r[19] = -r00 * r20 + r01 * r21;
     r[20] = t41 - t43;
     r[21] = -t50 + t48;
-    r[22] =  v866 * (t55 - t58);
+    r[22] = v866 * (t55 - t58);
     r[23] = t63 - t61;
-    r[24] = 0.5000000000e0f * (t74 - t68 - t70 +  t72);
+    r[24] = 0.5f *(t74 - t68 - t70 + t72);
 
     [unroll]
     for(uint i = 0; i < 5; ++i) {
@@ -604,14 +604,14 @@ SH9Color RotateSH9(in SH9Color sh, in float3x3 rotation)
 {
     const float r00 = rotation._m00;
     const float r10 = rotation._m01;
-    const float r20 = -rotation._m02;
+    const float r20 = rotation._m02;
 
     const float r01 = rotation._m10;
     const float r11 = rotation._m11;
-    const float r21 = -rotation._m12;
+    const float r21 = rotation._m12;
 
-    const float r02 = -rotation._m20;
-    const float r12 = -rotation._m21;
+    const float r02 = rotation._m20;
+    const float r12 = rotation._m21;
     const float r22 = rotation._m22;
 
     SH9Color result;
@@ -778,9 +778,9 @@ float EvalH4(in float3 n, in H4 hBasis)
     result += hBasis.x * (1.0f / sqrt(2.0f * Pi));
 
     // Band 1
-    result += hBasis.y * sqrt(1.5f / Pi) * n.y;
+    result += hBasis.y * -sqrt(1.5f / Pi) * n.y;
     result += hBasis.z * sqrt(1.5f / Pi) * (2 * n.z - 1.0f);
-    result += hBasis.w * sqrt(1.5f / Pi) * n.x;
+    result += hBasis.w * -sqrt(1.5f / Pi) * n.x;
 
 	return result;
 }
@@ -796,9 +796,9 @@ float3 EvalH4(in float3 n, in H4Color hBasis)
     color += hBasis.c[0] * (1.0f / sqrt(2.0f * Pi));
 
     // Band 1
-    color += hBasis.c[1] * sqrt(1.5f / Pi) * n.y;
+    color += hBasis.c[1] * -sqrt(1.5f / Pi) * n.y;
     color += hBasis.c[2] * sqrt(1.5f / Pi) * (2 * n.z - 1.0f);
-    color += hBasis.c[3] * sqrt(1.5f / Pi) * n.x;
+    color += hBasis.c[3] * -sqrt(1.5f / Pi) * n.x;
 
 	return color;
 }
@@ -931,6 +931,29 @@ H6Color ConvertToH6(in SH9Color sh)
 //-------------------------------------------------------------------------------------------------
 // Evalutes the 3-band H-Basis coefficients in the given direction
 //-------------------------------------------------------------------------------------------------
+float EvalH6(in float3 n, in H6 hBasis)
+{
+    float result = 0.0f;
+
+    // Band 0
+    result += hBasis.c[0] * (1.0f / sqrt(2.0f * Pi));
+
+    // Band 1
+    result += hBasis.c[1] * -sqrt(1.5f / Pi) * n.y;
+    result += hBasis.c[2] * sqrt(1.5f / Pi) * (2 * n.z - 1.0f);
+    result += hBasis.c[3] * -sqrt(1.5f / Pi) * n.x;
+
+    // Band 3
+    result += hBasis.c[4] * 0.5f * sqrt(7.5f / Pi) * n.x * n.y;
+    result += hBasis.c[5] * 0.5f * sqrt(7.5f / Pi) * (n.x * n.x - n.y * n.y);
+
+    return result;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+// Evalutes the 3-band H-Basis coefficients in the given direction
+//-------------------------------------------------------------------------------------------------
 float3 EvalH6(in float3 n, in H6Color hBasis)
 {
 	float3 color = 0.0f;
@@ -939,9 +962,9 @@ float3 EvalH6(in float3 n, in H6Color hBasis)
     color += hBasis.c[0] * (1.0f / sqrt(2.0f * Pi));
 
     // Band 1
-    color += hBasis.c[1] * sqrt(1.5f / Pi) * n.y;
+    color += hBasis.c[1] * -sqrt(1.5f / Pi) * n.y;
     color += hBasis.c[2] * sqrt(1.5f / Pi) * (2 * n.z - 1.0f);
-    color += hBasis.c[3] * sqrt(1.5f / Pi) * n.x;
+    color += hBasis.c[3] * -sqrt(1.5f / Pi) * n.x;
 
     // Band 3
     color += hBasis.c[4] * 0.5f * sqrt(7.5f / Pi) * n.x * n.y;
