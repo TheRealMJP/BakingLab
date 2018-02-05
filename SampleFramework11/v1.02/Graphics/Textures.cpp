@@ -22,7 +22,28 @@
 namespace SampleFramework11
 {
 
-    // Loads a texture, using either the DDS loader or the WIC loader
+static const DXGI_FORMAT UnormFormats[] =
+{
+    DXGI_FORMAT_R8G8B8A8_UNORM,
+    DXGI_FORMAT_R8G8_UNORM,
+    DXGI_FORMAT_R8_UNORM,
+
+    DXGI_FORMAT_R16G16B16A16_UNORM,
+    DXGI_FORMAT_R16G16_UNORM,
+    DXGI_FORMAT_R16_UNORM,
+
+    DXGI_FORMAT_R10G10B10A2_UNORM,
+};
+
+static bool IsUnormFormat(DXGI_FORMAT format)
+{
+    for(uint64 i = 0; i < ArraySize_(UnormFormats); ++i)
+        if(format == UnormFormats[i])
+            return true;
+    return false;
+}
+
+// Loads a texture, using either the DDS loader or the WIC loader
 ID3D11ShaderResourceViewPtr LoadTexture(ID3D11Device* device, const wchar* filePath, bool forceSRGB)
 {
     ID3D11DeviceContextPtr context;
@@ -52,19 +73,24 @@ template<typename T>
 static void GetTextureData(ID3D11Device* device, ID3D11ShaderResourceView* textureSRV,
                            DXGI_FORMAT outFormat, TextureData<T>& texData)
 {
-    static ComputeShaderPtr decodeTextureCS;
-    static ComputeShaderPtr decodeTextureArrayCS;
-
+    static ComputeShaderPtr decodeTextureCS[2][2];
     static const uint32 TGSize = 16;
 
-    if(decodeTextureCS.Valid() == false)
+    if(decodeTextureCS[0][0].Valid() == false)
     {
         CompileOptions opts;
         opts.Add("TGSize_", TGSize);
+        opts.Add("UnormOutput_", 0);
         const std::wstring shaderPath = SampleFrameworkDir() + L"Shaders\\DecodeTextureCS.hlsl";
-        decodeTextureCS = CompileCSFromFile(device, shaderPath.c_str(), "DecodeTextureCS", "cs_5_0", opts);
 
-        decodeTextureArrayCS = CompileCSFromFile(device, shaderPath.c_str(), "DecodeTextureArrayCS", "cs_5_0", opts);
+        decodeTextureCS[0][0] = CompileCSFromFile(device, shaderPath.c_str(), "DecodeTextureCS", "cs_5_0", opts);
+        decodeTextureCS[0][1] = CompileCSFromFile(device, shaderPath.c_str(), "DecodeTextureArrayCS", "cs_5_0", opts);
+
+        opts.Reset();
+        opts.Add("TGSize_", TGSize);
+        opts.Add("UnormOutput_", 1);
+        decodeTextureCS[1][0] = CompileCSFromFile(device, shaderPath.c_str(), "DecodeTextureCS", "cs_5_0", opts);
+        decodeTextureCS[1][1] = CompileCSFromFile(device, shaderPath.c_str(), "DecodeTextureArrayCS", "cs_5_0", opts);
     }
 
     ID3D11Texture2DPtr texture;
@@ -113,7 +139,10 @@ static void GetTextureData(ID3D11Device* device, ID3D11ShaderResourceView* textu
 
     SetCSInputs(context, sourceSRV);
     SetCSOutputs(context, decodeTextureUAV);
-    SetCSShader(context, arraySize > 1 ? decodeTextureArrayCS : decodeTextureCS);
+
+    uint32 arrayOutput = arraySize > 1 ? 1 : 0;
+    uint32 unormOutput = IsUnormFormat(outFormat) ? 1 : 0;
+    SetCSShader(context, decodeTextureCS[unormOutput][arrayOutput]);
 
     context->Dispatch(DispatchSize(TGSize, texDesc.Width), DispatchSize(TGSize, texDesc.Height), arraySize);
 

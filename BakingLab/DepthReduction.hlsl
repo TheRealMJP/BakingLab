@@ -29,7 +29,7 @@ static const uint NumThreads = ReductionTGSize * ReductionTGSize;
 
 Texture2D<float2> ReductionMap : register(t0);
 
-RWTexture2D<float2> OutputMap : register(u0);
+RWTexture2D<unorm float2> OutputMap : register(u0);
 
 cbuffer ReductionConstants : register(b0)
 {
