@@ -245,14 +245,14 @@ SH4 RotateSH4(in SH4 sh, in float3x3 rotation)
 {
     const float r00 = rotation._m00;
     const float r10 = rotation._m01;
-    const float r20 = -rotation._m02;
+    const float r20 = rotation._m02;
 
     const float r01 = rotation._m10;
     const float r11 = rotation._m11;
-    const float r21 = -rotation._m12;
+    const float r21 = rotation._m12;
 
-    const float r02 = -rotation._m20;
-    const float r12 = -rotation._m21;
+    const float r02 = rotation._m20;
+    const float r12 = rotation._m21;
     const float r22 = rotation._m22;
 
     SH4 result;
@@ -272,14 +272,14 @@ SH4Color RotateSH4(in SH4Color sh, in float3x3 rotation)
 {
     const float r00 = rotation._m00;
     const float r10 = rotation._m01;
-    const float r20 = -rotation._m02;
+    const float r20 = rotation._m02;
 
     const float r01 = rotation._m10;
     const float r11 = rotation._m11;
-    const float r21 = -rotation._m12;
+    const float r21 = rotation._m12;
 
-    const float r02 = -rotation._m20;
-    const float r12 = -rotation._m21;
+    const float r02 = rotation._m20;
+    const float r12 = rotation._m21;
     const float r22 = rotation._m22;
 
     SH4Color result;
