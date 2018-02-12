@@ -104,6 +104,9 @@
     </ClCompile>
     <ClCompile Include="SG.cpp" />
     <ClCompile Include="PathTracer.cpp" />
+    <ClCompile Include="..\Externals\HosekSky\Include\ArHosekSkyModel.c">
+      <Filter>SampleFramework11\HosekSky</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -247,6 +250,9 @@
     </Filter>
     <Filter Include="SampleFramework11\External DLLs">
       <UniqueIdentifier>{f554bad2-3017-4de6-b296-a8d625a6d4df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SampleFramework11\HosekSky">
+      <UniqueIdentifier>{52c7ad7a-d732-4230-824f-1420beca5127}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

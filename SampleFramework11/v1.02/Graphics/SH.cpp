@@ -24,9 +24,9 @@ SH4 ProjectOntoSH4(const Float3& dir)
     sh.Coefficients[0] = 0.282095f;
 
     // Band 1
-    sh.Coefficients[1] = 0.488603f * dir.y;
+    sh.Coefficients[1] = -0.488603f * dir.y;
     sh.Coefficients[2] = 0.488603f * dir.z;
-    sh.Coefficients[3] = 0.488603f * dir.x;
+    sh.Coefficients[3] = -0.488603f * dir.x;
 
     return sh;
 }
@@ -64,15 +64,15 @@ SH9 ProjectOntoSH9(const Float3& dir)
     sh.Coefficients[0] = 0.282095f;
 
     // Band 1
-    sh.Coefficients[1] = 0.488603f * dir.y;
+    sh.Coefficients[1] = -0.488603f * dir.y;
     sh.Coefficients[2] = 0.488603f * dir.z;
-    sh.Coefficients[3] = 0.488603f * dir.x;
+    sh.Coefficients[3] = -0.488603f * dir.x;
 
     // Band 2
     sh.Coefficients[4] = 1.092548f * dir.x * dir.y;
-    sh.Coefficients[5] = 1.092548f * dir.y * dir.z;
+    sh.Coefficients[5] = -1.092548f * dir.y * dir.z;
     sh.Coefficients[6] = 0.315392f * (3.0f * dir.z * dir.z - 1.0f);
-    sh.Coefficients[7] = 1.092548f * dir.x * dir.z;
+    sh.Coefficients[7] = -1.092548f * dir.x * dir.z;
     sh.Coefficients[8] = 0.546274f * (dir.x * dir.x - dir.y * dir.y);
 
     return sh;
@@ -111,12 +111,12 @@ H4 ProjectOntoH4(const Float3& dir)
 {
     H4 result;
 
-    result[0] = (1.0f / std::sqrt(2.0f * 3.14159f));
+    result[0] = (1.0f / sqrt(2.0f * 3.14159f));
 
     // Band 1
-    result[1] = std::sqrt(1.5f / 3.14159f) * dir.y;
-    result[2] = std::sqrt(1.5f / 3.14159f) * (2 * dir.z - 1.0f);
-    result[3] = std::sqrt(1.5f / 3.14159f) * dir.x;
+    result[1] = -sqrt(1.5f / 3.14159f) * dir.y;
+    result[2] = sqrt(1.5f / 3.14159f) * (2 * dir.z - 1.0f);
+    result[3] = -sqrt(1.5f / 3.14159f) * dir.x;
 
     return result;
 }

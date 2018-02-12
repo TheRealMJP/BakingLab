@@ -144,7 +144,7 @@ using namespace DirectX::PackedVector;
 #include "..\\..\\Externals\\Assimp-3.1.1\\include\\scene.h"
 #include "..\\..\\Externals\\Assimp-3.1.1\\include\\postprocess.h"
 
-// HosekSky lib
+// Hosek Sky Model
 #include "..\\..\\Externals\\HosekSky\\Include\\ArHosekSkyModel.h"
 
 // Static Lib Imports
@@ -165,13 +165,6 @@ using namespace DirectX::PackedVector;
 
 // DirectXTex
 #pragma comment(lib, "DirectXTex.lib")
-
-// Hosek Sky
-#ifdef _DEBUG
-    #pragma comment(lib, "HosekSky_Dbg.lib")
-#else
-    #pragma comment(lib, "HosekSky.lib")
-#endif
 
 #ifdef _DEBUG
     #pragma comment(lib, "comsuppwd.lib")

@@ -101,6 +101,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Externals\HosekSky\Include\ArHosekSkyModel.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\SampleFramework11\v1.02\App.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.02\Assert.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.02\FileIO.cpp" />
