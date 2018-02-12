@@ -77,33 +77,11 @@ protected:
     FirstPersonCamera unJitteredCamera;
     bool enableTAA = false;
 
-    RenderTarget2D probeCaptureMap;
-    RenderTarget2D probeDistanceCaptureMap;
-    RenderTarget2D probeIrradianceCubeMap;
+    RenderTarget2D probeRadianceCubeMap;
     RenderTarget2D probeDistanceCubeMap;
     DepthStencilBuffer probeDepthBuffer;
 
-    RenderTarget3D probeVolumeMaps[AppSettings::MaxBasisCount];
-    RenderTarget3D probeDistanceVolumeMaps[AppSettings::MaxBasisCount];
-
     uint64 currProbeIdx = 0;
-
-    ComputeShaderPtr probeIntegrateIrradianceCubeMap;
-    ComputeShaderPtr probeIntegrateDistanceCubeMap;
-
-    ComputeShaderPtr probeIntegrateVolumeMap;
-    ComputeShaderPtr probeIntegrateDistanceVolumeMap;
-
-    RenderTarget3D voxelRadiance;
-    RenderTarget3D voxelRadianceMips[6];
-    ComputeShaderPtr clearVoxelRadiance;
-    ComputeShaderPtr fillVoxelHolesX;
-    ComputeShaderPtr fillVoxelHolesY;
-    ComputeShaderPtr fillVoxelHolesZ;
-    ComputeShaderPtr generateFirstVoxelMip;
-    ComputeShaderPtr generateVoxelMips;
-    uint64 currVoxelIdx = 0;
-    uint32 numVoxelMips = 0;
 
     struct ResolveConstants
     {
@@ -120,22 +98,8 @@ protected:
         Float2 JitterOffset;
     };
 
-    struct IntegrateConstants
-    {
-        Float2 OutputTextureSize;
-        uint32 OutputProbeIdx;
-    };
-
-    struct GenerateMipConstants
-    {
-        float SrcMipTexelSize;
-        float DstMipTexelSize;
-    };
-
     ConstantBuffer<ResolveConstants> resolveConstants;
     ConstantBuffer<BackgroundVelocityConstants> backgroundVelocityConstants;
-    ConstantBuffer<IntegrateConstants> integrateConstants;
-    ConstantBuffer<GenerateMipConstants> generateMipConstants;
 
     virtual void Initialize() override;
     virtual void Render(const Timer& timer) override;
@@ -146,10 +110,9 @@ protected:
     void CreateRenderTargets();
 
     void RenderProbes(MeshBakerStatus& status);
-    void VoxelizeScene(MeshBakerStatus& status);
     void RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* secondRT,
                      const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
-                     bool32 renderAreaLight, bool32 showVoxelVisualizer, bool32 enableSkySun, bool32 probeRendering);
+                     bool32 renderAreaLight, bool32 enableSkySun, bool32 probeRendering);
     void RenderAA();
     void RenderBackgroundVelocity();
     void RenderHUD(const Timer& timer, float groundTruthProgress, float bakeProgress,

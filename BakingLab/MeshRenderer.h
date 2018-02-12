@@ -41,7 +41,7 @@ public:
 
     void RenderDepth(ID3D11DeviceContext* context, const Camera& camera, bool noZClip, bool flippedZRange);
     void RenderMainPass(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status,
-                        bool32 probeRendering, bool voxelizing);
+                        bool32 probeRendering);
 
     void Update(const Camera& camera, Float2 jitterOffset);
 
@@ -58,8 +58,6 @@ public:
                                    const MeshBakerStatus& status);
     void RenderProbeVisualizer(ID3D11DeviceContext* context, const Camera& camera,
                                const MeshBakerStatus& status);
-    void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Camera& camera,
-                                             const MeshBakerStatus& status);
 
 protected:
 
@@ -87,10 +85,8 @@ protected:
 
     std::vector<ID3D11InputLayoutPtr> meshInputLayouts;
     VertexShaderPtr meshVS;
-    VertexShaderPtr meshVSVoxelize;
     PixelShaderPtr meshPS;
     PixelShaderPtr meshPSProbes;
-    PixelShaderPtr meshPSVoxelize;
 
     std::vector<ID3D11InputLayoutPtr> meshDepthInputLayouts;
     VertexShaderPtr meshDepthVS;
@@ -134,18 +130,6 @@ protected:
 
     ID3D11ShaderResourceViewPtr shSpecularLookupA;
     ID3D11ShaderResourceViewPtr shSpecularLookupB;
-
-    VertexShaderPtr voxelGeoVS;
-    PixelShaderPtr voxelGeoPS;
-    ID3D11InputLayoutPtr voxelGeoIL;
-
-    VertexShaderPtr voxelRayMarchVS;
-    PixelShaderPtr voxelRayMarchFirstMipPS;
-    PixelShaderPtr voxelRayMarchPS;
-    ID3D11InputLayoutPtr voxelRayMarchIL;
-
-    ID3D11BufferPtr voxelVisualizerVB;
-    ID3D11BufferPtr voxelVisualizerIB;
 
     // Constant buffers
     struct MeshVSConstants
@@ -220,15 +204,7 @@ protected:
         float SGSharpness;
         Float3 SceneMinBounds;
         Float4Align Float3 SceneMaxBounds;
-    };
-
-    struct VoxelVisualizerConstants
-    {
-        Float4x4 ViewProjection;
-        Float4Align Float3 SceneMinBounds;
-        Float4Align Float3 SceneMaxBounds;
-        Float4Align Float3 CameraPos;
-        float MipVoxelRes;
+        Float4Align Float3 CameraPosWS;
     };
 
     ConstantBuffer<MeshVSConstants> meshVSConstants;
@@ -237,5 +213,4 @@ protected:
     ConstantBuffer<VisualizerConstants> visualizerConstants;
     ConstantBuffer<EVSMConstants> evsmConstants;
     ConstantBuffer<ReductionConstants> reductionConstants;
-    ConstantBuffer<VoxelVisualizerConstants> voxelVisualizerConstants;
 };

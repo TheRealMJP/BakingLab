@@ -69,12 +69,8 @@ Texture2DArray<float4> BakedLightingMap : register(t5);
 TextureCube<float> AreaLightShadowMap : register(t6);
 Texture3D<float4> SHSpecularLookupA : register(t7);
 Texture3D<float2> SHSpecularLookupB : register(t8);
-TextureCubeArray<float4> ProbeIrradianceCubeMaps : register(t9);
+TextureCubeArray<float4> ProbeRradianceCubeMaps : register(t9);
 TextureCubeArray<float2> ProbeDistanceCubeMaps : register(t10);
-Texture3D<float4> VoxelRadiance : register(t11);
-Texture3D<float4> VoxelRadianceMips[6] : register(t12);
-Texture3D<float4> ProbeVolumeMaps[MaxBasisCount];
-Texture3D<float2> ProbeDistanceVolumeMaps[MaxBasisCount];
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -83,9 +79,6 @@ SamplerComparisonState PCFSampler : register(s3);
 SamplerState PointSampler : register(s4);
 SamplerState LinearBorderSampler : register(s4);
 
-#if Voxelize_
-    RasterizerOrderedTexture3D<float4> VoxelRadianceOutput : register(u0);
-#endif
 
 //=================================================================================================
 // Input/Output structs
@@ -492,7 +485,7 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     }
 }
 
-void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
+/*void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
 {
     float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
     float3 probeDims = float3(ProbeResX, ProbeResY, ProbeResZ);
@@ -540,276 +533,7 @@ void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indi
 
     indirectIrradiance = irradianceSum;
     indirectSpecular = 0.0f;
-}
-
-float3 EvaluateProbeIrradiance(in float3 basis[MaxBasisCount], in float3 dir)
-{
-    float3 output = 0.0f;
-
-    if(ProbeMode == ProbeModes_AmbientCube)
-    {
-        float3 ambientCubeDirs[6] = { float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), float3(-1, 0, 0), float3(0, -1, 0), float3(0, 0, -1) };
-        float weightSum = 0.0f;
-
-        [unroll]
-        for(uint i = 0; i < 6; ++i)
-        {
-            float weight = saturate(dot(dir, ambientCubeDirs[i]));
-            output += basis[i] * weight;
-            weightSum += weight;
-        }
-
-        output /= weightSum;
-    }
-    else if(ProbeMode == ProbeModes_L1_SH)
-    {
-        SH4Color sh;
-
-        [unroll]
-        for(uint i = 0; i < 4; ++i)
-            sh.c[i] = basis[i];
-
-        output = EvalSH4Irradiance(dir, sh);
-    }
-    else if(ProbeMode == ProbeModes_L2_SH)
-    {
-        SH9Color sh;
-
-        [unroll]
-        for(uint i = 0; i < 9; ++i)
-            sh.c[i] = basis[i];
-
-
-        output = EvalSH9Irradiance(dir, sh);
-    }
-
-    return output;
-}
-
-
-void SampleVolumeTextures(in SurfaceContext surface, in float3 uvw, out float3 basis[MaxBasisCount])
-{
-    if(ProbeMode == ProbeModes_AmbientCube)
-    {
-        [unroll]
-        for(uint i = 0; i < 6; ++i)
-            basis[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz;
-    }
-    else if(ProbeMode == ProbeModes_L1_SH)
-    {
-        [unroll]
-        for(uint i = 0; i < 4; ++i)
-            basis[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz;
-    }
-    else if(ProbeMode == ProbeModes_L2_SH)
-    {
-        [unroll]
-        for(uint i = 0; i < 9; ++i)
-            basis[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz;
-    }
-}
-
-void ComputeIndirectFromProbeVolumeMaps(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
-{
-    float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
-    float3 uvw = normalizedSamplePos;
-
-    indirectIrradiance = 0.0f;
-    indirectSpecular = 0.0f;
-
-    float3 basis[MaxBasisCount];
-
-    [unroll]
-    for(uint i = 0; i < uint(MaxBasisCount); ++i)
-        basis[i] = 0.0f;
-
-    SampleVolumeTextures(surface, uvw, basis);
-
-    indirectIrradiance = EvaluateProbeIrradiance(basis, surface.NormalWS);
-}
-
-// Convert to normalized [0, 1] space mapping to the voxel grid
-float3 ToVoxelSpace(in float3 x)
-{
-    return (x - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds);
-}
-
-float ComputeVoxelAO(in SurfaceContext surface)
-{
-    const float3 coneDirections[6] =
-    {
-        float3(0, 0, 1),
-        float3(0, 0.866f, 0.5f),
-        float3(0.8236f, 0.2676f, 0.5f),
-        float3(0.51f, -0.7f, 0.5f),
-        float3(-0.5f, -0.7f, 0.5f),
-        float3(-0.82f, 0.5f, 0.267f),
-    };
-
-    const float coneWeights[6] = { Pi / 4, (3 * Pi) / 20, (3 * Pi) / 20, (3 * Pi) / 20, (3 * Pi) / 20, (3 * Pi) / 20 };
-
-    const float coneSpread = 0.325f;
-
-    const float voxelRes = VoxelResolution * 0.5f;
-    const float voxelTexelSize = rcp(voxelRes);
-
-    const float MaxMipLevel = 12.0f;
-
-    float visibility = 0.0f;
-    float weightSum = 0.0f;
-
-    const SamplerState voxelSampler = LinearSampler;
-
-    [unroll]
-    for(uint coneIdx = 0; coneIdx < 6; ++ coneIdx)
-    {
-        const float3 coneDirWS = mul(coneDirections[coneIdx], surface.TangentToWorld);
-        const float3 startPosWS = surface.PositionWS + surface.VtxNormalWS * 0.05f;
-
-        const float3 startPosVS = ToVoxelSpace(startPosWS);
-        const float3 coneDirVS = normalize(ToVoxelSpace(startPosWS + coneDirWS) - startPosVS);
-
-        float traceDistance = 0.01f;
-
-        float coneOcclusion = 0.0f;
-
-        const uint MaxIterations = -1;
-        uint numIterations = 0;
-
-        while(coneOcclusion < 1.0f && numIterations < MaxIterations && traceDistance < 0.5f)
-        {
-            const float3 tracePos = startPosVS + traceDistance * coneDirVS;
-            /*if(any(tracePos > 1.0f) || any(tracePos < 0.0f))
-                break;*/
-
-            const float3 uvw = tracePos;
-
-            const float mipLevel = min(log2(1.0f + coneSpread * 2.0f * traceDistance / voxelTexelSize), MaxMipLevel);
-            const float mipLevel2 = (mipLevel + 1) * (mipLevel + 1);
-
-            float4 voxelSample = 0.0f;
-            float3 weights = coneDirVS * coneDirVS;
-
-            [unroll]
-            for(uint i = 0; i < 3; ++i)
-            {
-                if(coneDirVS[i] >= 0.0f)
-                    voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(voxelSampler, uvw, mipLevel) * weights[i];
-                else
-                    voxelSample += VoxelRadianceMips[i * 2 + 0].SampleLevel(voxelSampler, uvw, mipLevel) * weights[i];
-            }
-
-            // voxelSample = VoxelRadiance.SampleLevel(voxelSampler, uvw, 0.0f);
-            // voxelSample = VoxelRadianceMips[0].SampleLevel(voxelSampler, uvw, mipLevel);
-
-            coneOcclusion += (1.0f - coneOcclusion) * voxelSample.w;
-
-            traceDistance += mipLevel2 * voxelTexelSize;
-
-            ++numIterations;
-        }
-
-        visibility += saturate(1.0f - coneOcclusion) * coneWeights[coneIdx];
-        weightSum += coneWeights[coneIdx];
-
-        // visibility = (numIterations == 4) * coneWeights[coneIdx] * 0.2f;
-    }
-
-    visibility /= weightSum;
-
-    return saturate(visibility);
-}
-
-float3 ComputeVoxelIrradiance(in SurfaceContext surface)
-{
-    const float3 coneDirections[6] =
-    {
-        float3(0, 0, 1),
-        float3(0, 0.866f, 0.5f),
-        float3(0.8236f, 0.2676f, 0.5f),
-        float3(0.51f, -0.7f, 0.5f),
-        float3(-0.5f, -0.7f, 0.5f),
-        float3(-0.82f, 0.5f, 0.267f),
-    };
-
-    const float coneWeights[6] = { Pi / 4, (3 * Pi) / 20, (3 * Pi) / 20, (3 * Pi) / 20, (3 * Pi) / 20, (3 * Pi) / 20 };
-
-    const float coneSpread = 0.325f;
-
-    const float voxelRes = VoxelResolution * 0.5f;
-    const float voxelTexelSize = rcp(voxelRes);
-
-    const float MaxMipLevel = 12.0f;
-
-    float3 irradiance = 0.0f;
-    float weightSum = 0.0f;
-
-    const SamplerState voxelSampler = LinearSampler;
-
-    [unroll]
-    for(uint coneIdx = 0; coneIdx < 6; ++ coneIdx)
-    {
-        const float3 coneDirWS = mul(coneDirections[coneIdx], surface.TangentToWorld);
-        const float3 startPosWS = surface.PositionWS + surface.VtxNormalWS * 0.55f;
-
-        const float3 startPosVS = ToVoxelSpace(startPosWS);
-        const float3 coneDirVS = normalize(ToVoxelSpace(startPosWS + coneDirWS) - startPosVS);
-
-        float traceDistance = 0.01f;
-
-        float3 coneIrradiance = 0.0f;
-        float coneOcclusion = 0.0f;
-
-        const uint MaxIterations = 6;
-        uint numIterations = 0;
-
-        while(coneOcclusion < 1.0f && numIterations < MaxIterations && traceDistance < 0.75f)
-        {
-            const float3 tracePos = startPosVS + traceDistance * coneDirVS;
-            /*if(any(tracePos > 1.0f) || any(tracePos < 0.0f))
-                break;*/
-
-            const float3 uvw = tracePos;
-
-            const float mipLevel = min(log2(1.0f + coneSpread * 2.0f * traceDistance / voxelTexelSize), MaxMipLevel);
-            const float mipLevel2 = (mipLevel + 1) * (mipLevel + 1);
-
-            float4 voxelSample = 0.0f;
-            float3 weights = coneDirVS * coneDirVS;
-
-            [unroll]
-            for(uint i = 0; i < 3; ++i)
-            {
-                if(coneDirVS[i] >= 0.0f)
-                    voxelSample += VoxelRadianceMips[i * 2 + 1].SampleLevel(voxelSampler, uvw, mipLevel) * weights[i];
-                else
-                    voxelSample += VoxelRadianceMips[i * 2 + 0].SampleLevel(voxelSampler, uvw, mipLevel) * weights[i];
-            }
-
-            // voxelSample = VoxelRadiance.SampleLevel(voxelSampler, uvw, 0.0f);
-
-            coneIrradiance += (1.0f - coneOcclusion) * voxelSample.xyz;
-            coneOcclusion += (1.0f - coneOcclusion) * voxelSample.w;
-
-            traceDistance += mipLevel2 * voxelTexelSize;
-
-            ++numIterations;
-        }
-
-        coneIrradiance *= Pi;
-
-        float3 skyIrradiance = EvalSH9Irradiance(coneDirWS, SkySH);
-        coneIrradiance += (1.0f - coneOcclusion) * skyIrradiance * InvPi;
-
-        irradiance += coneIrradiance * coneWeights[coneIdx];
-        weightSum += coneWeights[coneIdx];
-    }
-
-    // irradiance /= weightSum;
-
-    return irradiance;
-}
-
+}*/
 
 //=================================================================================================
 // Pixel Shader
@@ -899,27 +623,21 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
     }
 
 	// Add in the indirect
-    if((EnableIndirectLighting || ViewIndirectSpecular) && Voxelize_ == false)
+    if(EnableIndirectLighting || ViewIndirectSpecular)
     {
         float3 indirectIrradiance = 0.0f;
         float3 indirectSpecular = 0.0f;
 
-        if(UseProbes || ProbeRendering_)
+        // if(UseProbes || ProbeRendering_)
+        if(ProbeRendering_)
         {
-            if(ProbeMode == ProbeModes_CubeMap)
+            /*if(ProbeMode == ProbeModes_CubeMap)
                 ComputeIndirectFromProbeCubeMaps(surface, indirectIrradiance, indirectSpecular);
             else
-                ComputeIndirectFromProbeVolumeMaps(surface, indirectIrradiance, indirectSpecular);
+                ComputeIndirectFromProbeVolumeMaps(surface, indirectIrradiance, indirectSpecular);*/
         }
         else
             ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
-
-        // ###################################################
-        if(BakeWithVCT)
-        {
-            indirectIrradiance = ComputeVoxelIrradiance(surface);
-            indirectSpecular = 0.0f;
-        }
 
         if(EnableIndirectDiffuse)
         {
@@ -936,38 +654,24 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
 
     float illuminance = dot(irradiance, float3(0.2126f, 0.7152f, 0.0722f));
 
-    #if Voxelize_
-        float3 voxelRadiance = clamp(irradiance * surface.DiffuseAlbedo * InvPi, 0.0f, FP16Max);
-        float3 voxelUVW = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
-        int3 voxelCoord = int3(voxelUVW * VoxelResolution);
-        voxelCoord = clamp(voxelCoord, 0, VoxelResolution - 1);
+    PSOutput output;
+    output.Lighting = clamp(float4(lighting, illuminance), 0.0f, FP16Max);
 
-        float3 prevVoxelRadiance = VoxelRadianceOutput[voxelCoord].xyz;
-        float prevVoxelCount = VoxelRadianceOutput[voxelCoord].w;
-        float3 newVoxelRadiance = lerp(prevVoxelRadiance, voxelRadiance, 1.0f / (prevVoxelCount + 1.0f));
-        VoxelRadianceOutput[voxelCoord] = float4(newVoxelRadiance, prevVoxelCount + 1.0f);
+    if(isFrontFace == false)
+        output.Lighting = 0.0f;
+
+    #if ProbeRendering_
+        float distanceFromProbe = length(surface.PositionWS - CameraPosWS);
+        float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
+        distanceFromProbe = saturate(distanceFromProbe * rcp(maxDistance));
+        output.ProbeDistance = float2(distanceFromProbe, distanceFromProbe * distanceFromProbe);
     #else
-        PSOutput output;
-        output.Lighting = clamp(float4(lighting, illuminance), 0.0f, FP16Max);
-
-        if(isFrontFace == false)
-            output.Lighting = 0.0f;
-
-        #if ProbeRendering_
-            float distanceFromProbe = length(surface.PositionWS - CameraPosWS);
-            float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
-            distanceFromProbe = saturate(distanceFromProbe * rcp(maxDistance));
-            output.ProbeDistance = float2(distanceFromProbe, distanceFromProbe * distanceFromProbe);
-        #else
-            float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
-            prevPositionSS *= RTSize;
-            output.Velocity = input.PositionSS.xy - prevPositionSS;
-            output.Velocity -= JitterOffset;
-            output.Velocity /= RTSize;
-
-            // output.Lighting.xyz = ComputeVoxelAO(surface) * 8;
-        #endif
-
-        return output;
+        float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
+        prevPositionSS *= RTSize;
+        output.Velocity = input.PositionSS.xy - prevPositionSS;
+        output.Velocity -= JitterOffset;
+        output.Velocity /= RTSize;
     #endif
+
+    return output;
 }
