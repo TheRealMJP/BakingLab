@@ -857,5 +857,7 @@ public class Settings
         [MaxValue(100.0f)]
         [UseAsShaderConstant(false)]
         float SceneBoundsOffsetZ = 0.0f;
+
+        bool TestRayMarch = false;
     }
 }

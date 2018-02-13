@@ -66,6 +66,7 @@ cbuffer AppSettings : register(b7)
     float BloomMagnitude;
     float BloomBlurSigma;
     bool ViewIndirectSpecular;
+    bool TestRayMarch;
 }
 
 static const int SunDirectionTypes_UnitVector = 0;

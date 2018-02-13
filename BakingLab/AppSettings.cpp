@@ -278,6 +278,7 @@ namespace AppSettings
     FloatSetting SceneBoundsOffsetX;
     FloatSetting SceneBoundsOffsetY;
     FloatSetting SceneBoundsOffsetZ;
+    BoolSetting TestRayMarch;
 
     ConstantBuffer<AppSettingsCBuffer> CBuffer;
 
@@ -623,6 +624,9 @@ namespace AppSettings
         SceneBoundsOffsetZ.Initialize(tweakBar, "SceneBoundsOffsetZ", "Debug", "Scene Bounds Offset Z", "", 0.0000f, -100.0000f, 100.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SceneBoundsOffsetZ);
 
+        TestRayMarch.Initialize(tweakBar, "TestRayMarch", "Debug", "Test Ray March", "", false);
+        Settings.AddSetting(&TestRayMarch);
+
         TwHelper::SetOpened(tweakBar, "Sun Light", true);
 
         TwHelper::SetOpened(tweakBar, "Sky", true);
@@ -729,6 +733,7 @@ namespace AppSettings
         CBuffer.Data.BloomMagnitude = BloomMagnitude;
         CBuffer.Data.BloomBlurSigma = BloomBlurSigma;
         CBuffer.Data.ViewIndirectSpecular = ViewIndirectSpecular;
+        CBuffer.Data.TestRayMarch = TestRayMarch;
 
         CBuffer.ApplyChanges(context);
         CBuffer.SetVS(context, 7);

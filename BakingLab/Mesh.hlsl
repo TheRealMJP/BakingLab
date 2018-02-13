@@ -69,7 +69,7 @@ Texture2DArray<float4> BakedLightingMap : register(t5);
 TextureCube<float> AreaLightShadowMap : register(t6);
 Texture3D<float4> SHSpecularLookupA : register(t7);
 Texture3D<float2> SHSpecularLookupB : register(t8);
-TextureCubeArray<float4> ProbeRradianceCubeMaps : register(t9);
+TextureCubeArray<float4> ProbeRadianceCubeMaps : register(t9);
 TextureCubeArray<float2> ProbeDistanceCubeMaps : register(t10);
 
 SamplerState AnisoSampler : register(s0);
@@ -535,6 +535,78 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     indirectSpecular = 0.0f;
 }*/
 
+static const uint RayMarchHit = 0;
+static const uint RayMarchMiss = 1;
+static const uint RayMarchOccluded = 2;
+
+float3 RayMarchProbes(in SurfaceContext surface, in float3 marchDir)
+{
+    const float3 probeDims = float3(ProbeResX, ProbeResY, ProbeResZ);
+    const uint numProbes = ProbeResX * ProbeResY * ProbeResZ;
+
+    float3 normalizedPos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
+    uint3 probeIndices = uint3(normalizedPos * probeDims);
+    float probeIdx = probeIndices.z * (ProbeResX * ProbeResY) + probeIndices.y * ProbeResX + probeIndices.x;
+    float3 probePos = lerp(SceneMinBounds, SceneMaxBounds, (probeIndices + 0.5f) / probeDims);
+
+    const uint NumSteps = 256;
+    const float maxDistance = length(SceneMaxBounds - SceneMinBounds);
+    const float stepSize = (maxDistance / NumSteps) * 1;
+    const float hitThreshold = (maxDistance / NumSteps) * 2;
+    const uint MaxProbeIterations = min(numProbes, 10000);
+
+    float3 startPos = surface.PositionWS;
+    float currDist = stepSize;
+    float3 currSampleDir = marchDir;
+
+    uint marchStatus = RayMarchMiss;
+
+    for(uint probeIteration = 0; probeIteration < MaxProbeIterations; ++probeIteration)
+    {
+        marchStatus = RayMarchMiss;
+
+        for(uint stepIdx = 0; stepIdx < NumSteps; ++stepIdx)
+        {
+            float3 marchPos = startPos + marchDir * currDist;
+            float3 probeToPos = marchPos - probePos;
+            float probeToPosDist = length(probeToPos);
+            currSampleDir = probeToPos * rcp(probeToPosDist);
+            float heightFieldDist = ProbeDistanceCubeMaps.Sample(LinearSampler, float4(currSampleDir, probeIdx)).x;
+            heightFieldDist = heightFieldDist == 1.0f ? 100000.0f : heightFieldDist * maxDistance;
+
+            if(heightFieldDist < probeToPosDist)
+            {
+                if(abs(heightFieldDist - probeToPosDist) <= hitThreshold)
+                    marchStatus = RayMarchHit;
+                else
+                    marchStatus = RayMarchOccluded;
+
+                break;
+            }
+
+            currDist += stepSize;
+        }
+
+        if(marchStatus == RayMarchHit || marchStatus == RayMarchMiss)
+            break;
+
+        float3 currPos = startPos + marchDir * currDist;
+
+        probeIdx = (probeIdx + 1) % numProbes;
+        probeIndices.x = probeIdx % ProbeResX;
+        probeIndices.y = (probeIdx / ProbeResX) % ProbeResY;
+        probeIndices.z = probeIdx / (ProbeResX * ProbeResY);
+        probePos = lerp(SceneMinBounds, SceneMaxBounds, (probeIndices + 0.5f) / probeDims);
+    }
+
+    if(marchStatus == RayMarchMiss)
+        currSampleDir = marchDir;
+
+    float3 result = ProbeRadianceCubeMaps.Sample(LinearSampler, float4(currSampleDir, probeIdx)).xyz;
+    result = marchStatus == RayMarchOccluded ? float3(8.0f, 0.0f, 8.0f) : result;
+    return result;
+}
+
 //=================================================================================================
 // Pixel Shader
 //=================================================================================================
@@ -657,12 +729,15 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
     PSOutput output;
     output.Lighting = clamp(float4(lighting, illuminance), 0.0f, FP16Max);
 
+    if(TestRayMarch && ProbeRendering_ == 0)
+        output.Lighting.xyz = RayMarchProbes(surface, reflect(normalize(surface.PositionWS - CameraPosWS), surface.NormalWS));
+
     if(isFrontFace == false)
         output.Lighting = 0.0f;
 
     #if ProbeRendering_
         float distanceFromProbe = length(surface.PositionWS - CameraPosWS);
-        float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
+        float maxDistance = length(SceneMaxBounds - SceneMinBounds);
         distanceFromProbe = saturate(distanceFromProbe * rcp(maxDistance));
         output.ProbeDistance = float2(distanceFromProbe, distanceFromProbe * distanceFromProbe);
     #else

@@ -348,6 +348,7 @@ namespace AppSettings
     extern FloatSetting SceneBoundsOffsetX;
     extern FloatSetting SceneBoundsOffsetY;
     extern FloatSetting SceneBoundsOffsetZ;
+    extern BoolSetting TestRayMarch;
 
     struct AppSettingsCBuffer
     {
@@ -417,6 +418,7 @@ namespace AppSettings
         float BloomMagnitude;
         float BloomBlurSigma;
         bool32 ViewIndirectSpecular;
+        bool32 TestRayMarch;
     };
 
     extern ConstantBuffer<AppSettingsCBuffer> CBuffer;

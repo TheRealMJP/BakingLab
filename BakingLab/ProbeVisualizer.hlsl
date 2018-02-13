@@ -94,5 +94,7 @@ float4 PS(in PSInput input) : SV_Target0
     float3 output = 0.0f;
     output = ProbeRadianceCubeMap.Sample(LinearSampler, float4(reflectDirWS, input.ProbeIdx)).xyz;
 
+    // output = ProbeDistanceCubeMap.Sample(LinearSampler, float4(normalWS, input.ProbeIdx)).x;
+
     return float4(output, 1.0f);
 }
