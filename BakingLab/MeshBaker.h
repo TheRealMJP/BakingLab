@@ -61,6 +61,7 @@ struct MeshBakerStatus
     ID3D11ShaderResourceView* BakePoints = nullptr;
     ID3D11ShaderResourceView* ProbeRadianceCubeMap = nullptr;
     ID3D11ShaderResourceView* ProbeDistanceCubeMap = nullptr;
+    ID3D11ShaderResourceView* SkyMap = nullptr;
     uint64 NumBakePoints = 0;
     float GroundTruthProgress = 0.0f;
     float BakeProgress = 0.0f;

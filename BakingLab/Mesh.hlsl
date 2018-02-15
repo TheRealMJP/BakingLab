@@ -71,6 +71,7 @@ Texture3D<float4> SHSpecularLookupA : register(t7);
 Texture3D<float2> SHSpecularLookupB : register(t8);
 TextureCubeArray<float4> ProbeRadianceCubeMaps : register(t9);
 TextureCubeArray<float2> ProbeDistanceCubeMaps : register(t10);
+TextureCube<float3> SkyMap : register(t11);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -128,7 +129,7 @@ struct PSInput
     {
         float4 Lighting             : SV_Target0;
         #if ProbeRendering_
-            float2 ProbeDistance    : SV_Target1;
+            float ProbeDistance     : SV_Target1;
         #else
             float2 Velocity         : SV_Target1;
         #endif
@@ -552,8 +553,8 @@ float3 RayMarchProbes(in SurfaceContext surface, in float3 marchDir)
     const uint NumSteps = 256;
     const float maxDistance = length(SceneMaxBounds - SceneMinBounds);
     const float stepSize = (maxDistance / NumSteps) * 1;
-    const float hitThreshold = (maxDistance / NumSteps) * 2;
-    const uint MaxProbeIterations = min(numProbes, 10000);
+    const float hitThreshold = (maxDistance / NumSteps) * 1;
+    const uint MaxProbeIterations = min(numProbes, uint(-1));
 
     float3 startPos = surface.PositionWS;
     float currDist = stepSize;
@@ -572,7 +573,6 @@ float3 RayMarchProbes(in SurfaceContext surface, in float3 marchDir)
             float probeToPosDist = length(probeToPos);
             currSampleDir = probeToPos * rcp(probeToPosDist);
             float heightFieldDist = ProbeDistanceCubeMaps.Sample(LinearSampler, float4(currSampleDir, probeIdx)).x;
-            heightFieldDist = heightFieldDist == 1.0f ? 100000.0f : heightFieldDist * maxDistance;
 
             if(heightFieldDist < probeToPosDist)
             {
@@ -599,11 +599,14 @@ float3 RayMarchProbes(in SurfaceContext surface, in float3 marchDir)
         probePos = lerp(SceneMinBounds, SceneMaxBounds, (probeIndices + 0.5f) / probeDims);
     }
 
+    float3 result = 0.0f;
     if(marchStatus == RayMarchMiss)
-        currSampleDir = marchDir;
+        result = SkyMap.Sample(LinearSampler, marchDir);
+    else
+        result = ProbeRadianceCubeMaps.Sample(LinearSampler, float4(currSampleDir, probeIdx)).xyz;
 
-    float3 result = ProbeRadianceCubeMaps.Sample(LinearSampler, float4(currSampleDir, probeIdx)).xyz;
-    result = marchStatus == RayMarchOccluded ? float3(8.0f, 0.0f, 8.0f) : result;
+    // result = marchStatus == RayMarchOccluded ? float3(8.0f, 0.0f, 8.0f) : result;
+    // result = marchStatus == RayMarchMiss ? float3(0.0f, 8.0f, 8.0f) : result;
     return result;
 }
 
@@ -650,6 +653,10 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
     surface.SqrtRoughness = RoughnessMap.Sample(AnisoSampler, uv);
     surface.SqrtRoughness *= RoughnessScale;
     surface.Roughness = surface.SqrtRoughness * surface.SqrtRoughness;
+
+    #if ProbeRendering_
+        surface.SpecularAlbedo = 0.0f;
+    #endif
 
     float depthVS = input.DepthVS;
 
@@ -736,10 +743,7 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         output.Lighting = 0.0f;
 
     #if ProbeRendering_
-        float distanceFromProbe = length(surface.PositionWS - CameraPosWS);
-        float maxDistance = length(SceneMaxBounds - SceneMinBounds);
-        distanceFromProbe = saturate(distanceFromProbe * rcp(maxDistance));
-        output.ProbeDistance = float2(distanceFromProbe, distanceFromProbe * distanceFromProbe);
+        output.ProbeDistance = length(surface.PositionWS - CameraPosWS);
     #else
         float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
         prevPositionSS *= RTSize;

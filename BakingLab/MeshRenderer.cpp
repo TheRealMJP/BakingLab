@@ -816,6 +816,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
                 shSpecularLookupB,
                 status.ProbeRadianceCubeMap,
                 status.ProbeDistanceCubeMap,
+                status.SkyMap,
             };
 
             context->PSSetShaderResources(0, ArraySize_(psTextures), psTextures);

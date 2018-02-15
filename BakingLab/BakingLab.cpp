@@ -667,7 +667,7 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
 
         const uint32 resolution = AppSettings::ProbeCubemapCaptureRes;
         probeRadianceCubeMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, false, numProbes * 6, true);
-        probeDistanceCubeMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true, numProbes * 6, true);
+        probeDistanceCubeMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R32_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
         probeDepthBuffer.Initialize(device, resolution, resolution, DXGI_FORMAT_D24_UNORM_S8_UINT, true);
     }
 
@@ -794,6 +794,7 @@ void BakingLab::Render(const Timer& timer)
     {
         status.ProbeRadianceCubeMap = probeRadianceCubeMap.SRView;
         status.ProbeDistanceCubeMap = probeDistanceCubeMap.SRView;
+        status.SkyMap = skybox.GetSkyCache().CubeMap;
 
         RenderScene(status, colorTargetMSAA.RTView, velocityTargetMSAA.RTView, depthBuffer, camera,
                     AppSettings::ShowBakeDataVisualizer, AppSettings::ShowProbeVisualizer,
@@ -854,10 +855,8 @@ void BakingLab::RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetVie
     context->OMSetRenderTargets(2, renderTargets, dsv);
     SetViewport(context, depth.Width, depth.Height);
 
-    float maxDistance = Float3::Length(FarClip);
-
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    float secondClearColor[4] = { maxDistance, maxDistance * maxDistance, 0.0f, 0.0f };
+    float secondClearColor[4] = { FLT_MAX, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(colorTarget, clearColor);
     context->ClearRenderTargetView(secondRT, secondClearColor);
 
