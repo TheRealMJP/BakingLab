@@ -166,13 +166,6 @@ using namespace DirectX::PackedVector;
 // DirectXTex
 #pragma comment(lib, "DirectXTex.lib")
 
-// Hosek Sky
-#ifdef _DEBUG
-    #pragma comment(lib, "HosekSky_Dbg.lib")
-#else
-    #pragma comment(lib, "HosekSky.lib")
-#endif
-
 #ifdef _DEBUG
     #pragma comment(lib, "comsuppwd.lib")
 #else
