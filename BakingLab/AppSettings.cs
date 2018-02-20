@@ -635,7 +635,6 @@ public class Settings
         [HelpText("The square root of the number of sample rays to use for baking GI")]
         [MinValue(1)]
         [MaxValue(100)]
-        [UseAsShaderConstant(false)]
         [DisplayName("Sqrt Num Samples")]
         int NumBakeSamples = 25;
 
@@ -662,7 +661,7 @@ public class Settings
         [DisplayName("Russian Roullette Probability")]
         float BakeRussianRouletteProbability = 0.5f;
 
-        BakeModes BakeMode = BakeModes.H4;
+        BakeModes BakeMode = BakeModes.Diffuse;
 
         SolveModes SolveMode = SolveModes.NNLS;
     }
@@ -688,14 +687,18 @@ public class Settings
     }
 
     [ExpandGroup(true)]
-    public class VCT
+    public class Voxels
     {
-        bool BakeWithVCT = false;
+        bool BakeWithVoxels = false;
 
         [MinValue(2)]
         [MaxValue(2048)]
         [DisplayName("Voxel Resolution")]
         int VoxelResolution = 64;
+
+        [MinValue(1)]
+        [MaxValue(100)]
+        int NumSamplesPerPass = 4;
     }
 
     [ExpandGroup(false)]

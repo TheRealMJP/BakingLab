@@ -499,9 +499,12 @@ void BakingLab::Initialize()
         generateVoxelMips = CompileCSFromFile(device, L"GenerateVoxelMips.hlsl", "GenerateVoxelMips", "cs_5_0", opts);
     }
 
+    voxelBakeCS = CompileCSFromFile(device, L"VoxelBake.hlsl", "VoxelBake", "cs_5_0");
+
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
     generateMipConstants.Initialize(device);
+    voxelBakeConstants.Initialize(device);
 
     // Init the post processor
     postProcessor.Initialize(device);
@@ -787,7 +790,7 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     if(reVoxelize == false)
         return;
 
-    currVoxelIdx = 0;
+    voxelBakePass = 0;
 
     PIXEvent pixEvent(L"Voxelize Scene");
 
@@ -914,6 +917,55 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     }
 }
 
+void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
+{
+    if(AppSettings::NumSamplesPerPass.Changed())
+        voxelBakePass = 0;
+
+    if(AppSettings::BakeWithVoxels == false)
+        return;
+
+    const uint32 resolution = AppSettings::LightMapResolution;
+    const uint32 arraySize = Max(uint32(AppSettings::BasisCount()), 2u);
+    if(voxelBakeTexture.Width != resolution || voxelBakeTexture.ArraySize != arraySize)
+    {
+        voxelBakeTexture.Initialize(deviceManager.Device(), resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT,
+                                    1, 1, 0, false, true, arraySize, false);
+        voxelBakePass = 0;
+    }
+
+    status.LightMap = voxelBakeTexture.SRView;
+
+    const uint32 numSamples = AppSettings::NumBakeSamples * AppSettings::NumBakeSamples;
+    const uint32 numSamplesPerPass = AppSettings::NumSamplesPerPass * AppSettings::NumSamplesPerPass;
+    const uint32 numPasses = (numSamples + (numSamplesPerPass - 1)) / numSamplesPerPass;
+    if(voxelBakePass >= numPasses)
+        return;
+
+    ID3D11DeviceContext* context = deviceManager.ImmediateContext();
+    SetCSShader(context, voxelBakeCS);
+    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView);
+    SetCSOutputs(context, voxelBakeTexture.UAView);
+    SetCSSamplers(context, samplerStates.Point());
+
+    voxelBakeConstants.Data.BakeSampleStart = voxelBakePass * numSamplesPerPass;
+    voxelBakeConstants.Data.NumSamplesToBake = Min(numSamplesPerPass, numSamples - voxelBakeConstants.Data.BakeSampleStart);
+    voxelBakeConstants.Data.BasisCount = uint32(AppSettings::BasisCount());
+    voxelBakeConstants.Data.NumBakePoints = uint32(status.NumBakePoints);
+    voxelBakeConstants.Data.SkySH = status.SkySH;
+    voxelBakeConstants.Data.SceneMinBounds = currSceneMin;
+    voxelBakeConstants.Data.SceneMaxBounds = currSceneMax;
+    voxelBakeConstants.ApplyChanges(context);
+    voxelBakeConstants.SetCS(context, 0);
+
+    context->Dispatch(DispatchSize(64, uint32(status.NumBakePoints)), 1, 1);
+
+    ClearCSOutputs(context);
+    ClearCSInputs(context);
+
+    voxelBakePass += 1;
+}
+
 void BakingLab::Render(const Timer& timer)
 {
     if(AppSettings::MSAAMode.Changed())
@@ -950,6 +1002,8 @@ void BakingLab::Render(const Timer& timer)
     }
 
     VoxelizeScene(status);
+
+    BakeWithVoxels(status);
 
     RenderProbes(status);
 

@@ -91,8 +91,11 @@ protected:
     ComputeShaderPtr fillVoxelHolesZ;
     ComputeShaderPtr generateFirstVoxelMip;
     ComputeShaderPtr generateVoxelMips;
-    uint64 currVoxelIdx = 0;
     uint32 numVoxelMips = 0;
+
+    RenderTarget2D voxelBakeTexture;
+    uint32 voxelBakePass = 0;
+    ComputeShaderPtr voxelBakeCS;
 
     struct ResolveConstants
     {
@@ -115,9 +118,23 @@ protected:
         float DstMipTexelSize;
     };
 
+    struct VoxelBakeConstants
+    {
+        uint32 BakeSampleStart;
+        uint32 NumSamplesToBake;
+        uint32 BasisCount;
+        uint32 NumBakePoints;
+
+        Float4Align ShaderSH9Color SkySH;
+
+        Float4Align Float3 SceneMinBounds;
+        Float4Align Float3 SceneMaxBounds;
+    };
+
     ConstantBuffer<ResolveConstants> resolveConstants;
     ConstantBuffer<BackgroundVelocityConstants> backgroundVelocityConstants;
     ConstantBuffer<GenerateMipConstants> generateMipConstants;
+    ConstantBuffer<VoxelBakeConstants> voxelBakeConstants;
 
     virtual void Initialize() override;
     virtual void Render(const Timer& timer) override;
@@ -129,6 +146,7 @@ protected:
 
     void RenderProbes(MeshBakerStatus& status);
     void VoxelizeScene(MeshBakerStatus& status);
+    void BakeWithVoxels(MeshBakerStatus& status);
     void RenderScene(const MeshBakerStatus& status, ID3D11RenderTargetView* colorTarget, ID3D11RenderTargetView* secondRT,
                      const DepthStencilBuffer& depth, const Camera& cam, bool32 showBakeDataVisualizer, bool32 showProbeVisualizer,
                      bool32 renderAreaLight, bool32 showVoxelVisualizer, bool32 enableSkySun, bool32 probeRendering);

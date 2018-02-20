@@ -45,14 +45,16 @@ cbuffer AppSettings : register(b7)
     int SGDiffuseMode;
     bool UseASGWarp;
     int LightMapResolution;
+    int NumBakeSamples;
     int BakeMode;
     int SolveMode;
     int ProbeResX;
     int ProbeResY;
     int ProbeResZ;
     int ProbeCubemapCaptureRes;
-    bool BakeWithVCT;
+    bool BakeWithVoxels;
     int VoxelResolution;
+    int NumSamplesPerPass;
     bool EnableDiffuse;
     bool EnableSpecular;
     bool EnableDirectLighting;

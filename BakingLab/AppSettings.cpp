@@ -250,8 +250,9 @@ namespace AppSettings
     IntSetting ProbeResY;
     IntSetting ProbeResZ;
     IntSetting ProbeCubemapCaptureRes;
-    BoolSetting BakeWithVCT;
+    BoolSetting BakeWithVoxels;
     IntSetting VoxelResolution;
+    IntSetting NumSamplesPerPass;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -513,7 +514,7 @@ namespace AppSettings
         BakeRussianRouletteProbability.Initialize(tweakBar, "BakeRussianRouletteProbability", "Baking", "Russian Roullette Probability", "Maximum probability for continuing when Russian roulette is used", 0.5000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&BakeRussianRouletteProbability);
 
-        BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "", BakeModes::H4, 10, BakeModesLabels);
+        BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "", BakeModes::Diffuse, 10, BakeModesLabels);
         Settings.AddSetting(&BakeMode);
 
         SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::NNLS, 3, SolveModesLabels);
@@ -531,11 +532,14 @@ namespace AppSettings
         ProbeCubemapCaptureRes.Initialize(tweakBar, "ProbeCubemapCaptureRes", "Probes", "Probe Cubemap Capture Res", "", 256, 1, 4096);
         Settings.AddSetting(&ProbeCubemapCaptureRes);
 
-        BakeWithVCT.Initialize(tweakBar, "BakeWithVCT", "VCT", "Bake With VCT", "", false);
-        Settings.AddSetting(&BakeWithVCT);
+        BakeWithVoxels.Initialize(tweakBar, "BakeWithVoxels", "Voxels", "Bake With Voxels", "", false);
+        Settings.AddSetting(&BakeWithVoxels);
 
-        VoxelResolution.Initialize(tweakBar, "VoxelResolution", "VCT", "Voxel Resolution", "", 64, 2, 2048);
+        VoxelResolution.Initialize(tweakBar, "VoxelResolution", "Voxels", "Voxel Resolution", "", 64, 2, 2048);
         Settings.AddSetting(&VoxelResolution);
+
+        NumSamplesPerPass.Initialize(tweakBar, "NumSamplesPerPass", "Voxels", "Num Samples Per Pass", "", 4, 1, 100);
+        Settings.AddSetting(&NumSamplesPerPass);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
@@ -672,7 +676,7 @@ namespace AppSettings
 
         TwHelper::SetOpened(tweakBar, "Probes", false);
 
-        TwHelper::SetOpened(tweakBar, "VCT", true);
+        TwHelper::SetOpened(tweakBar, "Voxels", true);
 
         TwHelper::SetOpened(tweakBar, "Scene", false);
 
@@ -741,14 +745,16 @@ namespace AppSettings
         CBuffer.Data.SGDiffuseMode = SGDiffuseMode;
         CBuffer.Data.UseASGWarp = UseASGWarp;
         CBuffer.Data.LightMapResolution = LightMapResolution;
+        CBuffer.Data.NumBakeSamples = NumBakeSamples;
         CBuffer.Data.BakeMode = BakeMode;
         CBuffer.Data.SolveMode = SolveMode;
         CBuffer.Data.ProbeResX = ProbeResX;
         CBuffer.Data.ProbeResY = ProbeResY;
         CBuffer.Data.ProbeResZ = ProbeResZ;
         CBuffer.Data.ProbeCubemapCaptureRes = ProbeCubemapCaptureRes;
-        CBuffer.Data.BakeWithVCT = BakeWithVCT;
+        CBuffer.Data.BakeWithVoxels = BakeWithVoxels;
         CBuffer.Data.VoxelResolution = VoxelResolution;
+        CBuffer.Data.NumSamplesPerPass = NumSamplesPerPass;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;

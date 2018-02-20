@@ -582,21 +582,6 @@ float ComputeVoxelAO(in SurfaceContext surface)
     return saturate(visibility);
 }
 
-float IntersectRayBox3D_Clamped(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
-{
-    float3 invDir = rcp(dir);
-    float3 d0 = (bbmin - rayOrg) * invDir;
-    float3 d1 = (bbmax - rayOrg) * invDir;
-
-    float3 v0 = min(d0, d1);
-    float3 v1 = max(d0, d1);
-
-    float tmin = max(v0.x, max(v0.y, v0.z));
-    float tmax = min(v1.x, min(v1.y, v1.z));
-
-    return tmin;
-}
-
 float IntersectRayBox3D(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
 {
     float3 invDir = rcp(dir);
