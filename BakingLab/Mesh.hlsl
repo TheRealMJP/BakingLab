@@ -582,6 +582,141 @@ float ComputeVoxelAO(in SurfaceContext surface)
     return saturate(visibility);
 }
 
+float IntersectRayBox3D_Clamped(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
+{
+    float3 invDir = rcp(dir);
+    float3 d0 = (bbmin - rayOrg) * invDir;
+    float3 d1 = (bbmax - rayOrg) * invDir;
+
+    float3 v0 = min(d0, d1);
+    float3 v1 = max(d0, d1);
+
+    float tmin = max(v0.x, max(v0.y, v0.z));
+    float tmax = min(v1.x, min(v1.y, v1.z));
+
+    return tmin;
+}
+
+float IntersectRayBox3D(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
+{
+    float3 invDir = rcp(dir);
+    float3 d0 = (bbmin - rayOrg) * invDir;
+    float3 d1 = (bbmax - rayOrg) * invDir;
+
+    float3 v0 = min(d0, d1);
+    float3 v1 = max(d0, d1);
+
+    float tmin = max(v0.x, max(v0.y, v0.z));
+    float tmax = min(v1.x, min(v1.y, v1.z));
+
+    return tmin >= 0.0f ? tmin : tmax;
+}
+
+float IntersectRayBox2D(float2 rayOrg, float2 dir, float2 bbmin, float2 bbmax)
+{
+    float2 invDir = rcp(dir);
+    float2 d0 = (bbmin - rayOrg) * invDir;
+    float2 d1 = (bbmax - rayOrg) * invDir;
+
+    float2 v0 = min(d0, d1);
+    float2 v1 = max(d0, d1);
+
+    float tmin = max(v0.x, v0.y);
+    float tmax = min(v1.x, v1.y);
+
+    return tmin >= 0.0f ? tmin : tmax;
+}
+
+float IntersectRayBox1D(float rayOrg, float dir, float bbmin, float bbmax)
+{
+    float invDir = rcp(dir);
+    float d0 = (bbmin - rayOrg) * invDir;
+    float d1 = (bbmax - rayOrg) * invDir;
+
+    float v0 = min(d0, d1);
+    float v1 = max(d0, d1);
+
+    float tmin = v0;
+    float tmax = v1;
+
+    return tmin >= 0.0f ? tmin : tmax;
+}
+
+// TODO: optimize this
+float DistancetoNextVoxel(in float3 posVS, in float3 dirVS, in float3 currVoxelMin, in float3 currVoxelMax)
+{
+    float distToNextVoxel = IntersectRayBox3D(posVS, dirVS, currVoxelMin, currVoxelMax);
+    if(all(abs(dirVS.xy) < 0.01f))
+        distToNextVoxel = IntersectRayBox1D(posVS.z, dirVS.z, currVoxelMin.z, currVoxelMax.z);
+    else if(all(abs(dirVS.xz) < 0.01f))
+        distToNextVoxel = IntersectRayBox1D(posVS.y, dirVS.y, currVoxelMin.y, currVoxelMax.y);
+    else if(all(abs(dirVS.yz) < 0.01f))
+        distToNextVoxel = IntersectRayBox1D(posVS.x, dirVS.x, currVoxelMin.x, currVoxelMax.x);
+    else if(abs(dirVS.x) < 0.01f)
+        distToNextVoxel = IntersectRayBox2D(posVS.yz, dirVS.yz, currVoxelMin.yz, currVoxelMax.yz);
+    else if(abs(dirVS.y) < 0.01f)
+        distToNextVoxel = IntersectRayBox2D(posVS.xz, dirVS.xz, currVoxelMin.xz, currVoxelMax.xz);
+    else if(abs(dirVS.z) < 0.01f)
+        distToNextVoxel = IntersectRayBox2D(posVS.xy, dirVS.xy, currVoxelMin.xy, currVoxelMax.xy);
+    return distToNextVoxel;
+}
+
+float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
+{
+    const float voxelRes = float(VoxelResolution);
+    const float voxelSize = 1.0f / voxelRes;
+
+    // pos += dir * 0.1f;
+
+    const float3 startPosVS = ToVoxelSpace(pos) * voxelRes;
+    const float3 marchPosVS = ToVoxelSpace(pos + dir) * voxelRes;
+    const float3 marchDirVS = normalize(marchPosVS - startPosVS);
+    // const float bias = voxelSize * 0.25f;
+    const float bias = 0.001f;
+
+    float3 currPosVS = startPosVS;
+
+    float3 normalPosVS = ToVoxelSpace(pos + vtxNormal) * voxelRes;
+    float3 normalDirVS = normalize(normalPosVS - startPosVS);
+
+    uint iteration = 0;
+    while(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w >= 0.0f && iteration < 3)
+    {
+        const float distToNextVoxel = DistancetoNextVoxel(currPosVS, normalDirVS, floor(currPosVS), floor(currPosVS) + 1.0f);
+        currPosVS += normalDirVS * (distToNextVoxel + bias);
+        ++iteration;
+    }
+
+    const uint MaxSteps = 1024;
+
+    float3 radiance = 0.0f;
+    float opacity = 0.0f;
+    for(uint i = 0; i < MaxSteps; ++i)
+    {
+        float3 uvw = currPosVS / voxelRes;
+        if(any(abs(uvw * 2.0f - 1.0f) > 1.0001f) || opacity >= 0.999f)
+            break;
+
+        const float3 currVoxelMin = floor(currPosVS);
+        const float3 currVoxelMax = currVoxelMin + 1.0f;
+        const float3 currVoxelCenter = (currVoxelMin + currVoxelMax) / 2.0f;
+
+        float4 voxelSample = VoxelRadiance.SampleLevel(PointSampler, uvw, 0.0f);
+        voxelSample.w = saturate(voxelSample.w);
+
+        radiance += (1.0f - opacity) * voxelSample.xyz;
+        opacity += (1.0f - opacity) * voxelSample.w;
+
+        const float distToNextVoxel = DistancetoNextVoxel(currPosVS, marchDirVS, currVoxelMin, currVoxelMax);
+        currPosVS += marchDirVS * (distToNextVoxel + bias);
+    }
+
+    float3 skyRadiance = EvalSH9(dir, SkySH);
+    radiance += (1.0f - opacity) * skyRadiance;
+
+    return radiance;
+}
+
 float3 ComputeVoxelIrradiance(in SurfaceContext surface)
 {
     const float3 coneDirections[6] =
@@ -769,13 +904,6 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         if(ProbeRendering_ == 0)
             ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
 
-        // ###################################################
-        if(BakeWithVCT)
-        {
-            indirectIrradiance = ComputeVoxelIrradiance(surface);
-            indirectSpecular = 0.0f;
-        }
-
         if(EnableIndirectDiffuse)
         {
             irradiance += indirectIrradiance;
@@ -787,6 +915,12 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
 
         if(ViewIndirectSpecular)
             lighting = indirectSpecular;
+
+        if(TestVoxelReflections)
+        {
+            float3 reflectDir = reflect(normalize(surface.PositionWS - CameraPosWS), surface.NormalWS);
+            lighting = RayMarchVoxels(surface.PositionWS, reflectDir, surface.VtxNormalWS);
+        }
     }
 
     float illuminance = dot(irradiance, float3(0.2126f, 0.7152f, 0.0722f));

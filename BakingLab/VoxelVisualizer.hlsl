@@ -227,10 +227,16 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
         float distToNextVoxel = IntersectRayBox3D(currPos, viewDir, currVoxelMin, currVoxelMax);
         if(all(abs(viewDir.xy) < 0.01f))
             distToNextVoxel = IntersectRayBox1D(currPos.z, viewDir.z, currVoxelMin.z, currVoxelMax.z);
+        else if(all(abs(viewDir.xz) < 0.01f))
+            distToNextVoxel = IntersectRayBox1D(currPos.y, viewDir.y, currVoxelMin.y, currVoxelMax.y);
+        else if(all(abs(viewDir.yz) < 0.01f))
+            distToNextVoxel = IntersectRayBox1D(currPos.x, viewDir.x, currVoxelMin.x, currVoxelMax.x);
         else if(abs(viewDir.x) < 0.01f)
             distToNextVoxel = IntersectRayBox2D(currPos.yz, viewDir.yz, currVoxelMin.yz, currVoxelMax.yz);
         else if(abs(viewDir.y) < 0.01f)
             distToNextVoxel = IntersectRayBox2D(currPos.xz, viewDir.xz, currVoxelMin.xz, currVoxelMax.xz);
+        else if(abs(viewDir.z) < 0.01f)
+            distToNextVoxel = IntersectRayBox2D(currPos.xy, viewDir.xy, currVoxelMin.xy, currVoxelMax.xy);
 
         currPos += viewDir * (distToNextVoxel + bias);
     }

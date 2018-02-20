@@ -685,9 +685,6 @@ public class Settings
         [MinValue(1)]
         [MaxValue(4096)]
         int ProbeCubemapCaptureRes = 256;
-
-        [UseAsShaderConstant(false)]
-        float SceneBoundsScale = 1.25f;
     }
 
     [ExpandGroup(true)]
@@ -757,6 +754,9 @@ public class Settings
         [StepSize(0.01f)]
         [HelpText("Global scale applied to all material roughness values")]
         float RoughnessScale = 2.0f;
+
+        [UseAsShaderConstant(false)]
+        float SceneBoundsScale = 1.25f;
     }
 
     [ExpandGroup(false)]
@@ -885,5 +885,7 @@ public class Settings
         [MaxValue(100.0f)]
         [UseAsShaderConstant(false)]
         float SceneBoundsOffsetZ = 0.0f;
+
+        bool TestVoxelReflections = false;
     }
 }

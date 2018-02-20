@@ -250,7 +250,6 @@ namespace AppSettings
     IntSetting ProbeResY;
     IntSetting ProbeResZ;
     IntSetting ProbeCubemapCaptureRes;
-    FloatSetting SceneBoundsScale;
     BoolSetting BakeWithVCT;
     IntSetting VoxelResolution;
     ScenesSetting CurrentScene;
@@ -265,6 +264,7 @@ namespace AppSettings
     FloatSetting NormalMapIntensity;
     FloatSetting DiffuseAlbedoScale;
     FloatSetting RoughnessScale;
+    FloatSetting SceneBoundsScale;
     BoolSetting ShowGroundTruth;
     IntSetting NumRenderSamples;
     SampleModesSetting RenderSampleMode;
@@ -290,6 +290,7 @@ namespace AppSettings
     FloatSetting SceneBoundsOffsetX;
     FloatSetting SceneBoundsOffsetY;
     FloatSetting SceneBoundsOffsetZ;
+    BoolSetting TestVoxelReflections;
 
     ConstantBuffer<AppSettingsCBuffer> CBuffer;
 
@@ -530,9 +531,6 @@ namespace AppSettings
         ProbeCubemapCaptureRes.Initialize(tweakBar, "ProbeCubemapCaptureRes", "Probes", "Probe Cubemap Capture Res", "", 256, 1, 4096);
         Settings.AddSetting(&ProbeCubemapCaptureRes);
 
-        SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.2500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
-        Settings.AddSetting(&SceneBoundsScale);
-
         BakeWithVCT.Initialize(tweakBar, "BakeWithVCT", "VCT", "Bake With VCT", "", false);
         Settings.AddSetting(&BakeWithVCT);
 
@@ -574,6 +572,9 @@ namespace AppSettings
 
         RoughnessScale.Initialize(tweakBar, "RoughnessScale", "Scene", "Specular Roughness Scale", "Global scale applied to all material roughness values", 2.0000f, 0.0100f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&RoughnessScale);
+
+        SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Scene", "Scene Bounds Scale", "", 1.2500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&SceneBoundsScale);
 
         ShowGroundTruth.Initialize(tweakBar, "ShowGroundTruth", "Ground Truth", "Show Ground Truth", "If enabled, shows a ground truth image rendered on the CPU", false);
         Settings.AddSetting(&ShowGroundTruth);
@@ -649,6 +650,9 @@ namespace AppSettings
 
         SceneBoundsOffsetZ.Initialize(tweakBar, "SceneBoundsOffsetZ", "Debug", "Scene Bounds Offset Z", "", 0.0000f, -100.0000f, 100.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SceneBoundsOffsetZ);
+
+        TestVoxelReflections.Initialize(tweakBar, "TestVoxelReflections", "Debug", "Test Voxel Reflections", "", false);
+        Settings.AddSetting(&TestVoxelReflections);
 
         TwHelper::SetOpened(tweakBar, "Sun Light", true);
 
@@ -761,6 +765,7 @@ namespace AppSettings
         CBuffer.Data.BloomBlurSigma = BloomBlurSigma;
         CBuffer.Data.ViewIndirectSpecular = ViewIndirectSpecular;
         CBuffer.Data.VoxelVisualizerMipLevel = VoxelVisualizerMipLevel;
+        CBuffer.Data.TestVoxelReflections = TestVoxelReflections;
 
         CBuffer.ApplyChanges(context);
         CBuffer.SetVS(context, 7);

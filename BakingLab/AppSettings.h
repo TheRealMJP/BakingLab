@@ -324,7 +324,6 @@ namespace AppSettings
     extern IntSetting ProbeResY;
     extern IntSetting ProbeResZ;
     extern IntSetting ProbeCubemapCaptureRes;
-    extern FloatSetting SceneBoundsScale;
     extern BoolSetting BakeWithVCT;
     extern IntSetting VoxelResolution;
     extern ScenesSetting CurrentScene;
@@ -339,6 +338,7 @@ namespace AppSettings
     extern FloatSetting NormalMapIntensity;
     extern FloatSetting DiffuseAlbedoScale;
     extern FloatSetting RoughnessScale;
+    extern FloatSetting SceneBoundsScale;
     extern BoolSetting ShowGroundTruth;
     extern IntSetting NumRenderSamples;
     extern SampleModesSetting RenderSampleMode;
@@ -364,6 +364,7 @@ namespace AppSettings
     extern FloatSetting SceneBoundsOffsetX;
     extern FloatSetting SceneBoundsOffsetY;
     extern FloatSetting SceneBoundsOffsetZ;
+    extern BoolSetting TestVoxelReflections;
 
     struct AppSettingsCBuffer
     {
@@ -436,6 +437,7 @@ namespace AppSettings
         float BloomBlurSigma;
         bool32 ViewIndirectSpecular;
         int32 VoxelVisualizerMipLevel;
+        bool32 TestVoxelReflections;
     };
 
     extern ConstantBuffer<AppSettingsCBuffer> CBuffer;
