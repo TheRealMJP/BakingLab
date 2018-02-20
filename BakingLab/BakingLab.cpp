@@ -943,6 +943,8 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     if(voxelBakePass >= numPasses)
         return;
 
+    PIXEvent pixEvent(L"Voxel Bake");
+
     ID3D11DeviceContext* context = deviceManager.ImmediateContext();
     SetCSShader(context, voxelBakeCS);
     SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, status.GutterTexels);
