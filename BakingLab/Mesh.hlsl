@@ -69,12 +69,10 @@ Texture2DArray<float4> BakedLightingMap : register(t5);
 TextureCube<float> AreaLightShadowMap : register(t6);
 Texture3D<float4> SHSpecularLookupA : register(t7);
 Texture3D<float2> SHSpecularLookupB : register(t8);
-TextureCubeArray<float4> ProbeIrradianceCubeMaps : register(t9);
+TextureCubeArray<float4> ProbeRadianceCubeMaps : register(t9);
 TextureCubeArray<float2> ProbeDistanceCubeMaps : register(t10);
 Texture3D<float4> VoxelRadiance : register(t11);
 Texture3D<float4> VoxelRadianceMips[6] : register(t12);
-Texture3D<float4> ProbeVolumeMaps[MaxBasisCount];
-Texture3D<float2> ProbeDistanceVolumeMaps[MaxBasisCount];
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -492,142 +490,6 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     }
 }
 
-void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
-{
-    float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
-    float3 probeDims = float3(ProbeResX, ProbeResY, ProbeResZ);
-
-    float3 halfTexelSize = 0.5f / probeDims;
-    float3 baseSamplePos = saturate(normalizedSamplePos - halfTexelSize) * probeDims;
-    float3 lerpAmts = frac(baseSamplePos);
-
-    float3 irradianceSum = 0.0f;
-    float weightSum = 0.0f;
-    for(uint i = 0; i < 8; ++i)
-    {
-        uint3 sampleOffset = uint3(i, i >> 1, i >> 2) & 0x1;
-        uint3 probeIndices = min(uint3(baseSamplePos) + sampleOffset, probeDims - 1.0f);
-        float probeIdx = uint(probeIndices.z) * (ProbeResX * ProbeResY) + uint(probeIndices.y) * ProbeResX + uint(probeIndices.x);
-        float3 triLinear = lerp(1.0f - lerpAmts, lerpAmts, float3(sampleOffset));
-        float sampleWeight = triLinear.x * triLinear.y * triLinear.z;
-
-        float3 probePosWS = lerp(SceneMinBounds, SceneMaxBounds, (probeIndices + 0.5f) / probeDims);
-        float3 dirToProbe = normalize(probePosWS - surface.PositionWS);
-        float distToProbe = length(probePosWS - surface.PositionWS);
-
-        if(WeightProbesByNormal)
-            sampleWeight *= max(0.05f, dot(dirToProbe, surface.VtxNormalWS));
-
-        if(WeightProbesByVisibility)
-        {
-            float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
-            float compareDistance = saturate(distToProbe * rcp(maxDistance));
-
-            float2 distSample = ProbeDistanceCubeMaps.Sample(LinearSampler, float4(-dirToProbe, probeIdx));
-            float visTerm = ChebyshevUpperBound(distSample, compareDistance, 0.0001f, 0.25f);
-            sampleWeight *= visTerm;
-        }
-
-        sampleWeight = max(0.0002f, sampleWeight);
-
-        float3 irradianceSample = ProbeIrradianceCubeMaps.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
-        irradianceSum += irradianceSample * sampleWeight;
-        weightSum += sampleWeight;
-    }
-
-    irradianceSum *= 1.0f / weightSum;
-    // irradianceSum *= 1.0f / max(weightSum, 0.0002f);
-
-    indirectIrradiance = irradianceSum;
-    indirectSpecular = 0.0f;
-}
-
-float3 EvaluateProbeIrradiance(in float3 basis[MaxBasisCount], in float3 dir)
-{
-    float3 output = 0.0f;
-
-    if(ProbeMode == ProbeModes_AmbientCube)
-    {
-        float3 ambientCubeDirs[6] = { float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), float3(-1, 0, 0), float3(0, -1, 0), float3(0, 0, -1) };
-        float weightSum = 0.0f;
-
-        [unroll]
-        for(uint i = 0; i < 6; ++i)
-        {
-            float weight = saturate(dot(dir, ambientCubeDirs[i]));
-            output += basis[i] * weight;
-            weightSum += weight;
-        }
-
-        output /= weightSum;
-    }
-    else if(ProbeMode == ProbeModes_L1_SH)
-    {
-        SH4Color sh;
-
-        [unroll]
-        for(uint i = 0; i < 4; ++i)
-            sh.c[i] = basis[i];
-
-        output = EvalSH4Irradiance(dir, sh);
-    }
-    else if(ProbeMode == ProbeModes_L2_SH)
-    {
-        SH9Color sh;
-
-        [unroll]
-        for(uint i = 0; i < 9; ++i)
-            sh.c[i] = basis[i];
-
-
-        output = EvalSH9Irradiance(dir, sh);
-    }
-
-    return output;
-}
-
-
-void SampleVolumeTextures(in SurfaceContext surface, in float3 uvw, out float3 basis[MaxBasisCount])
-{
-    if(ProbeMode == ProbeModes_AmbientCube)
-    {
-        [unroll]
-        for(uint i = 0; i < 6; ++i)
-            basis[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz;
-    }
-    else if(ProbeMode == ProbeModes_L1_SH)
-    {
-        [unroll]
-        for(uint i = 0; i < 4; ++i)
-            basis[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz;
-    }
-    else if(ProbeMode == ProbeModes_L2_SH)
-    {
-        [unroll]
-        for(uint i = 0; i < 9; ++i)
-            basis[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, uvw, 0.0f).xyz;
-    }
-}
-
-void ComputeIndirectFromProbeVolumeMaps(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
-{
-    float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
-    float3 uvw = normalizedSamplePos;
-
-    indirectIrradiance = 0.0f;
-    indirectSpecular = 0.0f;
-
-    float3 basis[MaxBasisCount];
-
-    [unroll]
-    for(uint i = 0; i < uint(MaxBasisCount); ++i)
-        basis[i] = 0.0f;
-
-    SampleVolumeTextures(surface, uvw, basis);
-
-    indirectIrradiance = EvaluateProbeIrradiance(basis, surface.NormalWS);
-}
-
 // Convert to normalized [0, 1] space mapping to the voxel grid
 float3 ToVoxelSpace(in float3 x)
 {
@@ -904,14 +766,7 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         float3 indirectIrradiance = 0.0f;
         float3 indirectSpecular = 0.0f;
 
-        if(UseProbes || ProbeRendering_)
-        {
-            if(ProbeMode == ProbeModes_CubeMap)
-                ComputeIndirectFromProbeCubeMaps(surface, indirectIrradiance, indirectSpecular);
-            else
-                ComputeIndirectFromProbeVolumeMaps(surface, indirectIrradiance, indirectSpecular);
-        }
-        else
+        if(ProbeRendering_ == 0)
             ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
 
         // ###################################################

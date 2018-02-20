@@ -220,6 +220,7 @@ protected:
         float SGSharpness;
         Float3 SceneMinBounds;
         Float4Align Float3 SceneMaxBounds;
+        Float4Align Float3 CameraPosWS;
     };
 
     struct VoxelVisualizerConstants

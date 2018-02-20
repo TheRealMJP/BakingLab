@@ -100,7 +100,7 @@ VSOutputRayMarch RayMarchVS(in float3 VertexPosition : POSITION)
 
     return output;
 }
-float IntersectRayBox_(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
+float IntersectRayBox3D_Clamped(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
 {
     float3 invDir = rcp(dir);
     float3 d0 = (bbmin - rayOrg) * invDir;
@@ -115,7 +115,7 @@ float IntersectRayBox_(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
     return tmin;
 }
 
-float IntersectRayBox(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
+float IntersectRayBox3D(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
 {
     float3 invDir = rcp(dir);
     float3 d0 = (bbmin - rayOrg) * invDir;
@@ -126,6 +126,36 @@ float IntersectRayBox(float3 rayOrg, float3 dir, float3 bbmin, float3 bbmax)
 
     float tmin = max(v0.x, max(v0.y, v0.z));
     float tmax = min(v1.x, min(v1.y, v1.z));
+
+    return tmin >= 0.0f ? tmin : tmax;
+}
+
+float IntersectRayBox2D(float2 rayOrg, float2 dir, float2 bbmin, float2 bbmax)
+{
+    float2 invDir = rcp(dir);
+    float2 d0 = (bbmin - rayOrg) * invDir;
+    float2 d1 = (bbmax - rayOrg) * invDir;
+
+    float2 v0 = min(d0, d1);
+    float2 v1 = max(d0, d1);
+
+    float tmin = max(v0.x, v0.y);
+    float tmax = min(v1.x, v1.y);
+
+    return tmin >= 0.0f ? tmin : tmax;
+}
+
+float IntersectRayBox1D(float rayOrg, float dir, float bbmin, float bbmax)
+{
+    float invDir = rcp(dir);
+    float d0 = (bbmin - rayOrg) * invDir;
+    float d1 = (bbmax - rayOrg) * invDir;
+
+    float v0 = min(d0, d1);
+    float v1 = max(d0, d1);
+
+    float tmin = v0;
+    float tmax = v1;
 
     return tmin >= 0.0f ? tmin : tmax;
 }
@@ -142,12 +172,14 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
     const float3 pixelPosVoxelSpace = ((input.PositionWS - SceneMinBounds) / sceneSize) * voxelRes;
     const float3 cameraPosVoxelSpace = ((CameraPos - SceneMinBounds) / sceneSize) * voxelRes;
     const float3 viewDir = normalize(pixelPosVoxelSpace - cameraPosVoxelSpace);
-    const float bias = voxelSize * 0.25f;
+    // const float bias = voxelSize * 0.25f;
+    const float bias = 0.001f;
 
     // const float opacityCorrection = voxelSize / rcp(VoxelResolution);
 
-    float dist = max(IntersectRayBox_(cameraPosVoxelSpace, viewDir, 0.0f, voxelRes), 0.0f);
-    float3 currPos = cameraPosVoxelSpace + viewDir * (dist + bias);
+    float dist = max(IntersectRayBox3D_Clamped(cameraPosVoxelSpace, viewDir, 0.0f, voxelRes), 0.0f);
+    float3 startPos = cameraPosVoxelSpace + viewDir * (dist + bias);
+    float3 currPos = startPos;
 
     const float mipLevel = VoxelVisualizerMipLevel - 1.0f;
 
@@ -192,7 +224,13 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
         radiance += (1.0f - opacity) * voxelSample.xyz;
         opacity += (1.0f - opacity) * voxelSample.w;
 
-        const float distToNextVoxel = IntersectRayBox(currPos, viewDir, currVoxelMin, currVoxelMax);
+        float distToNextVoxel = IntersectRayBox3D(currPos, viewDir, currVoxelMin, currVoxelMax);
+        if(all(abs(viewDir.xy) < 0.01f))
+            distToNextVoxel = IntersectRayBox1D(currPos.z, viewDir.z, currVoxelMin.z, currVoxelMax.z);
+        else if(abs(viewDir.x) < 0.01f)
+            distToNextVoxel = IntersectRayBox2D(currPos.yz, viewDir.yz, currVoxelMin.yz, currVoxelMax.yz);
+        else if(abs(viewDir.y) < 0.01f)
+            distToNextVoxel = IntersectRayBox2D(currPos.xz, viewDir.xz, currVoxelMin.xz, currVoxelMax.xz);
 
         currPos += viewDir * (distToNextVoxel + bias);
     }

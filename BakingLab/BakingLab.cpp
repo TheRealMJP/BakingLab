@@ -473,12 +473,6 @@ void BakingLab::Initialize()
     backgroundVelocityVS = CompileVSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityVS");
     backgroundVelocityPS = CompilePSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityPS");
 
-    probeIntegrateIrradianceCubeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateIrradianceCubeMap");
-    probeIntegrateDistanceCubeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistanceCubeMap");
-
-    probeIntegrateVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateVolumeMap");
-    probeIntegrateDistanceVolumeMap = CompileCSFromFile(device, L"ProbeIntegrate.hlsl", "IntegrateDistanceVolumeMap");
-
     clearVoxelRadiance = CompileCSFromFile(device, L"ClearVoxelRadiance.hlsl", "ClearVoxelRadiance");
 
     {
@@ -507,7 +501,6 @@ void BakingLab::Initialize()
 
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
-    integrateConstants.Initialize(device);
     generateMipConstants.Initialize(device);
 
     // Init the post processor
@@ -665,23 +658,20 @@ void BakingLab::Update(const Timer& timer)
     currSceneMax.y += AppSettings::SceneBoundsOffsetY;
     currSceneMax.z += AppSettings::SceneBoundsOffsetZ;
 
-    if(AppSettings::ProbeMode == ProbeModes::CubeMap)
+    // Make sure that our probes fit within a single texture resource
+    const uint64 maxProbes = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION / 6;
+    uint64 numProbes = AppSettings::NumProbes();
+    if(numProbes > maxProbes)
     {
-        // Make sure that our probes fit within a single texture resource
-        const uint64 maxProbes = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION / 6;
-        uint64 numProbes = AppSettings::NumProbes();
-        if(numProbes > maxProbes)
-        {
-            const uint64 biggestDimRes = Max(Max(AppSettings::ProbeResX, AppSettings::ProbeResY), AppSettings::ProbeResZ);
-            const uint64 probesPerBiggestDimSlice = numProbes / biggestDimRes;
-            const int32 newRes = int32(maxProbes / float(probesPerBiggestDimSlice));
-            if(biggestDimRes == AppSettings::ProbeResX)
-                AppSettings::ProbeResX.SetValue(newRes);
-            else if(biggestDimRes == AppSettings::ProbeResY)
-                AppSettings::ProbeResY.SetValue(newRes);
-            else
-                AppSettings::ProbeResZ.SetValue(newRes);
-        }
+        const uint64 biggestDimRes = Max(Max(AppSettings::ProbeResX, AppSettings::ProbeResY), AppSettings::ProbeResZ);
+        const uint64 probesPerBiggestDimSlice = numProbes / biggestDimRes;
+        const int32 newRes = int32(maxProbes / float(probesPerBiggestDimSlice));
+        if(biggestDimRes == AppSettings::ProbeResX)
+            AppSettings::ProbeResX.SetValue(newRes);
+        else if(biggestDimRes == AppSettings::ProbeResY)
+            AppSettings::ProbeResY.SetValue(newRes);
+        else
+            AppSettings::ProbeResZ.SetValue(newRes);
     }
 
     numVoxelMips = NumMipLevels(AppSettings::VoxelResolution, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
@@ -701,60 +691,30 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     const uint64 currSceneIdx = AppSettings::CurrentScene;
     const uint32 numProbes = uint32(AppSettings::NumProbes());
 
-    if(probeCaptureMap.Width == 0 || AppSettings::ProbeCubemapCaptureRes.Changed())
+    if(AppSettings::ProbeResX.Changed() || AppSettings::ProbeResY.Changed() ||
+       AppSettings::ProbeResZ.Changed() || probeRadianceCubeMap.ArraySize == 0 ||
+       AppSettings::ProbeCubemapCaptureRes.Changed())
     {
         currProbeIdx = 0;
 
         const uint32 resolution = AppSettings::ProbeCubemapCaptureRes;
-        probeCaptureMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, false, 6, true);
-        probeDistanceCaptureMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, false, 6, true);
+        probeRadianceCubeMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
+        probeDistanceCubeMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true, numProbes * 6, true);
         probeDepthBuffer.Initialize(device, resolution, resolution, DXGI_FORMAT_D24_UNORM_S8_UINT, true);
-    }
-
-    if(AppSettings::ProbeResX.Changed() || AppSettings::ProbeResY.Changed() ||
-       AppSettings::ProbeResZ.Changed() || probeIrradianceCubeMap.ArraySize == 0 ||
-       AppSettings::ProbeIrradianceCubemapRes.Changed() || AppSettings::ProbeDistanceCubemapRes.Changed() ||
-       AppSettings::ProbeMode.Changed())
-    {
-        currProbeIdx = 0;
-
-        if(AppSettings::ProbeMode == ProbeModes::CubeMap)
-        {
-            const uint32 irrResolution = AppSettings::ProbeIrradianceCubemapRes;
-            const uint32 distResolution = AppSettings::ProbeDistanceCubemapRes;
-            probeIrradianceCubeMap.Initialize(device, irrResolution, irrResolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
-            probeDistanceCubeMap.Initialize(device, distResolution, distResolution, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true, numProbes * 6, true);
-        }
-        else
-        {
-            for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
-            {
-                probeVolumeMaps[i].Initialize(device, AppSettings::ProbeResX, AppSettings::ProbeResY, AppSettings::ProbeResZ,
-                                              DXGI_FORMAT_R16G16B16A16_FLOAT, 1, true);
-                probeDistanceVolumeMaps[i].Initialize(device, AppSettings::ProbeResX, AppSettings::ProbeResY, AppSettings::ProbeResZ,
-                                                      DXGI_FORMAT_R16G16_UNORM, 1, true);
-            }
-        }
     }
 
     if(status.BakingInvalidated || AppSettings::SceneBoundsScale.Changed() ||
        AppSettings::AlwaysRegenerateProbes.Changed() || AppSettings::SceneBoundsOffsetX.Changed() ||
-       AppSettings::SceneBoundsOffsetY.Changed() || AppSettings::SceneBoundsOffsetZ.Changed() ||
-       AppSettings::DistanceFilterSharpness.Changed() || AppSettings::ProbeIntegrationSamples.Changed() ||
-       AppSettings::ProbeDistanceIntegrationSamples.Changed())
+       AppSettings::SceneBoundsOffsetY.Changed() || AppSettings::SceneBoundsOffsetZ.Changed())
+    {
         currProbeIdx = 0;
+    }
 
     if(currProbeIdx >= numProbes)
     {
         status.ProbeBakeProgress = 1.0f;
         return;
     }
-
-    if(AppSettings::UseProbes == false)
-        return;
-
-    bool32 prevUseProbes = AppSettings::UseProbes;
-    AppSettings::UseProbes.SetValue(false);
 
     uint64 probeX = currProbeIdx % AppSettings::ProbeResX;
     uint64 probeY = (currProbeIdx / AppSettings::ProbeResX) % AppSettings::ProbeResY;
@@ -785,85 +745,14 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
             orientation = Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), Pi);
 
         probeCam.SetOrientation(orientation);
-        RenderScene(status, probeCaptureMap.RTVArraySlices[i], probeDistanceCaptureMap.RTVArraySlices[i], probeDepthBuffer, probeCam,
+
+        const uint64 sliceIdx = currProbeIdx * 6 + i;
+        RenderScene(status, probeRadianceCubeMap.RTVArraySlices[sliceIdx], probeDistanceCubeMap.RTVArraySlices[sliceIdx], probeDepthBuffer, probeCam,
                     false, false, AppSettings::BakeDirectAreaLight, false, false, true);
     }
 
-    AppSettings::UseProbes.SetValue(prevUseProbes);
-
     ID3D11RenderTargetView* rtvs[2] = { };
     context->OMSetRenderTargets(2, rtvs, nullptr);
-
-    if(AppSettings::ProbeMode == ProbeModes::CubeMap)
-    {
-        SetCSInputs(context, probeCaptureMap.SRView);
-        SetCSOutputs(context, probeIrradianceCubeMap.UAView);
-        SetCSSamplers(context, samplerStates.LinearClamp());
-        SetCSShader(context, probeIntegrateIrradianceCubeMap);
-
-        integrateConstants.Data.OutputTextureSize.x = float(probeIrradianceCubeMap.Width);
-        integrateConstants.Data.OutputTextureSize.y = float(probeIrradianceCubeMap.Height);
-        integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
-        integrateConstants.ApplyChanges(context);
-        integrateConstants.SetCS(context, 0);
-
-        context->Dispatch(DispatchSize(8, probeIrradianceCubeMap.Width), DispatchSize(8, probeIrradianceCubeMap.Height), 6);
-
-        ClearCSInputs(context);
-        ClearCSOutputs(context);
-
-        SetCSInputs(context, probeDistanceCaptureMap.SRView);
-        SetCSOutputs(context, probeDistanceCubeMap.UAView);
-        SetCSShader(context, probeIntegrateDistanceCubeMap);
-
-        integrateConstants.Data.OutputTextureSize.x = float(probeDistanceCubeMap.Width);
-        integrateConstants.Data.OutputTextureSize.y = float(probeDistanceCubeMap.Height);
-        integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
-        integrateConstants.ApplyChanges(context);
-
-        context->Dispatch(DispatchSize(8, probeDistanceCubeMap.Width), DispatchSize(8, probeDistanceCubeMap.Height), 6);
-    }
-    else
-    {
-        SetCSInputs(context, probeCaptureMap.SRView);
-        SetCSSamplers(context, samplerStates.LinearClamp());
-        SetCSShader(context, probeIntegrateVolumeMap);
-
-        ID3D11UnorderedAccessView* uavs[AppSettings::MaxBasisCount] = { };
-        for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
-            uavs[i] = probeVolumeMaps[i].UAView;
-        context->CSSetUnorderedAccessViews(0, AppSettings::MaxBasisCount, uavs, nullptr);
-
-        integrateConstants.Data.OutputTextureSize.x = 0.0f;
-        integrateConstants.Data.OutputTextureSize.y = 0.0f;
-        integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
-        integrateConstants.ApplyChanges(context);
-        integrateConstants.SetCS(context, 0);
-
-        context->Dispatch(1, 1, 1);
-
-        ClearCSInputs(context);
-        ClearCSOutputs(context);
-
-        SetCSInputs(context, probeDistanceCaptureMap.SRView);
-        SetCSShader(context, probeIntegrateDistanceVolumeMap);
-
-        for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
-            uavs[i] = probeDistanceVolumeMaps[i].UAView;
-        context->CSSetUnorderedAccessViews(0, AppSettings::MaxBasisCount, uavs, nullptr);
-
-        integrateConstants.Data.OutputTextureSize.x = 0.0f;
-        integrateConstants.Data.OutputTextureSize.y = 0.0f;
-        integrateConstants.Data.OutputProbeIdx = uint32(currProbeIdx);
-        integrateConstants.ApplyChanges(context);
-
-        context->Dispatch(1, 1, 1);
-    }
-
-    ClearCSInputs(context);
-
-    ID3D11UnorderedAccessView* uavs[AppSettings::MaxBasisCount] = { };
-    context->CSSetUnorderedAccessViews(0, AppSettings::MaxBasisCount, uavs, nullptr);
 
     ++currProbeIdx;
 
@@ -880,7 +769,7 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
 
     bool reVoxelize = false;
 
-    if(status.BakingInvalidated || AppSettings::AlwaysRevoxelize)
+    if(status.BakingInvalidated || AppSettings::AlwaysRevoxelize || AppSettings::SceneBoundsScale.Changed())
         reVoxelize = true;
 
     if(voxelRadiance.Texture == nullptr || AppSettings::VoxelResolution.Changed())
@@ -1087,13 +976,8 @@ void BakingLab::Render(const Timer& timer)
     }
     else
     {
-        status.ProbeIrradianceCubeMap = probeIrradianceCubeMap.SRView;
+        status.ProbeRadianceCubeMap = probeRadianceCubeMap.SRView;
         status.ProbeDistanceCubeMap = probeDistanceCubeMap.SRView;
-        for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
-        {
-            status.ProbeVolumeMaps[i] = probeVolumeMaps[i].SRView;
-            status.ProbeDistanceVolumeMaps[i] = probeDistanceVolumeMaps[i].SRView;
-        }
 
         RenderScene(status, colorTargetMSAA.RTView, velocityTargetMSAA.RTView, depthBuffer, camera,
                     AppSettings::ShowBakeDataVisualizer, AppSettings::ShowProbeVisualizer,
@@ -1353,7 +1237,7 @@ void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float b
         spriteRenderer.RenderText(font, progressText.c_str(), transform);
     }
 
-    if(probeBakeProgress < 1.0f && AppSettings::UseProbes)
+    if(probeBakeProgress < 1.0f)
     {
         float percent = Round(probeBakeProgress * 10000.0f);
         percent /= 100.0f;

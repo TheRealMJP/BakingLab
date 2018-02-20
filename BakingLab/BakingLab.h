@@ -77,22 +77,11 @@ protected:
     FirstPersonCamera unJitteredCamera;
     bool enableTAA = false;
 
-    RenderTarget2D probeCaptureMap;
-    RenderTarget2D probeDistanceCaptureMap;
-    RenderTarget2D probeIrradianceCubeMap;
+    RenderTarget2D probeRadianceCubeMap;
     RenderTarget2D probeDistanceCubeMap;
     DepthStencilBuffer probeDepthBuffer;
 
-    RenderTarget3D probeVolumeMaps[AppSettings::MaxBasisCount];
-    RenderTarget3D probeDistanceVolumeMaps[AppSettings::MaxBasisCount];
-
     uint64 currProbeIdx = 0;
-
-    ComputeShaderPtr probeIntegrateIrradianceCubeMap;
-    ComputeShaderPtr probeIntegrateDistanceCubeMap;
-
-    ComputeShaderPtr probeIntegrateVolumeMap;
-    ComputeShaderPtr probeIntegrateDistanceVolumeMap;
 
     RenderTarget3D voxelRadiance;
     RenderTarget3D voxelRadianceMips[6];
@@ -120,12 +109,6 @@ protected:
         Float2 JitterOffset;
     };
 
-    struct IntegrateConstants
-    {
-        Float2 OutputTextureSize;
-        uint32 OutputProbeIdx;
-    };
-
     struct GenerateMipConstants
     {
         float SrcMipTexelSize;
@@ -134,7 +117,6 @@ protected:
 
     ConstantBuffer<ResolveConstants> resolveConstants;
     ConstantBuffer<BackgroundVelocityConstants> backgroundVelocityConstants;
-    ConstantBuffer<IntegrateConstants> integrateConstants;
     ConstantBuffer<GenerateMipConstants> generateMipConstants;
 
     virtual void Initialize() override;

@@ -300,18 +300,6 @@ enum SGDiffuseModes
     Fitted,
 }
 
-enum ProbeModes
-{
-    CubeMap,
-    AmbientCube,
-
-    [EnumLabel("L1 SH")]
-    L1_SH,
-
-    [EnumLabel("L2 SH")]
-    L2_SH,
-}
-
 enum VoxelVisualizerModes
 {
     None,
@@ -682,10 +670,6 @@ public class Settings
     [ExpandGroup(false)]
     public class Probes
     {
-        bool UseProbes = false;
-
-        ProbeModes ProbeMode = ProbeModes.CubeMap;
-
         [MinValue(1)]
         [MaxValue(2048)]
         int ProbeResX = 4;
@@ -702,32 +686,8 @@ public class Settings
         [MaxValue(4096)]
         int ProbeCubemapCaptureRes = 256;
 
-        [MinValue(1)]
-        [MaxValue(4096)]
-        int ProbeIrradianceCubemapRes = 16;
-
-        [MinValue(1)]
-        [MaxValue(4096)]
-        int ProbeDistanceCubemapRes = 128;
-
         [UseAsShaderConstant(false)]
         float SceneBoundsScale = 1.25f;
-
-        bool WeightProbesByNormal = false;
-
-        bool WeightProbesByVisibility = false;
-
-        [MinValue(1.0f)]
-        [MaxValue(20.0f)]
-        float DistanceFilterSharpness = 10.0f;
-
-        [MinValue(1)]
-        [MaxValue(64)]
-        int ProbeIntegrationSamples = 32;
-
-        [MinValue(1)]
-        [MaxValue(64)]
-        int ProbeDistanceIntegrationSamples = 32;
     }
 
     [ExpandGroup(true)]

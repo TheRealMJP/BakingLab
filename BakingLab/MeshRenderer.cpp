@@ -862,7 +862,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
                 areaLightShadowMap.SRView,
                 shSpecularLookupA,
                 shSpecularLookupB,
-                status.ProbeIrradianceCubeMap,
+                status.ProbeRadianceCubeMap,
                 status.ProbeDistanceCubeMap,
             };
 
@@ -873,12 +873,6 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
 
             offset += 1;
             context->PSSetShaderResources(offset, ArraySize_(status.VoxelRadianceMips), status.VoxelRadianceMips);
-
-            offset += ArraySize_(status.VoxelRadianceMips);
-            context->PSSetShaderResources(offset, ArraySize_(status.ProbeVolumeMaps), status.ProbeVolumeMaps);
-
-            offset += ArraySize_(status.ProbeVolumeMaps);
-            context->PSSetShaderResources(offset, ArraySize_(status.ProbeDistanceVolumeMaps), status.ProbeDistanceVolumeMaps);
 
             context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
         }
@@ -1234,6 +1228,7 @@ void MeshRenderer::RenderBakeDataVisualizer(ID3D11DeviceContext* context, const 
     visualizerConstants.Data.SGSharpness = status.SGSharpness;
     visualizerConstants.Data.SceneMinBounds = status.SceneMinBounds;
     visualizerConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
+    visualizerConstants.Data.CameraPosWS = camera.Position();
     visualizerConstants.ApplyChanges(context);
     visualizerConstants.SetVS(context, 0);
     visualizerConstants.SetPS(context, 0);
@@ -1289,6 +1284,7 @@ void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Cam
     visualizerConstants.Data.SGSharpness = status.SGSharpness;
     visualizerConstants.Data.SceneMinBounds = status.SceneMinBounds;
     visualizerConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
+    visualizerConstants.Data.CameraPosWS = camera.Position();
     visualizerConstants.ApplyChanges(context);
     visualizerConstants.SetVS(context, 0);
     visualizerConstants.SetPS(context, 0);
@@ -1300,14 +1296,8 @@ void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Cam
     context->VSSetShader(probeVisualizerVS , nullptr, 0);
     context->PSSetShader(probeVisualizerPS, nullptr, 0);
 
-    ID3D11ShaderResourceView* psSrvs[] = { status.ProbeIrradianceCubeMap, status.ProbeDistanceCubeMap };
+    ID3D11ShaderResourceView* psSrvs[] = { status.ProbeRadianceCubeMap, status.ProbeDistanceCubeMap };
     context->PSSetShaderResources(0, ArraySize_(psSrvs), psSrvs);
-
-    uint32 offset = ArraySize_(psSrvs);
-    context->PSSetShaderResources(offset, ArraySize_(status.ProbeVolumeMaps), status.ProbeVolumeMaps);
-
-    offset += ArraySize_(status.ProbeVolumeMaps);
-    context->PSSetShaderResources(offset, ArraySize_(status.ProbeDistanceVolumeMaps), status.ProbeDistanceVolumeMaps);
 
     ID3D11SamplerState* psSamplers[] = { samplerStates.LinearClamp() };
     context->PSSetSamplers(0, ArraySize_(psSamplers), psSamplers);
