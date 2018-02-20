@@ -33,13 +33,6 @@ static const uint64 BakeGroupSizeX = 8;
 static const uint64 BakeGroupSizeY = 8;
 static const uint64 BakeGroupSize = BakeGroupSizeX * BakeGroupSizeY;
 
-// Info about a gutter texel
-struct GutterTexel
-{
-    Uint2 TexelPos;
-    Uint2 NeighborPos;
-};
-
 // Returns the final monte-carlo weighting factor using the PDF of a cosine-weighted hemisphere
 static float CosineWeightedMonteCarloFactor(uint64 numSamples)
 {
@@ -1365,6 +1358,11 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
             bakePointBuffer.Initialize(input.Device, sizeof(BakePoint), uint32(bakePoints.size()),
                                        false, false, false, bakePoints.data());
 
+            gutterTexelBuffer = StructuredBuffer();
+            if(gutterTexels.size() > 0)
+                gutterTexelBuffer.Initialize(input.Device, sizeof(GutterTexel), uint32(gutterTexels.size()),
+                                             false, false, false, gutterTexels.data());
+
             const uint64 basisCount = AppSettings::BasisCount(bakeMode);
             const uint64 numTexels = lightMapSize * lightMapSize;
             for(uint64 i = 0; i < AppSettings::MaxBasisCount; ++i)
@@ -1597,7 +1595,9 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
     status.GroundTruth = renderTextureSRV;
     status.LightMap = bakeTextureSRV;
     status.BakePoints = bakePointBuffer.SRView;
+    status.GutterTexels = gutterTexelBuffer.SRView;
     status.NumBakePoints = bakePointBuffer.NumElements;
+    status.NumGutterTexels = gutterTexelBuffer.NumElements;
 
     const uint64 sgCount = AppSettings::SGCount(currBakeMode);
     for(uint64 i = 0; i < sgCount; ++i)

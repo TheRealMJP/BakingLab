@@ -500,6 +500,7 @@ void BakingLab::Initialize()
     }
 
     voxelBakeCS = CompileCSFromFile(device, L"VoxelBake.hlsl", "VoxelBake", "cs_5_0");
+    fillGuttersCS = CompileCSFromFile(device, L"VoxelBake.hlsl", "FillGutters", "cs_5_0");
 
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
@@ -944,7 +945,7 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
 
     ID3D11DeviceContext* context = deviceManager.ImmediateContext();
     SetCSShader(context, voxelBakeCS);
-    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView);
+    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, status.GutterTexels);
     SetCSOutputs(context, voxelBakeTexture.UAView);
     SetCSSamplers(context, samplerStates.Point());
 
@@ -952,6 +953,7 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     voxelBakeConstants.Data.NumSamplesToBake = Min(numSamplesPerPass, numSamples - voxelBakeConstants.Data.BakeSampleStart);
     voxelBakeConstants.Data.BasisCount = uint32(AppSettings::BasisCount());
     voxelBakeConstants.Data.NumBakePoints = uint32(status.NumBakePoints);
+    voxelBakeConstants.Data.NumGutterTexels = uint32(status.NumGutterTexels);
     voxelBakeConstants.Data.SkySH = status.SkySH;
     voxelBakeConstants.Data.SceneMinBounds = currSceneMin;
     voxelBakeConstants.Data.SceneMaxBounds = currSceneMax;
@@ -959,6 +961,12 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     voxelBakeConstants.SetCS(context, 0);
 
     context->Dispatch(DispatchSize(64, uint32(status.NumBakePoints)), 1, 1);
+
+    if(status.NumGutterTexels > 0)
+    {
+        SetCSShader(context, fillGuttersCS);
+        context->Dispatch(DispatchSize(64, uint32(status.NumGutterTexels)), 1, 1);
+    }
 
     ClearCSOutputs(context);
     ClearCSInputs(context);

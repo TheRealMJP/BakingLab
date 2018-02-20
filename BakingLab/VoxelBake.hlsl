@@ -25,6 +25,7 @@ cbuffer VoxelBakeConstants : register(b0)
     uint NumSamplesToBake;
     uint BasisCount;
     uint NumBakePoints;
+    uint NumGutterTexels;
 
     SH9Color SkySH;
 
@@ -37,6 +38,7 @@ cbuffer VoxelBakeConstants : register(b0)
 //=================================================================================================
 StructuredBuffer<BakePoint> BakePoints : register(t0);
 Texture3D<float4> VoxelRadiance : register(t1);
+StructuredBuffer<GutterTexel> GutterTexels : register(t2);
 RWTexture2DArray<float4> BakeResults : register(u0);
 SamplerState PointSampler : register(s0);
 
@@ -306,7 +308,6 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
     return radiance;
 }
 
-
 [numthreads(64, 1, 1)]
 void VoxelBake(in uint bakePointIdx : SV_DispatchThreadID)
 {
@@ -322,7 +323,7 @@ void VoxelBake(in uint bakePointIdx : SV_DispatchThreadID)
     for(uint i = 0; i < NumSamplesToBake; ++i)
     {
         const uint sampleIdx = BakeSampleStart + i;
-        const float2 sampleCoord = SampleCMJ2D(sampleIdx, NumBakeSamples, NumBakeSamples, 0);
+        const float2 sampleCoord = SampleCMJ2D(sampleIdx, NumBakeSamples, NumBakeSamples, bakePointIdx);
         if(BakeMode == BakeModes_Diffuse)
         {
             const float3 sampleDirTS = SampleCosineHemisphere(sampleCoord.x, sampleCoord.y);
@@ -338,4 +339,18 @@ void VoxelBake(in uint bakePointIdx : SV_DispatchThreadID)
     }
 
     BakeResults[uint3(bakePoint.TexelPos, 0)] = currResults;
+}
+
+[numthreads(64, 1, 1)]
+void FillGutters(in uint gutterIdx : SV_DispatchThreadID)
+{
+    if(gutterIdx >= NumGutterTexels)
+        return;
+
+    const GutterTexel gutterTexel = GutterTexels[gutterIdx];
+    for(uint i = 0; i < BasisCount; ++i)
+    {
+        const float4 srcData = BakeResults[uint3(gutterTexel.NeighborPos, i)];
+        BakeResults[uint3(gutterTexel.TexelPos, i)] = srcData;
+    }
 }

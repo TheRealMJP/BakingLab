@@ -96,6 +96,7 @@ protected:
     RenderTarget2D voxelBakeTexture;
     uint32 voxelBakePass = 0;
     ComputeShaderPtr voxelBakeCS;
+    ComputeShaderPtr fillGuttersCS;
 
     struct ResolveConstants
     {
@@ -124,6 +125,7 @@ protected:
         uint32 NumSamplesToBake;
         uint32 BasisCount;
         uint32 NumBakePoints;
+        uint32 NumGutterTexels;
 
         Float4Align ShaderSH9Color SkySH;
 

@@ -40,3 +40,10 @@ struct BakePoint
         BakePoint() : Coverage(0) {}
     #endif
 };
+
+// Info about a gutter texel
+struct GutterTexel
+{
+    uint2 TexelPos;
+    uint2 NeighborPos;
+};

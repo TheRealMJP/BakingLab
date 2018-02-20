@@ -59,11 +59,13 @@ struct MeshBakerStatus
     ID3D11ShaderResourceView* GroundTruth = nullptr;
     ID3D11ShaderResourceView* LightMap = nullptr;
     ID3D11ShaderResourceView* BakePoints = nullptr;
+    ID3D11ShaderResourceView* GutterTexels = nullptr;
     ID3D11ShaderResourceView* ProbeRadianceCubeMap = nullptr;
     ID3D11ShaderResourceView* ProbeDistanceCubeMap = nullptr;
     ID3D11ShaderResourceView* VoxelRadiance = nullptr;
     ID3D11ShaderResourceView* VoxelRadianceMips[6] = { };
     uint64 NumBakePoints = 0;
+    uint64 NumGutterTexels = 0;
     float GroundTruthProgress = 0.0f;
     float BakeProgress = 0.0f;
     uint64 GroundTruthSampleCount = 0;
@@ -167,6 +169,7 @@ private:
     SampleModes bakeSampleMode = SampleModes::Random;
     uint64 numBakeSamples = 0;
     StructuredBuffer bakePointBuffer;
+    StructuredBuffer gutterTexelBuffer;
     bool bakeThreadsSuspended = false;
 
     Float3 sgDirections[AppSettings::MaxSGCount];
