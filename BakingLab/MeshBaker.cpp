@@ -1452,6 +1452,8 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
 
             InterlockedIncrement64(&bakeTag);
             currBakeBatch = 0;
+
+            status.BakingInvalidated = true;
         }
     }
     else

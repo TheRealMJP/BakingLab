@@ -38,7 +38,8 @@ cbuffer VoxelBakeConstants : register(b0)
 //=================================================================================================
 StructuredBuffer<BakePoint> BakePoints : register(t0);
 Texture3D<float4> VoxelRadiance : register(t1);
-StructuredBuffer<GutterTexel> GutterTexels : register(t2);
+Texture2DArray<float4> PrevBakeResults : register(t2);
+StructuredBuffer<GutterTexel> GutterTexels : register(t3);
 RWTexture2DArray<float4> BakeResults : register(u0);
 SamplerState PointSampler : register(s0);
 
@@ -271,7 +272,7 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
     float3 normalDirVS = normalize(normalPosVS - startPosVS);
 
     uint iteration = 0;
-    while(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w >= 0.0f && iteration < 3)
+    while(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f && iteration < 2)
     {
         const float distToNextVoxel = DistancetoNextVoxel(currPosVS, normalDirVS, floor(currPosVS), floor(currPosVS) + 1.0f);
         currPosVS += normalDirVS * (distToNextVoxel + bias);
@@ -282,6 +283,7 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
 
     float3 radiance = 0.0f;
     float opacity = 0.0f;
+
     for(uint i = 0; i < MaxSteps; ++i)
     {
         float3 uvw = currPosVS / voxelRes;
@@ -294,6 +296,7 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
 
         float4 voxelSample = VoxelRadiance.SampleLevel(PointSampler, uvw, 0.0f);
         voxelSample.w = saturate(voxelSample.w);
+        // voxelSample.w = voxelSample.w > 0.0f ? 1.0f : 0.0f;
 
         radiance += (1.0f - opacity) * voxelSample.xyz;
         opacity += (1.0f - opacity) * voxelSample.w;
@@ -318,7 +321,7 @@ void VoxelBake(in uint bakePointIdx : SV_DispatchThreadID)
 
     const float3x3 tangentToWorld = float3x3(bakePoint.Tangent, bakePoint.Bitangent, bakePoint.Normal);
 
-    float4 currResults = BakeResults[uint3(bakePoint.TexelPos, 0)];
+    float4 currResults = PrevBakeResults[uint3(bakePoint.TexelPos, 0)];
 
     for(uint i = 0; i < NumSamplesToBake; ++i)
     {

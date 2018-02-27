@@ -33,6 +33,7 @@ struct VSOutputGeo
 {
     float4 PositionCS : SV_Position;
     float3 VoxelRadiance  : VOXELRADIANCE;
+    float3 PositionWS : POSITIONWS;
 };
 
 //=================================================================================================
@@ -53,6 +54,7 @@ VSOutputGeo GeoVS(in float3 VertexPosition : POSITION, in uint InstanceID : SV_I
         VSOutputGeo output;
         output.PositionCS = float4(-10000.0f, -10000.0f, -10000.0f, 1.0f);
         output.VoxelRadiance = 0.0f;
+        output.PositionWS = 0.0f;
         return output;
     }
 
@@ -69,6 +71,7 @@ VSOutputGeo GeoVS(in float3 VertexPosition : POSITION, in uint InstanceID : SV_I
     VSOutputGeo output;
     output.PositionCS = mul(float4(vtxPositionWS, 1.0f), ViewProjection);
     output.VoxelRadiance = voxelRadiance;
+    output.PositionWS = vtxPositionWS;
 
     return output;
 }
@@ -79,6 +82,11 @@ VSOutputGeo GeoVS(in float3 VertexPosition : POSITION, in uint InstanceID : SV_I
 float4 GeoPS(in VSOutputGeo input) : SV_Target0
 {
     return float4(input.VoxelRadiance, 1.0f);
+
+    /*float3 posDX = ddx(input.PositionWS);
+    float3 posDY = ddy(input.PositionWS);
+    float3 faceNormal = normalize(cross(posDX, posDY));
+    return float4(faceNormal * 0.5f + 0.5f, 1.0f);*/
 }
 
 struct VSOutputRayMarch

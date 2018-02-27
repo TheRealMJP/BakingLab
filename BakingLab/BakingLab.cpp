@@ -824,8 +824,8 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     if(AppSettings::EnableAreaLight)
         meshRenderer.RenderAreaLightShadowMap(context, voxelCameraZ);
 
-    ID3D11UnorderedAccessView* uavs[] = { voxelRadiance.UAView };
-    context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, ArraySize_(uavs), uavs, nullptr);
+        ID3D11UnorderedAccessView* uavs[] = { voxelRadiance.UAView };
+        context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, ArraySize_(uavs), uavs, nullptr);
 
     for(uint64 i = 0; i < 3; ++i)
     {
@@ -850,7 +850,7 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
         meshRenderer.RenderMainPass(context, *voxelCamera, status, false, true);
     }
 
-    context->OMSetRenderTargets(0, nullptr, nullptr);
+        context->OMSetRenderTargets(0, nullptr, nullptr);
 
     // Fill the interioriors with opaque voxels
     SetCSShader(context, fillVoxelHolesX);
@@ -920,7 +920,9 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
 
 void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
 {
-    if(AppSettings::NumSamplesPerPass.Changed())
+    voxelBakeProgress = 0.0f;
+
+    if(AppSettings::NumSamplesPerPass.Changed() || status.BakingInvalidated)
         voxelBakePass = 0;
 
     if(AppSettings::BakeWithVoxels == false)
@@ -928,27 +930,45 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
 
     const uint32 resolution = AppSettings::LightMapResolution;
     const uint32 arraySize = Max(uint32(AppSettings::BasisCount()), 2u);
-    if(voxelBakeTexture.Width != resolution || voxelBakeTexture.ArraySize != arraySize)
+    if(voxelBakeTextures[0].Width != resolution || voxelBakeTextures[0].ArraySize != arraySize)
     {
-        voxelBakeTexture.Initialize(deviceManager.Device(), resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT,
-                                    1, 1, 0, false, true, arraySize, false);
+        for(uint64 i = 0; i < 2; ++i)
+            voxelBakeTextures[i].Initialize(deviceManager.Device(), resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT,
+                                        1, 1, 0, false, true, arraySize, false);
         voxelBakePass = 0;
     }
 
-    status.LightMap = voxelBakeTexture.SRView;
+    RenderTarget2D& currBakeTexture = voxelBakeTextures[currVoxelBakeTexture];
+    RenderTarget2D& prevBakeTexture = voxelBakeTextures[(currVoxelBakeTexture + 1) % 2];
+
+    status.LightMap = currBakeTexture.SRView;
 
     const uint32 numSamples = AppSettings::NumBakeSamples * AppSettings::NumBakeSamples;
     const uint32 numSamplesPerPass = AppSettings::NumSamplesPerPass * AppSettings::NumSamplesPerPass;
     const uint32 numPasses = (numSamples + (numSamplesPerPass - 1)) / numSamplesPerPass;
     if(voxelBakePass >= numPasses)
+    {
+        voxelBakeProgress = 1.0f;
         return;
+    }
 
     PIXEvent pixEvent(L"Voxel Bake");
 
     ID3D11DeviceContext* context = deviceManager.ImmediateContext();
+
+    if(voxelBakePass == 0)
+    {
+        float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+        for(uint32 i = 0; i < currBakeTexture.ArraySize; ++i)
+        {
+            context->ClearRenderTargetView(voxelBakeTextures[0].RTVArraySlices[i], clearColor);
+            context->ClearRenderTargetView(voxelBakeTextures[1].RTVArraySlices[i], clearColor);
+        }
+    }
+
     SetCSShader(context, voxelBakeCS);
-    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, status.GutterTexels);
-    SetCSOutputs(context, voxelBakeTexture.UAView);
+    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, prevBakeTexture.SRView, status.GutterTexels);
+    SetCSOutputs(context, currBakeTexture.UAView);
     SetCSSamplers(context, samplerStates.Point());
 
     voxelBakeConstants.Data.BakeSampleStart = voxelBakePass * numSamplesPerPass;
@@ -974,6 +994,9 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     ClearCSInputs(context);
 
     voxelBakePass += 1;
+    currVoxelBakeTexture = (currVoxelBakeTexture + 1) % 2;
+
+    voxelBakeProgress = float(voxelBakePass) / numPasses;
 }
 
 void BakingLab::Render(const Timer& timer)
@@ -1015,7 +1038,7 @@ void BakingLab::Render(const Timer& timer)
 
     BakeWithVoxels(status);
 
-    RenderProbes(status);
+    // RenderProbes(status);
 
     status.VoxelRadiance = voxelRadiance.SRView;
     for(uint64 i = 0; i < 6; ++i)
@@ -1301,7 +1324,18 @@ void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float b
         spriteRenderer.RenderText(font, progressText.c_str(), transform);
     }
 
-    if(probeBakeProgress < 1.0f)
+    if(AppSettings::BakeWithVoxels && voxelBakeProgress < 1.0f)
+    {
+        float percent = Round(voxelBakeProgress * 10000.0f);
+        percent /= 100.0f;
+        std::wstring progressText = L"Baking with voxels (" + ToString(percent) + L"%)";
+
+        transform._41 = 35.0f;
+        transform._42 = deviceManager.BackBufferHeight() - 40.0f;
+        spriteRenderer.RenderText(font, progressText.c_str(), transform);
+    }
+
+    /*if(probeBakeProgress < 1.0f)
     {
         float percent = Round(probeBakeProgress * 10000.0f);
         percent /= 100.0f;
@@ -1310,7 +1344,7 @@ void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float b
         transform._41 = 35.0f;
         transform._42 = deviceManager.BackBufferHeight() - 40.0f;
         spriteRenderer.RenderText(font, progressText.c_str(), transform);
-    }
+    }*/
 
     if(AppSettings::EnableLuminancePicker && mouseState.IsOverWindow)
     {

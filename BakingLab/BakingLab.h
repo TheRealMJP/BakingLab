@@ -93,8 +93,10 @@ protected:
     ComputeShaderPtr generateVoxelMips;
     uint32 numVoxelMips = 0;
 
-    RenderTarget2D voxelBakeTexture;
+    RenderTarget2D voxelBakeTextures[2];
     uint32 voxelBakePass = 0;
+    uint32 currVoxelBakeTexture = 0;
+    float voxelBakeProgress = 0.0f;
     ComputeShaderPtr voxelBakeCS;
     ComputeShaderPtr fillGuttersCS;
 
