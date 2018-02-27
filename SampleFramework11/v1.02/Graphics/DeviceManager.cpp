@@ -111,7 +111,7 @@ void DeviceManager::Initialize(HWND outputWindow)
 
     D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_12_1 };
 
-    DXCall(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags,
+    DXCall(D3D11CreateDeviceAndSwapChain(adapter, D3D_DRIVER_TYPE_UNKNOWN, NULL, flags,
                                          featureLevels, ArraySize_(featureLevels), D3D11_SDK_VERSION, &desc, &swapChain,
                                          &device, NULL, &immediateContext));
 
@@ -161,20 +161,17 @@ void DeviceManager::CheckForSuitableOutput()
         throw Exception(L"Unable to create a DXGI 1.1 device.\n "
                         L"Make sure that your OS and driver support DirectX 11");
 
-    // Look for an adapter that supports D3D11
-    IDXGIAdapter1Ptr curAdapter;
-    uint32 adapterIdx = 0;
-    LARGE_INTEGER umdVersion;
-    while(!adapter && SUCCEEDED(factory->EnumAdapters1(0, &adapter)))
-        if(SUCCEEDED(adapter->CheckInterfaceSupport(__uuidof(ID3D11Device), &umdVersion)))
-            adapter = curAdapter;
-
+    factory->EnumAdapters1(0, &adapter);
     if(!adapter)
         throw Exception(L"Unable to locate a DXGI 1.1 adapter that supports a D3D11 device.\n"
                         L"Make sure that your OS and driver support DirectX 11");
 
+    DXGI_ADAPTER_DESC1 desc = { };
+    adapter->GetDesc1(&desc);
+    PrintString("Creating DX12 device on adapter '%ls'", desc.Description);
+
     // We'll just use the first output
-    DXCall(adapter->EnumOutputs(0, &output));
+    adapter->EnumOutputs(0, &output);
 }
 
 void DeviceManager::PrepareFullScreenSettings()
