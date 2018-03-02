@@ -385,8 +385,11 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
                 irradiance += directIrradiance * irrThroughput;
             }
 
+            // Hack to match our single-bounce voxel baking
+            break;
+
             // Pick a new path, using MIS to sample both our diffuse and specular BRDF's
-            if(AppSettings::EnableIndirectLighting || params.ViewIndirectSpecular)
+            /*if(AppSettings::EnableIndirectLighting || params.ViewIndirectSpecular)
             {
                 const bool enableDiffuseSampling = metallic < 1.0f && AppSettings::EnableIndirectDiffuse && enableDiffuse && indirectSpecOnly == false;
                 const bool enableSpecularSampling = enableSpecular && AppSettings::EnableIndirectSpecular;
@@ -453,7 +456,7 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
                         continueTracing = true;
                     }
                 }
-            }
+            }*/
         }
         else {
             // We hit the sky, so we'll sample the sky radiance and then bail out

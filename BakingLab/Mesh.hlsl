@@ -904,7 +904,9 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         if(TestVoxelReflections)
         {
             float3 reflectDir = reflect(normalize(surface.PositionWS - CameraPosWS), surface.NormalWS);
-            lighting = RayMarchVoxels(surface.PositionWS, reflectDir, surface.VtxNormalWS);
+            indirectSpecular = RayMarchVoxels(surface.PositionWS, reflectDir, surface.VtxNormalWS);
+            indirectSpecular *= Fresnel(surface.SpecularAlbedo, surface.NormalWS, surface.ViewWS);
+            lighting += indirectSpecular;
         }
     }
 

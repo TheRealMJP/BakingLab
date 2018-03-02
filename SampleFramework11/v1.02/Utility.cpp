@@ -116,15 +116,15 @@ uint32 DispatchSize(uint32 tgSize, uint32 numElements)
 }
 
 void SetCSInputs(ID3D11DeviceContext* context, ID3D11ShaderResourceView* srv0, ID3D11ShaderResourceView* srv1,
-                    ID3D11ShaderResourceView* srv2, ID3D11ShaderResourceView* srv3)
+                 ID3D11ShaderResourceView* srv2, ID3D11ShaderResourceView* srv3, ID3D11ShaderResourceView* srv4)
 {
-    ID3D11ShaderResourceView* srvs[4] = { srv0, srv1, srv2, srv3 };
-    context->CSSetShaderResources(0, 4, srvs);
+    ID3D11ShaderResourceView* srvs[] = { srv0, srv1, srv2, srv3, srv4 };
+    context->CSSetShaderResources(0, ArraySize_(srvs), srvs);
 }
 
 void ClearCSInputs(ID3D11DeviceContext* context)
 {
-    SetCSInputs(context, nullptr, nullptr, nullptr, nullptr);
+    SetCSInputs(context, nullptr);
 }
 
 void SetCSOutputs(ID3D11DeviceContext* context, ID3D11UnorderedAccessView* uav0, ID3D11UnorderedAccessView* uav1,

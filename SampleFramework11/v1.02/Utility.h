@@ -198,7 +198,8 @@ BOOL PointIsInTriangle(const XMFLOAT3& r, float epsilon = 0.0f);
 // Compute shader helpers
 uint32 DispatchSize(uint32 tgSize, uint32 numElements);
 void SetCSInputs(ID3D11DeviceContext* context, ID3D11ShaderResourceView* srv0, ID3D11ShaderResourceView* srv1 = NULL,
-                    ID3D11ShaderResourceView* srv2 = NULL, ID3D11ShaderResourceView* srv3 = NULL);
+                 ID3D11ShaderResourceView* srv2 = NULL, ID3D11ShaderResourceView* srv3 = NULL,
+                 ID3D11ShaderResourceView* srv4 = NULL);
 void ClearCSInputs(ID3D11DeviceContext* context);
 void SetCSOutputs(ID3D11DeviceContext* context, ID3D11UnorderedAccessView* uav0, ID3D11UnorderedAccessView* uav1 = NULL,
                     ID3D11UnorderedAccessView* uav2 = NULL, ID3D11UnorderedAccessView* uav3 = NULL,

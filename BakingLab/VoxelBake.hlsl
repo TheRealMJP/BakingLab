@@ -39,7 +39,8 @@ cbuffer VoxelBakeConstants : register(b0)
 StructuredBuffer<BakePoint> BakePoints : register(t0);
 Texture3D<float4> VoxelRadiance : register(t1);
 Texture2DArray<float4> PrevBakeResults : register(t2);
-StructuredBuffer<GutterTexel> GutterTexels : register(t3);
+TextureCube<float3> SkyRadiance : register(t3);
+StructuredBuffer<GutterTexel> GutterTexels : register(t4);
 RWTexture2DArray<float4> BakeResults : register(u0);
 SamplerState PointSampler : register(s0);
 
@@ -271,13 +272,15 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
     float3 normalPosVS = ToVoxelSpace(pos + vtxNormal) * voxelRes;
     float3 normalDirVS = normalize(normalPosVS - startPosVS);
 
-    uint iteration = 0;
-    while(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f && iteration < 2)
+    /*uint iteration = 0;
+    while(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f && iteration < 3)
     {
         const float distToNextVoxel = DistancetoNextVoxel(currPosVS, normalDirVS, floor(currPosVS), floor(currPosVS) + 1.0f);
         currPosVS += normalDirVS * (distToNextVoxel + bias);
         ++iteration;
-    }
+    }*/
+
+    currPosVS += (1.0f + saturate(dot(vtxNormal, dir)) * 1.0f) * marchDirVS;
 
     const uint MaxSteps = 1024;
 
@@ -305,7 +308,7 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
         currPosVS += marchDirVS * (distToNextVoxel + bias);
     }
 
-    float3 skyRadiance = EvalSH9(dir, SkySH);
+    float3 skyRadiance = SkyRadiance.SampleLevel(PointSampler, dir, 0.0f);
     radiance += (1.0f - opacity) * skyRadiance;
 
     return radiance;

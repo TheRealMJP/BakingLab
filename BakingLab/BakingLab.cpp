@@ -967,7 +967,7 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     }
 
     SetCSShader(context, voxelBakeCS);
-    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, prevBakeTexture.SRView, status.GutterTexels);
+    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, prevBakeTexture.SRView, skybox.GetSkyCache().CubeMap, status.GutterTexels);
     SetCSOutputs(context, currBakeTexture.UAView);
     SetCSSamplers(context, samplerStates.Point());
 
