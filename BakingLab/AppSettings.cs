@@ -699,6 +699,10 @@ public class Settings
         [MinValue(1)]
         [MaxValue(100)]
         int NumSamplesPerPass = 4;
+
+        [MinValue(1)]
+        [MaxValue(256)]
+        int MaxBakePointsPerPass = 64;
     }
 
     [ExpandGroup(false)]

@@ -25,6 +25,7 @@ cbuffer VoxelBakeConstants : register(b0)
     uint NumSamplesToBake;
     uint BasisCount;
     uint NumBakePoints;
+    uint BakePointOffset;
     uint NumGutterTexels;
 
     SH9Color SkySH;
@@ -272,15 +273,15 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
     float3 normalPosVS = ToVoxelSpace(pos + vtxNormal) * voxelRes;
     float3 normalDirVS = normalize(normalPosVS - startPosVS);
 
-    /*uint iteration = 0;
+    uint iteration = 0;
     while(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f && iteration < 3)
     {
         const float distToNextVoxel = DistancetoNextVoxel(currPosVS, normalDirVS, floor(currPosVS), floor(currPosVS) + 1.0f);
         currPosVS += normalDirVS * (distToNextVoxel + bias);
         ++iteration;
-    }*/
+    }
 
-    currPosVS += (1.0f + saturate(dot(vtxNormal, dir)) * 1.0f) * marchDirVS;
+    // currPosVS += (0.5f + (1.0f - saturate(dot(vtxNormal, dir))) * 1.0f) * marchDirVS;
 
     const uint MaxSteps = 1024;
 
@@ -315,8 +316,10 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
 }
 
 [numthreads(64, 1, 1)]
-void VoxelBake(in uint bakePointIdx : SV_DispatchThreadID)
+void VoxelBake(in uint dispatchThreadID : SV_DispatchThreadID)
 {
+    uint bakePointIdx = dispatchThreadID;
+    bakePointIdx += BakePointOffset;
     if(bakePointIdx >= NumBakePoints)
         return;
 

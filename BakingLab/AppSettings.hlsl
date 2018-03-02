@@ -55,6 +55,7 @@ cbuffer AppSettings : register(b7)
     bool BakeWithVoxels;
     int VoxelResolution;
     int NumSamplesPerPass;
+    int MaxBakePointsPerPass;
     bool EnableDiffuse;
     bool EnableSpecular;
     bool EnableDirectLighting;

@@ -327,6 +327,7 @@ namespace AppSettings
     extern BoolSetting BakeWithVoxels;
     extern IntSetting VoxelResolution;
     extern IntSetting NumSamplesPerPass;
+    extern IntSetting MaxBakePointsPerPass;
     extern ScenesSetting CurrentScene;
     extern BoolSetting EnableDiffuse;
     extern BoolSetting EnableSpecular;
@@ -424,6 +425,7 @@ namespace AppSettings
         bool32 BakeWithVoxels;
         int32 VoxelResolution;
         int32 NumSamplesPerPass;
+        int32 MaxBakePointsPerPass;
         bool32 EnableDiffuse;
         bool32 EnableSpecular;
         bool32 EnableDirectLighting;

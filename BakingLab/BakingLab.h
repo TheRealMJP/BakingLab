@@ -95,7 +95,7 @@ protected:
 
     RenderTarget2D voxelBakeTextures[2];
     uint32 voxelBakePass = 0;
-    uint32 currVoxelBakeTexture = 0;
+    uint32 voxelBakePointOffset = 0;
     float voxelBakeProgress = 0.0f;
     ComputeShaderPtr voxelBakeCS;
     ComputeShaderPtr fillGuttersCS;
@@ -127,6 +127,7 @@ protected:
         uint32 NumSamplesToBake;
         uint32 BasisCount;
         uint32 NumBakePoints;
+        uint32 BakePointOffset;
         uint32 NumGutterTexels;
 
         Float4Align ShaderSH9Color SkySH;

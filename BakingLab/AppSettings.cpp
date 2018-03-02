@@ -253,6 +253,7 @@ namespace AppSettings
     BoolSetting BakeWithVoxels;
     IntSetting VoxelResolution;
     IntSetting NumSamplesPerPass;
+    IntSetting MaxBakePointsPerPass;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -541,6 +542,9 @@ namespace AppSettings
         NumSamplesPerPass.Initialize(tweakBar, "NumSamplesPerPass", "Voxels", "Num Samples Per Pass", "", 4, 1, 100);
         Settings.AddSetting(&NumSamplesPerPass);
 
+        MaxBakePointsPerPass.Initialize(tweakBar, "MaxBakePointsPerPass", "Voxels", "Max Bake Points Per Pass", "", 64, 1, 256);
+        Settings.AddSetting(&MaxBakePointsPerPass);
+
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
@@ -755,6 +759,7 @@ namespace AppSettings
         CBuffer.Data.BakeWithVoxels = BakeWithVoxels;
         CBuffer.Data.VoxelResolution = VoxelResolution;
         CBuffer.Data.NumSamplesPerPass = NumSamplesPerPass;
+        CBuffer.Data.MaxBakePointsPerPass = MaxBakePointsPerPass;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;

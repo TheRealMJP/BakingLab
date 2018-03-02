@@ -792,6 +792,7 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
         return;
 
     voxelBakePass = 0;
+    voxelBakePointOffset = 0;
 
     PIXEvent pixEvent(L"Voxelize Scene");
 
@@ -923,7 +924,10 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     voxelBakeProgress = 0.0f;
 
     if(AppSettings::NumSamplesPerPass.Changed() || status.BakingInvalidated)
+    {
         voxelBakePass = 0;
+        voxelBakePointOffset = 0;
+    }
 
     if(AppSettings::BakeWithVoxels == false)
         return;
@@ -936,16 +940,15 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
             voxelBakeTextures[i].Initialize(deviceManager.Device(), resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT,
                                         1, 1, 0, false, true, arraySize, false);
         voxelBakePass = 0;
+        voxelBakePointOffset = 0;
     }
 
-    RenderTarget2D& currBakeTexture = voxelBakeTextures[currVoxelBakeTexture];
-    RenderTarget2D& prevBakeTexture = voxelBakeTextures[(currVoxelBakeTexture + 1) % 2];
-
-    status.LightMap = currBakeTexture.SRView;
+    status.LightMap = voxelBakeTextures[0].SRView;
 
     const uint32 numSamples = AppSettings::NumBakeSamples * AppSettings::NumBakeSamples;
     const uint32 numSamplesPerPass = AppSettings::NumSamplesPerPass * AppSettings::NumSamplesPerPass;
     const uint32 numPasses = (numSamples + (numSamplesPerPass - 1)) / numSamplesPerPass;
+    const uint32 numPointsToBake = Min<uint32>(AppSettings::MaxBakePointsPerPass * 1024, uint32(status.NumBakePoints) - voxelBakePointOffset);
     if(voxelBakePass >= numPasses)
     {
         voxelBakeProgress = 1.0f;
@@ -956,15 +959,18 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
 
     ID3D11DeviceContext* context = deviceManager.ImmediateContext();
 
-    if(voxelBakePass == 0)
+    if(voxelBakePass == 0 && voxelBakePointOffset == 0)
     {
         float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-        for(uint32 i = 0; i < currBakeTexture.ArraySize; ++i)
+        for(uint32 i = 0; i < voxelBakeTextures[0].ArraySize; ++i)
         {
             context->ClearRenderTargetView(voxelBakeTextures[0].RTVArraySlices[i], clearColor);
             context->ClearRenderTargetView(voxelBakeTextures[1].RTVArraySlices[i], clearColor);
         }
     }
+
+    RenderTarget2D& currBakeTexture = voxelBakeTextures[0];
+    RenderTarget2D& prevBakeTexture = voxelBakeTextures[1];
 
     SetCSShader(context, voxelBakeCS);
     SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, prevBakeTexture.SRView, skybox.GetSkyCache().CubeMap, status.GutterTexels);
@@ -975,6 +981,7 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     voxelBakeConstants.Data.NumSamplesToBake = Min(numSamplesPerPass, numSamples - voxelBakeConstants.Data.BakeSampleStart);
     voxelBakeConstants.Data.BasisCount = uint32(AppSettings::BasisCount());
     voxelBakeConstants.Data.NumBakePoints = uint32(status.NumBakePoints);
+    voxelBakeConstants.Data.BakePointOffset = voxelBakePointOffset;
     voxelBakeConstants.Data.NumGutterTexels = uint32(status.NumGutterTexels);
     voxelBakeConstants.Data.SkySH = status.SkySH;
     voxelBakeConstants.Data.SceneMinBounds = currSceneMin;
@@ -982,7 +989,7 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     voxelBakeConstants.ApplyChanges(context);
     voxelBakeConstants.SetCS(context, 0);
 
-    context->Dispatch(DispatchSize(64, uint32(status.NumBakePoints)), 1, 1);
+    context->Dispatch(DispatchSize(64, numPointsToBake), 1, 1);
 
     if(status.NumGutterTexels > 0)
     {
@@ -993,8 +1000,14 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     ClearCSOutputs(context);
     ClearCSInputs(context);
 
-    voxelBakePass += 1;
-    currVoxelBakeTexture = (currVoxelBakeTexture + 1) % 2;
+    voxelBakePointOffset += numPointsToBake;
+    if(voxelBakePointOffset >= status.NumBakePoints)
+    {
+        voxelBakePass += 1;
+        voxelBakePointOffset = 0;
+
+        context->CopyResource(voxelBakeTextures[1].Texture, voxelBakeTextures[0].Texture);
+    }
 
     voxelBakeProgress = float(voxelBakePass) / numPasses;
 }
@@ -1294,7 +1307,7 @@ void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float b
         std::wstring progressText;
         if(groundTruthProgress < 1.0f)
         {
-            float percent = Round(groundTruthProgress * 10000.0f);
+            float percent = std::round(groundTruthProgress * 10000.0f);
             percent /= 100.0f;
             progressText = L"Rendering ground truth (" + ToString(percent) + L"%)";
             if(groundTruthSampleCount > 0)
@@ -1307,14 +1320,14 @@ void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float b
                 for(uint64 i = 0; i < bufferSize; ++i)
                     samplesPerMS +=  GTSampleRateBuffer[i];
                 samplesPerMS /= float(bufferSize);
-                samplesPerMS = Round(samplesPerMS * 1000.0f);
+                samplesPerMS = std::round(samplesPerMS * 1000.0f);
 
                 progressText += L" [" + ToString(samplesPerMS) + L" samp/sec]";
             }
         }
         else if(bakeProgress < 1.0f)
         {
-            float percent = Round(bakeProgress * 10000.0f);
+            float percent = std::round(bakeProgress * 10000.0f);
             percent /= 100.0f;
             progressText = L"Baking light maps (" + ToString(percent) + L"%)";
         }
@@ -1326,7 +1339,7 @@ void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float b
 
     if(AppSettings::BakeWithVoxels && voxelBakeProgress < 1.0f)
     {
-        float percent = Round(voxelBakeProgress * 10000.0f);
+        float percent = std::round(voxelBakeProgress * 10000.0f);
         percent /= 100.0f;
         std::wstring progressText = L"Baking with voxels (" + ToString(percent) + L"%)";
 
@@ -1337,7 +1350,7 @@ void BakingLab::RenderHUD(const Timer& timer, float groundTruthProgress, float b
 
     /*if(probeBakeProgress < 1.0f)
     {
-        float percent = Round(probeBakeProgress * 10000.0f);
+        float percent = std::round(probeBakeProgress * 10000.0f);
         percent /= 100.0f;
         std::wstring progressText = L"Baking probes (" + ToString(percent) + L"%)";
 
