@@ -93,6 +93,12 @@ protected:
     ComputeShaderPtr generateVoxelMips;
     uint32 numVoxelMips = 0;
 
+    RenderTarget3D jumpFloodTexture;
+    RenderTarget3D voxelDistanceField;
+    ComputeShaderPtr initJumpFlood;
+    ComputeShaderPtr jumpFloodIteration;
+    ComputeShaderPtr fillDistanceTexture;
+
     RenderTarget2D voxelBakeTexture;
     uint32 voxelBakePass = 0;
     uint32 voxelBakePointOffset = 0;
@@ -121,6 +127,11 @@ protected:
         float DstMipTexelSize;
     };
 
+    struct DistanceFieldConstants
+    {
+        int32 StepSize;
+    };
+
     struct VoxelBakeConstants
     {
         uint32 BakeSampleStart;
@@ -139,6 +150,7 @@ protected:
     ConstantBuffer<ResolveConstants> resolveConstants;
     ConstantBuffer<BackgroundVelocityConstants> backgroundVelocityConstants;
     ConstantBuffer<GenerateMipConstants> generateMipConstants;
+    ConstantBuffer<DistanceFieldConstants> distanceFieldConstants;
     ConstantBuffer<VoxelBakeConstants> voxelBakeConstants;
 
     virtual void Initialize() override;

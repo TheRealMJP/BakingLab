@@ -499,12 +499,17 @@ void BakingLab::Initialize()
         generateVoxelMips = CompileCSFromFile(device, L"GenerateVoxelMips.hlsl", "GenerateVoxelMips", "cs_5_0", opts);
     }
 
+    initJumpFlood = CompileCSFromFile(device, L"VoxelDistanceField.hlsl", "InitJumpFlood", "cs_5_0");
+    jumpFloodIteration = CompileCSFromFile(device, L"VoxelDistanceField.hlsl", "JumpFloodIteration", "cs_5_0");
+    fillDistanceTexture = CompileCSFromFile(device, L"VoxelDistanceField.hlsl", "FillDistanceTexture", "cs_5_0");
+
     voxelBakeCS = CompileCSFromFile(device, L"VoxelBake.hlsl", "VoxelBake", "cs_5_0");
     fillGuttersCS = CompileCSFromFile(device, L"VoxelBake.hlsl", "FillGutters", "cs_5_0");
 
     resolveConstants.Initialize(device);
     backgroundVelocityConstants.Initialize(device);
     generateMipConstants.Initialize(device);
+    distanceFieldConstants.Initialize(device);
     voxelBakeConstants.Initialize(device);
 
     // Init the post processor
@@ -786,6 +791,12 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
         uint32 numMips = Max(numVoxelMips - 1, 1u);
         for(uint64 i = 0; i < 6; ++i)
             voxelRadianceMips[i].Initialize(device, voxelMipSize, voxelMipSize, voxelMipSize, DXGI_FORMAT_R16G16B16A16_FLOAT, numMips, true);
+
+        jumpFloodTexture.Initialize(device, AppSettings::VoxelResolution, AppSettings::VoxelResolution, AppSettings::VoxelResolution,
+                                    DXGI_FORMAT_R16G16B16A16_UINT, 1, true);
+
+        voxelDistanceField.Initialize(device, AppSettings::VoxelResolution, AppSettings::VoxelResolution, AppSettings::VoxelResolution,
+                                      DXGI_FORMAT_R32_FLOAT, 1, true);
     }
 
     if(reVoxelize == false)
@@ -794,128 +805,173 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
     voxelBakePass = 0;
     voxelBakePointOffset = 0;
 
-    PIXEvent pixEvent(L"Voxelize Scene");
-
-    // Clear the voxel radiance texture
-    SetCSShader(context, clearVoxelRadiance);
-    SetCSOutputs(context, voxelRadiance.UAView);
-
-    const uint32 voxelDispatchSize = DispatchSize(4, AppSettings::VoxelResolution);
-    context->Dispatch(voxelDispatchSize, voxelDispatchSize, voxelDispatchSize);
-
-    ClearCSOutputs(context);
-
-    Float3 sceneCenter = (currSceneMin + currSceneMax) / 2.0f;
-    Float3 sceneHalfExtents = (currSceneMax - currSceneMin) / 2.0f;
-
-    OrthographicCamera voxelCameraX(-sceneHalfExtents.z, -sceneHalfExtents.y, sceneHalfExtents.z, sceneHalfExtents.y, 0.0f, sceneHalfExtents.x * 2.0f);
-    voxelCameraX.SetPosition(Float3(currSceneMin.x, sceneCenter.y, sceneCenter.z));
-    voxelCameraX.SetOrientation(Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), Pi_2));
-
-    OrthographicCamera voxelCameraY(-sceneHalfExtents.x, -sceneHalfExtents.z, sceneHalfExtents.x, sceneHalfExtents.z, 0.0f, sceneHalfExtents.y * 2.0f);
-    voxelCameraY.SetPosition(Float3(sceneCenter.x, currSceneMin.y, sceneCenter.z));
-    voxelCameraY.SetOrientation(Quaternion::FromAxisAngle(Float3(1.0f, 0.0f, 0.0f), -Pi_2));
-
-    OrthographicCamera voxelCameraZ(-sceneHalfExtents.x, -sceneHalfExtents.y, sceneHalfExtents.x, sceneHalfExtents.y, 0.0f, sceneHalfExtents.z * 2.0f);
-    voxelCameraZ.SetPosition(Float3(sceneCenter.x, sceneCenter.y, currSceneMin.z));
-
-    if(AppSettings::EnableSun)
-        meshRenderer.RenderSunShadowMap(context, voxelCameraZ, false);
-
-    if(AppSettings::EnableAreaLight)
-        meshRenderer.RenderAreaLightShadowMap(context, voxelCameraZ);
-
-        ID3D11UnorderedAccessView* uavs[] = { voxelRadiance.UAView };
-        context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, ArraySize_(uavs), uavs, nullptr);
-
-    for(uint64 i = 0; i < 3; ++i)
     {
-        OrthographicCamera* voxelCamera = nullptr;
+        PIXEvent pixEvent(L"Voxelize Scene");
 
-        if(i == 0)
-        {
-            voxelCamera = &voxelCameraX;
-            SetViewport(context, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
-        }
-        else if(i == 1)
-        {
-            voxelCamera = &voxelCameraY;
-            SetViewport(context, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
-        }
-        else if(i == 2)
-        {
-            voxelCamera = &voxelCameraZ;
-            SetViewport(context, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
-        }
+        // Clear the voxel radiance texture
+        SetCSShader(context, clearVoxelRadiance);
+        SetCSOutputs(context, voxelRadiance.UAView);
 
-        meshRenderer.RenderMainPass(context, *voxelCamera, status, false, true);
-    }
+        const uint32 voxelDispatchSize = DispatchSize(4, AppSettings::VoxelResolution);
+        context->Dispatch(voxelDispatchSize, voxelDispatchSize, voxelDispatchSize);
+
+        ClearCSOutputs(context);
+
+        Float3 sceneCenter = (currSceneMin + currSceneMax) / 2.0f;
+        Float3 sceneHalfExtents = (currSceneMax - currSceneMin) / 2.0f;
+
+        OrthographicCamera voxelCameraX(-sceneHalfExtents.z, -sceneHalfExtents.y, sceneHalfExtents.z, sceneHalfExtents.y, 0.0f, sceneHalfExtents.x * 2.0f);
+        voxelCameraX.SetPosition(Float3(currSceneMin.x, sceneCenter.y, sceneCenter.z));
+        voxelCameraX.SetOrientation(Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), Pi_2));
+
+        OrthographicCamera voxelCameraY(-sceneHalfExtents.x, -sceneHalfExtents.z, sceneHalfExtents.x, sceneHalfExtents.z, 0.0f, sceneHalfExtents.y * 2.0f);
+        voxelCameraY.SetPosition(Float3(sceneCenter.x, currSceneMin.y, sceneCenter.z));
+        voxelCameraY.SetOrientation(Quaternion::FromAxisAngle(Float3(1.0f, 0.0f, 0.0f), -Pi_2));
+
+        OrthographicCamera voxelCameraZ(-sceneHalfExtents.x, -sceneHalfExtents.y, sceneHalfExtents.x, sceneHalfExtents.y, 0.0f, sceneHalfExtents.z * 2.0f);
+        voxelCameraZ.SetPosition(Float3(sceneCenter.x, sceneCenter.y, currSceneMin.z));
+
+        if(AppSettings::EnableSun)
+            meshRenderer.RenderSunShadowMap(context, voxelCameraZ, false);
+
+        if(AppSettings::EnableAreaLight)
+            meshRenderer.RenderAreaLightShadowMap(context, voxelCameraZ);
+
+            ID3D11UnorderedAccessView* uavs[] = { voxelRadiance.UAView };
+            context->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, 0, ArraySize_(uavs), uavs, nullptr);
+
+        for(uint64 i = 0; i < 3; ++i)
+        {
+            OrthographicCamera* voxelCamera = nullptr;
+
+            if(i == 0)
+            {
+                voxelCamera = &voxelCameraX;
+                SetViewport(context, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
+            }
+            else if(i == 1)
+            {
+                voxelCamera = &voxelCameraY;
+                SetViewport(context, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
+            }
+            else if(i == 2)
+            {
+                voxelCamera = &voxelCameraZ;
+                SetViewport(context, AppSettings::VoxelResolution, AppSettings::VoxelResolution);
+            }
+
+            meshRenderer.RenderMainPass(context, *voxelCamera, status, false, true);
+        }
 
         context->OMSetRenderTargets(0, nullptr, nullptr);
+    }
 
-    // Fill the interioriors with opaque voxels
-    SetCSShader(context, fillVoxelHolesX);
-    SetCSOutputs(context, voxelRadiance.UAView);
-
-    context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
-
-    SetCSShader(context, fillVoxelHolesY);
-
-    context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
-
-    SetCSShader(context, fillVoxelHolesZ);
-
-    context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
-
-    ClearCSOutputs(context);
-
-    SetCSSamplers(context, samplerStates.Point());
-
-    const uint32 numMips = voxelRadianceMips[0].NumMipLevels;
-    uint32 srcMipSize = AppSettings::VoxelResolution;
-    for(uint32 srcMipLevel = 0; srcMipLevel < numMips; ++srcMipLevel)
     {
-        ID3D11ShaderResourceView* srvs[6] = { };
+        PIXEvent pixEvent(L"Fill Voxel Holes");
 
-        if(srcMipLevel == 0)
+        // Fill the interioriors with opaque voxels
+        SetCSShader(context, fillVoxelHolesX);
+        SetCSOutputs(context, voxelRadiance.UAView);
+
+        context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
+
+        SetCSShader(context, fillVoxelHolesY);
+
+        context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
+
+        SetCSShader(context, fillVoxelHolesZ);
+
+        context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
+
+        ClearCSOutputs(context);
+    }
+
+    {
+        PIXEvent pixEvent(L"Generate Voxel Mips");
+
+        SetCSSamplers(context, samplerStates.Point());
+
+        const uint32 numMips = voxelRadianceMips[0].NumMipLevels;
+        uint32 srcMipSize = AppSettings::VoxelResolution;
+        for(uint32 srcMipLevel = 0; srcMipLevel < numMips; ++srcMipLevel)
         {
-            SetCSShader(context, generateFirstVoxelMip);
-            srvs[0] = voxelRadiance.SRView;
-        }
-        else
-        {
-            SetCSShader(context, generateVoxelMips);
+            ID3D11ShaderResourceView* srvs[6] = { };
+
+            if(srcMipLevel == 0)
+            {
+                SetCSShader(context, generateFirstVoxelMip);
+                srvs[0] = voxelRadiance.SRView;
+            }
+            else
+            {
+                SetCSShader(context, generateVoxelMips);
+                for(uint64 i = 0; i < 6; ++i)
+                    srvs[i] = voxelRadianceMips[i].MipSRVs[srcMipLevel - 1];
+            }
+
+            ID3D11UnorderedAccessView* uavs[6] = { };
             for(uint64 i = 0; i < 6; ++i)
-                srvs[i] = voxelRadianceMips[i].MipSRVs[srcMipLevel - 1];
+                uavs[i] = voxelRadianceMips[i].MipUAVs[srcMipLevel];
+
+
+            context->CSSetShaderResources(0, 6, srvs);
+            context->CSSetUnorderedAccessViews(0, 6, uavs, nullptr);
+
+            uint32 dstMipSize = Max(srcMipSize / 2, 1u);
+
+            generateMipConstants.Data.SrcMipTexelSize = 1.0f / srcMipSize;
+            generateMipConstants.Data.DstMipTexelSize = 1.0f / dstMipSize;
+            generateMipConstants.ApplyChanges(context);
+            generateMipConstants.SetCS(context, 0);
+
+            context->Dispatch(DispatchSize(4, dstMipSize), DispatchSize(4, dstMipSize), DispatchSize(4, dstMipSize));
+
+            srcMipSize = dstMipSize;
+
+            for(uint64 i = 0; i < 6; ++i)
+            {
+                srvs[i] = nullptr;
+                uavs[i] = nullptr;
+            }
+
+            context->CSSetShaderResources(0, 6, srvs);
+            context->CSSetUnorderedAccessViews(0, 6, uavs, nullptr);
         }
 
-        ID3D11UnorderedAccessView* uavs[6] = { };
-        for(uint64 i = 0; i < 6; ++i)
-            uavs[i] = voxelRadianceMips[i].MipUAVs[srcMipLevel];
+        ClearCSOutputs(context);
+    }
 
+    {
+        PIXEvent pixEvent(L"Generate Voxel Distance");
 
-        context->CSSetShaderResources(0, 6, srvs);
-        context->CSSetUnorderedAccessViews(0, 6, uavs, nullptr);
+        SetCSInputs(context, voxelRadiance.SRView);
+        SetCSOutputs(context, jumpFloodTexture.UAView, voxelDistanceField.UAView);
 
-        uint32 dstMipSize = Max(srcMipSize / 2, 1u);
+        SetCSShader(context, initJumpFlood);
 
-        generateMipConstants.Data.SrcMipTexelSize = 1.0f / srcMipSize;
-        generateMipConstants.Data.DstMipTexelSize = 1.0f / dstMipSize;
-        generateMipConstants.ApplyChanges(context);
-        generateMipConstants.SetCS(context, 0);
+        const uint32 dispatchSize = DispatchSize(4, AppSettings::VoxelResolution);
+        context->Dispatch(dispatchSize, dispatchSize, dispatchSize);
 
-        context->Dispatch(DispatchSize(4, dstMipSize), DispatchSize(4, dstMipSize), DispatchSize(4, dstMipSize));
+        SetCSShader(context, jumpFloodIteration);
 
-        srcMipSize = dstMipSize;
+        const uint32 numPasses = voxelRadianceMips[0].NumMipLevels;
+        distanceFieldConstants.Data.StepSize = voxelRadianceMips[0].Width;
 
-        for(uint64 i = 0; i < 6; ++i)
+        for(uint32 i = 0; i < numPasses; ++i)
         {
-            srvs[i] = nullptr;
-            uavs[i] = nullptr;
+            distanceFieldConstants.ApplyChanges(context);
+            distanceFieldConstants.SetCS(context, 0);
+
+            context->Dispatch(dispatchSize, dispatchSize, dispatchSize);
+
+            distanceFieldConstants.Data.StepSize = Max<int32>(distanceFieldConstants.Data.StepSize / 2, 1);
         }
 
-        context->CSSetShaderResources(0, 6, srvs);
-        context->CSSetUnorderedAccessViews(0, 6, uavs, nullptr);
+        SetCSShader(context, fillDistanceTexture);
+
+        context->Dispatch(dispatchSize, dispatchSize, dispatchSize);
+
+        ClearCSOutputs(context);
     }
 }
 
