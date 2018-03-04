@@ -934,16 +934,15 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
 
     const uint32 resolution = AppSettings::LightMapResolution;
     const uint32 arraySize = Max(uint32(AppSettings::BasisCount()), 2u);
-    if(voxelBakeTextures[0].Width != resolution || voxelBakeTextures[0].ArraySize != arraySize)
+    if(voxelBakeTexture.Width != resolution || voxelBakeTexture.ArraySize != arraySize)
     {
-        for(uint64 i = 0; i < 2; ++i)
-            voxelBakeTextures[i].Initialize(deviceManager.Device(), resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT,
-                                        1, 1, 0, false, true, arraySize, false);
+        voxelBakeTexture.Initialize(deviceManager.Device(), resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT,
+                                    1, 1, 0, false, true, arraySize, false);
         voxelBakePass = 0;
         voxelBakePointOffset = 0;
     }
 
-    status.LightMap = voxelBakeTextures[0].SRView;
+    status.LightMap = voxelBakeTexture.SRView;
 
     const uint32 numSamples = AppSettings::NumBakeSamples * AppSettings::NumBakeSamples;
     const uint32 numSamplesPerPass = AppSettings::NumSamplesPerPass * AppSettings::NumSamplesPerPass;
@@ -962,19 +961,14 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     if(voxelBakePass == 0 && voxelBakePointOffset == 0)
     {
         float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-        for(uint32 i = 0; i < voxelBakeTextures[0].ArraySize; ++i)
-        {
-            context->ClearRenderTargetView(voxelBakeTextures[0].RTVArraySlices[i], clearColor);
-            context->ClearRenderTargetView(voxelBakeTextures[1].RTVArraySlices[i], clearColor);
-        }
+        for(uint32 i = 0; i < voxelBakeTexture.ArraySize; ++i)
+            context->ClearRenderTargetView(voxelBakeTexture.RTVArraySlices[i], clearColor);
     }
 
-    RenderTarget2D& currBakeTexture = voxelBakeTextures[0];
-    RenderTarget2D& prevBakeTexture = voxelBakeTextures[1];
 
     SetCSShader(context, voxelBakeCS);
-    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, prevBakeTexture.SRView, skybox.GetSkyCache().CubeMap, status.GutterTexels);
-    SetCSOutputs(context, currBakeTexture.UAView);
+    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, skybox.GetSkyCache().CubeMap, status.GutterTexels);
+    SetCSOutputs(context, voxelBakeTexture.UAView);
     SetCSSamplers(context, samplerStates.Point());
 
     voxelBakeConstants.Data.BakeSampleStart = voxelBakePass * numSamplesPerPass;
@@ -1005,8 +999,6 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     {
         voxelBakePass += 1;
         voxelBakePointOffset = 0;
-
-        context->CopyResource(voxelBakeTextures[1].Texture, voxelBakeTextures[0].Texture);
     }
 
     voxelBakeProgress = float(voxelBakePass) / numPasses;

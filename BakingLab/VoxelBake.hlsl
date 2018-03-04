@@ -39,9 +39,8 @@ cbuffer VoxelBakeConstants : register(b0)
 //=================================================================================================
 StructuredBuffer<BakePoint> BakePoints : register(t0);
 Texture3D<float4> VoxelRadiance : register(t1);
-Texture2DArray<float4> PrevBakeResults : register(t2);
-TextureCube<float3> SkyRadiance : register(t3);
-StructuredBuffer<GutterTexel> GutterTexels : register(t4);
+TextureCube<float3> SkyRadiance : register(t2);
+StructuredBuffer<GutterTexel> GutterTexels : register(t3);
 RWTexture2DArray<float4> BakeResults : register(u0);
 SamplerState PointSampler : register(s0);
 
@@ -327,7 +326,7 @@ void VoxelBake(in uint dispatchThreadID : SV_DispatchThreadID)
 
     const float3x3 tangentToWorld = float3x3(bakePoint.Tangent, bakePoint.Bitangent, bakePoint.Normal);
 
-    float4 currResults = PrevBakeResults[uint3(bakePoint.TexelPos, 0)];
+    float4 currResults = BakeResults[uint3(bakePoint.TexelPos, 0)];
 
     for(uint i = 0; i < NumSamplesToBake; ++i)
     {
