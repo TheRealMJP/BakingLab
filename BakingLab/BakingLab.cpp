@@ -792,9 +792,10 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
         for(uint64 i = 0; i < 6; ++i)
             voxelRadianceMips[i].Initialize(device, voxelMipSize, voxelMipSize, voxelMipSize, DXGI_FORMAT_R16G16B16A16_FLOAT, numMips, true);
 
-        jumpFloodTexture.Initialize(device, AppSettings::VoxelResolution, AppSettings::VoxelResolution, AppSettings::VoxelResolution,
-                                    DXGI_FORMAT_R16G16B16A16_UINT, 1, true);
-
+        jumpFloodTexturePositive.Initialize(device, AppSettings::VoxelResolution, AppSettings::VoxelResolution, AppSettings::VoxelResolution,
+                                          DXGI_FORMAT_R16G16B16A16_UINT, 1, true);
+        jumpFloodTextureNegative.Initialize(device, AppSettings::VoxelResolution, AppSettings::VoxelResolution, AppSettings::VoxelResolution,
+                                           DXGI_FORMAT_R16G16B16A16_UINT, 1, true);
         voxelDistanceField.Initialize(device, AppSettings::VoxelResolution, AppSettings::VoxelResolution, AppSettings::VoxelResolution,
                                       DXGI_FORMAT_R32_FLOAT, 1, true);
     }
@@ -945,7 +946,7 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
         PIXEvent pixEvent(L"Generate Voxel Distance");
 
         SetCSInputs(context, voxelRadiance.SRView);
-        SetCSOutputs(context, jumpFloodTexture.UAView, voxelDistanceField.UAView);
+        SetCSOutputs(context, jumpFloodTexturePositive.UAView, jumpFloodTextureNegative.UAView, voxelDistanceField.UAView);
 
         SetCSShader(context, initJumpFlood);
 
@@ -1023,9 +1024,9 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
 
 
     SetCSShader(context, voxelBakeCS);
-    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, skybox.GetSkyCache().CubeMap, status.GutterTexels);
+    SetCSInputs(context, status.BakePoints, voxelRadiance.SRView, voxelDistanceField.SRView, skybox.GetSkyCache().CubeMap, status.GutterTexels);
     SetCSOutputs(context, voxelBakeTexture.UAView);
-    SetCSSamplers(context, samplerStates.Point());
+    SetCSSamplers(context, samplerStates.Point(), samplerStates.LinearClamp());
 
     voxelBakeConstants.Data.BakeSampleStart = voxelBakePass * numSamplesPerPass;
     voxelBakeConstants.Data.NumSamplesToBake = Min(numSamplesPerPass, numSamples - voxelBakeConstants.Data.BakeSampleStart);
@@ -1105,6 +1106,7 @@ void BakingLab::Render(const Timer& timer)
     status.VoxelRadiance = voxelRadiance.SRView;
     for(uint64 i = 0; i < 6; ++i)
         status.VoxelRadianceMips[i] = voxelRadianceMips[i].SRView;
+    status.VoxelDistanceField = voxelDistanceField.SRView;
 
     if(AppSettings::ShowGroundTruth)
     {

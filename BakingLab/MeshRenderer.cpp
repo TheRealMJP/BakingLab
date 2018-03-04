@@ -1342,14 +1342,14 @@ void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Cam
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
 
-    ID3D11ShaderResourceView* srvs[7] = { status.VoxelRadiance };
+    ID3D11ShaderResourceView* srvs[8] = { status.VoxelRadiance, status.VoxelDistanceField };
     for(uint64 i = 0; i < 6; ++i)
-        srvs[i + 1] = status.VoxelRadianceMips[i];
+        srvs[i + 2] = status.VoxelRadianceMips[i];
 
     context->VSSetShaderResources(0, ArraySize_(srvs), srvs);
     context->PSSetShaderResources(0, ArraySize_(srvs), srvs);
 
-    ID3D11SamplerState* samplers[] = { samplerStates.Point() };
+    ID3D11SamplerState* samplers[] = { samplerStates.Point(), samplerStates.LinearClamp() };
     context->PSSetSamplers(0, ArraySize_(samplers), samplers);
 
     // Draw a box for each voxel

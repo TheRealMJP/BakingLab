@@ -64,6 +64,7 @@ struct MeshBakerStatus
     ID3D11ShaderResourceView* ProbeDistanceCubeMap = nullptr;
     ID3D11ShaderResourceView* VoxelRadiance = nullptr;
     ID3D11ShaderResourceView* VoxelRadianceMips[6] = { };
+    ID3D11ShaderResourceView* VoxelDistanceField = nullptr;
     uint64 NumBakePoints = 0;
     uint64 NumGutterTexels = 0;
     float GroundTruthProgress = 0.0f;

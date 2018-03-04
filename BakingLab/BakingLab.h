@@ -93,7 +93,8 @@ protected:
     ComputeShaderPtr generateVoxelMips;
     uint32 numVoxelMips = 0;
 
-    RenderTarget3D jumpFloodTexture;
+    RenderTarget3D jumpFloodTexturePositive;
+    RenderTarget3D jumpFloodTextureNegative;
     RenderTarget3D voxelDistanceField;
     ComputeShaderPtr initJumpFlood;
     ComputeShaderPtr jumpFloodIteration;

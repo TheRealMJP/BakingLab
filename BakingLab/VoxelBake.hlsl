@@ -39,10 +39,12 @@ cbuffer VoxelBakeConstants : register(b0)
 //=================================================================================================
 StructuredBuffer<BakePoint> BakePoints : register(t0);
 Texture3D<float4> VoxelRadiance : register(t1);
-TextureCube<float3> SkyRadiance : register(t2);
-StructuredBuffer<GutterTexel> GutterTexels : register(t3);
+Texture3D<float> VoxelDistanceField : register(t2);
+TextureCube<float3> SkyRadiance : register(t3);
+StructuredBuffer<GutterTexel> GutterTexels : register(t4);
 RWTexture2DArray<float4> BakeResults : register(u0);
 SamplerState PointSampler : register(s0);
+SamplerState LinearSampler : register(s1);
 
 uint CMJPermute(uint i, uint l, uint p)
 {
@@ -272,15 +274,21 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
     float3 normalPosVS = ToVoxelSpace(pos + vtxNormal) * voxelRes;
     float3 normalDirVS = normalize(normalPosVS - startPosVS);
 
-    uint iteration = 0;
+    /*uint iteration = 0;
     while(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f && iteration < 3)
     {
         const float distToNextVoxel = DistancetoNextVoxel(currPosVS, normalDirVS, floor(currPosVS), floor(currPosVS) + 1.0f);
         currPosVS += normalDirVS * (distToNextVoxel + bias);
         ++iteration;
-    }
+    }*/
 
     // currPosVS += (0.5f + (1.0f - saturate(dot(vtxNormal, dir))) * 1.0f) * marchDirVS;
+
+    if(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f)
+        currPosVS += normalDirVS * length(1.0f);
+
+    /*if(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f)
+        return 0.0f;*/
 
     const uint MaxSteps = 1024;
 
@@ -304,7 +312,10 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
         radiance += (1.0f - opacity) * voxelSample.xyz;
         opacity += (1.0f - opacity) * voxelSample.w;
 
-        const float distToNextVoxel = DistancetoNextVoxel(currPosVS, marchDirVS, currVoxelMin, currVoxelMax);
+        // const float distToNextVoxel = DistancetoNextVoxel(currPosVS, marchDirVS, currVoxelMin, currVoxelMax);
+
+        const float distToNextVoxel = VoxelDistanceField.SampleLevel(LinearSampler, uvw, 0.0f);
+
         currPosVS += marchDirVS * (distToNextVoxel + bias);
     }
 

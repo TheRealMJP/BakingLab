@@ -26,8 +26,10 @@ cbuffer Constants : register(b0)
 }
 
 Texture3D<float4> VoxelRadiance : register(t0);
-Texture3D<float4> VoxelRadianceMips[6] : register(t1);
+Texture3D<float> VoxelDistanceField : register(t1);
+Texture3D<float4> VoxelRadianceMips[6] : register(t2);
 SamplerState PointSampler : register(s0);
+SamplerState LinearSampler : register(s1);
 
 struct VSOutputGeo
 {
@@ -195,6 +197,7 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
 
     float3 radiance = 0.0f;
     float opacity = 0.0f;
+    uint numSteps = 0;
     for(uint i = 0; i < MaxSteps; ++i)
     {
         float3 uvw = currPos / voxelRes;
@@ -246,8 +249,18 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
         else if(abs(viewDir.z) < 0.01f)
             distToNextVoxel = IntersectRayBox2D(currPos.xy, viewDir.xy, currVoxelMin.xy, currVoxelMax.xy);
 
-        currPos += viewDir * (distToNextVoxel + bias);
+        distToNextVoxel += bias;
+
+        // distToNextVoxel = VoxelDistanceField.SampleLevel(LinearSampler, uvw, 0.0f) + bias;
+
+        /// distToNextVoxel = max(VoxelDistanceField.SampleLevel(PointSampler, uvw, 0.0f) - 1.0f, 0.0f);
+
+        currPos += viewDir * distToNextVoxel;
+
+        ++numSteps;
     }
+
+    // radiance = numSteps / 16.0f;
 
     return float4(radiance, opacity);
 }
