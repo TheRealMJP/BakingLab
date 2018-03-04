@@ -120,6 +120,7 @@ public:
     BakeModes currBakeMode = BakeModes::Diffuse;
     SolveModes currSolveMode = SolveModes::NNLS;
     std::vector<BakePoint> bakePoints;
+    std::vector<BakePoint> sparseBakePoints;
     std::vector<GutterTexel> gutterTexels;
 
     // Read-only data shared with both bake and render threads

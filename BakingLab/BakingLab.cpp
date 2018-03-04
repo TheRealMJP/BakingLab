@@ -1010,6 +1010,7 @@ void BakingLab::BakeWithVoxels(MeshBakerStatus& status)
     }
 
     voxelBakeProgress = float(voxelBakePass) / numPasses;
+    voxelBakeProgress += voxelBakePointOffset / float(status.NumBakePoints * numPasses);
 }
 
 void BakingLab::Render(const Timer& timer)

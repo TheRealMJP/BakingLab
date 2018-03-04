@@ -795,13 +795,14 @@ static void BuildBVH(const Model& model, BVHData& bvhData, ID3D11Device* d3dDevi
 
 // Computes lightmap sample points and gutter texels
 static void ExtractBakePoints(const BakeInputData& bakeInput, std::vector<BakePoint>& bakePoints,
-                              std::vector<GutterTexel>& gutterTexels)
+                              std::vector<BakePoint>& sparseBakePoints, std::vector<GutterTexel>& gutterTexels)
 {
     const uint32 LightMapSize = AppSettings::LightMapResolution;
     const uint64 NumTexels = LightMapSize * LightMapSize;
 
     bakePoints.clear();
     bakePoints.resize(NumTexels);
+    sparseBakePoints.clear();
     gutterTexels.clear();
 
     Timer timer;
@@ -976,7 +977,7 @@ static void ExtractBakePoints(const BakeInputData& bakeInput, std::vector<BakePo
                 bakePoint.Size = Float2(positions[x].w, normals[x].w);
                 bakePoint.Coverage = coverage[x];
                 bakePoint.TexelPos = Uint2(x, y);
-                bakePoints.push_back(bakePoint);
+                sparseBakePoints.push_back(bakePoint);
             }
             else
             {
@@ -1354,9 +1355,9 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
             KillBakeThreads();
             KillRenderThreads();
 
-            ExtractBakePoints(input, bakePoints, gutterTexels);
-            bakePointBuffer.Initialize(input.Device, sizeof(BakePoint), uint32(bakePoints.size()),
-                                       false, false, false, bakePoints.data());
+            ExtractBakePoints(input, bakePoints, sparseBakePoints, gutterTexels);
+            bakePointBuffer.Initialize(input.Device, sizeof(BakePoint), uint32(sparseBakePoints.size()),
+                                       false, false, false, sparseBakePoints.data());
 
             gutterTexelBuffer = StructuredBuffer();
             if(gutterTexels.size() > 0)
