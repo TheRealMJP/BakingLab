@@ -211,21 +211,22 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
         #if FirstMip_
             float4 voxelSample = VoxelRadiance.SampleLevel(PointSampler, uvw, 0.0f);
         #else
-            float3 voxelToPos = currPos - currVoxelCenter;
-            float largestComponent = max(max(abs(voxelToPos.x), abs(voxelToPos.y)), abs(voxelToPos.z));
+            float3 voxelDir = currPos - currVoxelCenter;
+            // float3 voxelDir = viewDir;
+            float largestComponent = max(max(abs(voxelDir.x), abs(voxelDir.y)), abs(voxelDir.z));
 
             float4 voxelSample = 0.0f;
-            if(largestComponent == voxelToPos.x)
+            if(largestComponent == voxelDir.x)
                 voxelSample = VoxelRadianceMips[0].SampleLevel(PointSampler, uvw, mipLevel);
-            else if(largestComponent == -voxelToPos.x)
+            else if(largestComponent == -voxelDir.x)
                 voxelSample = VoxelRadianceMips[1].SampleLevel(PointSampler, uvw, mipLevel);
-            else if(largestComponent == voxelToPos.y)
+            else if(largestComponent == voxelDir.y)
                 voxelSample = VoxelRadianceMips[2].SampleLevel(PointSampler, uvw, mipLevel);
-            else if(largestComponent == -voxelToPos.y)
+            else if(largestComponent == -voxelDir.y)
                 voxelSample = VoxelRadianceMips[3].SampleLevel(PointSampler, uvw, mipLevel);
-            else if(largestComponent == voxelToPos.z)
+            else if(largestComponent == voxelDir.z)
                 voxelSample = VoxelRadianceMips[4].SampleLevel(PointSampler, uvw, mipLevel);
-            else if(largestComponent == -voxelToPos.z)
+            else if(largestComponent == -voxelDir.z)
                 voxelSample = VoxelRadianceMips[5].SampleLevel(PointSampler, uvw, mipLevel);
         #endif
 
@@ -251,9 +252,10 @@ float4 RayMarchPS(in VSOutputRayMarch input) : SV_Target0
 
         distToNextVoxel += bias;
 
-        // distToNextVoxel = VoxelDistanceField.SampleLevel(LinearSampler, uvw, 0.0f) + bias;
-
-        /// distToNextVoxel = max(VoxelDistanceField.SampleLevel(PointSampler, uvw, 0.0f) - 1.0f, 0.0f);
+        #if FirstMip_
+            // distToNextVoxel = VoxelDistanceField.SampleLevel(LinearSampler, uvw, 0.0f) + bias;
+            // distToNextVoxel = max(VoxelDistanceField.SampleLevel(PointSampler, uvw, 0.0f) - 1.0f, 0.0f);
+        #endif
 
         currPos += viewDir * distToNextVoxel;
 

@@ -79,13 +79,15 @@ void FillVoxelHoles(in uint2 planeCoord : SV_DispatchThreadID)
             float4 voxelSample = VoxelRadiance[voxelCoord];
             if(voxelSample.w < 0.0f)
             {
-                voxelSample = 0.0f;
+                voxelSample.xyz = 0.0f;
 
                 if(voxelSample.w == -3.0)
                 {
                     // voxelSample.xyz = float3(0, 10.0f, 0.0f);
                     voxelSample.w = 1.0f;
                 }
+
+                voxelSample.w = saturate(voxelSample.w);
 
                 VoxelRadiance[voxelCoord] = voxelSample;
             }

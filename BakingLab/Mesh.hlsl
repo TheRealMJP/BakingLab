@@ -889,6 +889,8 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         if(ProbeRendering_ == 0)
             ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
 
+        // indirectIrradiance = ComputeVoxelIrradiance(surface);
+
         if(EnableIndirectDiffuse)
         {
             irradiance += indirectIrradiance;

@@ -284,8 +284,8 @@ float3 RayMarchVoxels(in float3 pos, in float3 dir, in float3 vtxNormal)
 
     // currPosVS += (0.5f + (1.0f - saturate(dot(vtxNormal, dir))) * 1.0f) * marchDirVS;
 
-    if(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f)
-        currPosVS += normalDirVS * length(1.0f);
+    // if(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f)
+        currPosVS += normalDirVS * length(1.0f) * 1.1f;
 
     /*if(VoxelRadiance.SampleLevel(PointSampler, currPosVS / voxelRes, 0.0f).w > 0.0f)
         return 0.0f;*/

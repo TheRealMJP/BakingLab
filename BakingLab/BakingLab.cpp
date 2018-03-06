@@ -867,7 +867,7 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
         context->OMSetRenderTargets(0, nullptr, nullptr);
     }
 
-    {
+    /*{
         PIXEvent pixEvent(L"Fill Voxel Holes");
 
         // Fill the interioriors with opaque voxels
@@ -885,7 +885,7 @@ void BakingLab::VoxelizeScene(MeshBakerStatus& status)
         context->Dispatch(DispatchSize(8, AppSettings::VoxelResolution), DispatchSize(8, AppSettings::VoxelResolution), 1);
 
         ClearCSOutputs(context);
-    }
+    }*/
 
     {
         PIXEvent pixEvent(L"Generate Voxel Mips");
