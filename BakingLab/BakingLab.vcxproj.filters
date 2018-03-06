@@ -104,6 +104,9 @@
     </ClCompile>
     <ClCompile Include="SG.cpp" />
     <ClCompile Include="PathTracer.cpp" />
+    <ClCompile Include="..\Externals\HosekSky\Include\ArHosekSkyModel.c">
+      <Filter>SampleFramework11\Graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
