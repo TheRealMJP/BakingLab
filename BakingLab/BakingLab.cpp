@@ -54,7 +54,6 @@ static const Float2 SceneCameraRotations[] = { Float2(0.0f, 0.0f), Float2(0.0f, 
 static const float SceneAlbedoScales[] = { 0.5f, 0.5f, 1.0f };
 
 static const Uint3 SceneDefaultProbeRes[] = { Uint3(4, 4, 4), Uint3(5, 3, 5), Uint3(5, 5, 5) };
-// static const float SceneDefaultBoundsScales[] = { 1.5f, 1.65f, 1.0f };
 static const float SceneDefaultBoundsScales[] = { 1.1f, 1.1f, 1.1f };
 
 StaticAssert_(ArraySize_(ScenePaths) >= uint64(Scenes::NumValues));
