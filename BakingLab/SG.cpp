@@ -209,6 +209,8 @@ static void SolveProjection(SGSolveParam& params)
         params.OutSGs[i].Amplitude *= monteCarloFactor;
 }
 
+// Accumulates a single sample for computing a set of SG's using a running average. This technique and the code it's based
+// on was provided by Thomas Roughton in the following article: http://torust.me/rendering/irradiance-caching/spherical-gaussians/2018/09/21/spherical-gaussians.html
 void SGRunningAverage(const Float3& dir, const Float3& color, SG* outSGs, uint64 numSGs, float* lobeWeights, bool nonNegative)
 {
     float sampleLobeWeights[AppSettings::MaxSGCount] = { };
