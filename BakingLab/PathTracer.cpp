@@ -113,7 +113,8 @@ static Float3 SampleSphericalAreaLight(const Float3& position, const Float3& nor
                                        const Float3& diffuseAlbedo, const Float3& cameraPos,
                                        bool includeSpecular, Float3 specAlbedo, float roughness,
                                        float u1, float u2, float lightRadius,
-                                       const Float3& lightPos, const Float3& lightColor, Float3& irradiance)
+                                       const Float3& lightPos, const Float3& lightColor,
+                                       Float3& irradiance, Float3& sampleDir)
 {
     const float radius2 = lightRadius * lightRadius;
     const float invPDF = 2.0f * Pi * radius2;
@@ -130,7 +131,7 @@ static Float3 SampleSphericalAreaLight(const Float3& position, const Float3& nor
     samplePos.y = lightPos.y + 2.0f * r * std::sin(2.0f * Pi * y) * std::sqrt(x * (1.0f - x));
     samplePos.z = lightPos.z + r * (1.0f - 2.0f * x);
 
-    Float3 sampleDir = samplePos - position;
+    sampleDir = samplePos - position;
     float sampleDirLen = Float3::Length(sampleDir);
     bool visible = false;
     if(sampleDirLen > 0.0f)
@@ -165,12 +166,12 @@ static Float3 SampleSphericalAreaLight(const Float3& position, const Float3& nor
 Float3 SampleAreaLight(const Float3& position, const Float3& normal, RTCScene scene,
                        const Float3& diffuseAlbedo, const Float3& cameraPos,
                        bool includeSpecular, Float3 specAlbedo, float roughness,
-                       float u1, float u2, Float3& irradiance)
+                       float u1, float u2, Float3& irradiance, Float3& sampleDir)
 {
     Float3 lightPos = Float3(AppSettings::AreaLightX, AppSettings::AreaLightY, AppSettings::AreaLightZ);
     return SampleSphericalAreaLight(position, normal, scene, diffuseAlbedo, cameraPos, includeSpecular,
                                     specAlbedo, roughness, u1, u2, AppSettings::AreaLightSize,
-                                    lightPos, AppSettings::AreaLightColor.Value() * FP16Scale, irradiance);
+                                    lightPos, AppSettings::AreaLightColor.Value() * FP16Scale, irradiance, sampleDir);
 }
 
 // Checks to see if a ray intersects with the area light
@@ -199,8 +200,9 @@ static Float3 SampleSunLight(const Float3& position, const Float3& normal, RTCSc
     const float radius = std::tan(DegToRad(AppSettings::SunSize)) * sunDistance;
     Float3 sunLuminance = AppSettings::SunLuminance();
     Float3 sunPos = position + AppSettings::SunDirection.Value() * sunDistance;
+    Float3 sampleDir;
     return SampleSphericalAreaLight(position, normal, scene, diffuseAlbedo, cameraPos, includeSpecular,
-                                    specAlbedo, roughness, u1, u2, radius, sunPos, sunLuminance, irradiance);
+                                    specAlbedo, roughness, u1, u2, radius, sunPos, sunLuminance, irradiance, sampleDir);
 }
 
 // Generates a full list of sample points for all integration types
@@ -376,9 +378,10 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
                     Float2 areaLightSample = params.SampleSet->AreaLight();
                     if(pathLength > 1)
                         areaLightSample = randomGenerator.RandomFloat2();
+                    Float3 areaLightSampleDir;
                     directLighting += SampleAreaLight(hitSurface.Position, normal, bvh.Scene, diffuseAlbedo,
                                                       rayOrigin, enableSpecular, specAlbedo, roughness,
-                                                      areaLightSample.x, areaLightSample.y, directIrradiance);
+                                                      areaLightSample.x, areaLightSample.y, directIrradiance, areaLightSampleDir);
                 }
 
                 radiance += directLighting * throughput;

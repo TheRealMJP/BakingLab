@@ -192,7 +192,7 @@ void GenerateIntegrationSamples(IntegrationSamples& samples, uint64 sqrtNumSampl
 Float3 SampleAreaLight(const Float3& position, const Float3& normal, RTCScene scene,
                        const Float3& diffuseAlbedo, const Float3& cameraPos,
                        bool includeSpecular, Float3 specAlbedo, float roughness,
-                       float u1, float u2, Float3& irradiance);
+                       float u1, float u2, Float3& irradiance, Float3& sampleDir);
 
 // Options for path tracing
 struct PathTracerParams

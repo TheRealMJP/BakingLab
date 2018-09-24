@@ -82,7 +82,7 @@ struct DiffuseBaker
         return SampleCosineHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample, bool hitSky)
+    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
     {
         ResultSum += sample;
     }
@@ -122,7 +122,7 @@ struct HL2Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample, bool hitSky)
+    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
     {
         static const Float3 BasisDirs[BasisCount] =
         {
@@ -175,7 +175,7 @@ struct SH4Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample, bool hitSky)
+    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
     {
         ResultSum += ProjectOntoSH4Color(sampleDir, sample);
     }
@@ -219,7 +219,7 @@ struct SH9Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample, bool hitSky)
+    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
     {
         ResultSum += ProjectOntoSH9Color(sampleDir, sample);
     }
@@ -263,7 +263,7 @@ struct H4Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample, bool hitSky)
+    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
     {
         ResultSum += ProjectOntoSH9Color(sampleDir, sample);
     }
@@ -313,7 +313,7 @@ struct H6Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample, bool hitSky)
+    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
     {
         ResultSum += ProjectOntoSH9Color(sampleDir, sample);
     }
@@ -386,7 +386,7 @@ template<uint64 SGCount> struct SGBaker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample, bool hitSky)
+    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
     {
         SampleDirs[CurrSampleIdx] = sampleDir;
         Samples[CurrSampleIdx] = sample;
@@ -560,8 +560,11 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
                     continue;
 
                 Float4 texelResults[TBaker::BasisCount];
-                for(uint64 basisIdx = 0; basisIdx < TBaker::BasisCount; ++basisIdx)
-                    texelResults[basisIdx] = context.BakeOutput[basisIdx][texelIdx].ToFloat4();
+                if(sampleIdx > 0)
+                {
+                    for(uint64 basisIdx = 0; basisIdx < TBaker::BasisCount; ++basisIdx)
+                        texelResults[basisIdx] = context.BakeOutput[basisIdx][texelIdx].ToFloat4();
+                }
 
                 baker.Init(numSamplesPerTexel, texelResults);
 
@@ -576,27 +579,37 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
                 // Create a random ray direction in tangent space, then convert to world space
                 Float3 rayStart = bakePoint.Position;
                 Float3 rayDirTS = baker.SampleDirection(sampleSet.Pixel());
-                Float3 rayDir = Float3::Transform(rayDirTS, tangentFrame);
-                rayDir = Float3::Normalize(rayDir);
+                Float3 rayDirWS = Float3::Transform(rayDirTS, tangentFrame);
+                rayDirWS = Float3::Normalize(rayDirWS);
 
-                params.RayDir = rayDir;
-                params.RayStart = rayStart + 0.1f * rayDir;
-                params.RayLen = FLT_MAX;
-                params.SampleSet = &sampleSet;
+                Float3 sampleResult = 0.0f;
 
-                float illuminance = 0.0f;
-                bool hitSky = false;
-                Float3 sampleResult = PathTrace(params, random, illuminance, hitSky);
-
-                if(addAreaLight)
+                Float2 directAreaLightSample = sampleSet.Lens();
+                if(addAreaLight && directAreaLightSample.x >= 0.5f)
                 {
                     Float3 areaLightIrradiance;
-                    sampleResult += SampleAreaLight(bakePoint.Position, bakePoint.Normal, context.SceneBVH->Scene,
-                                                    1.0f, 0.0f, false, 0.0f, 1.0f, sampleSet.Lens().x,
-                                                    sampleSet.Lens().y, areaLightIrradiance);
+                    sampleResult = SampleAreaLight(bakePoint.Position, bakePoint.Normal, context.SceneBVH->Scene,
+                                                   1.0f, 0.0f, false, 0.0f, 1.0f, sampleSet.Lens().x,
+                                                   sampleSet.Lens().y, areaLightIrradiance, rayDirWS);
+                    rayDirTS = Float3::Transform(rayDirWS, Float3x3::Transpose(tangentFrame));
+                }
+                else
+                {
+                    params.RayDir = rayDirWS;
+                    params.RayStart = rayStart + 0.1f * rayDirWS;
+                    params.RayLen = FLT_MAX;
+                    params.SampleSet = &sampleSet;
+
+                    float illuminance = 0.0f;
+                    bool hitSky = false;
+                    sampleResult = PathTrace(params, random, illuminance, hitSky);
                 }
 
-                baker.AddSample(rayDirTS, sampleIdx, sampleResult, hitSky);
+                // Account for equally distributing our samples among the area light and the rest of the environment
+                if(addAreaLight)
+                    sampleResult *= 2.0f;
+
+                baker.AddSample(rayDirTS, sampleIdx, sampleResult);
 
                 baker.ProgressiveResult(texelResults, sampleIdx);
 
@@ -640,27 +653,37 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
             // Create a random ray direction in tangent space, then convert to world space
             Float3 rayStart = bakePoint.Position;
             Float3 rayDirTS = baker.SampleDirection(sampleSet.Pixel());
-            Float3 rayDir = Float3::Transform(rayDirTS, tangentFrame);
-            rayDir = Float3::Normalize(rayDir);
+            Float3 rayDirWS = Float3::Transform(rayDirTS, tangentFrame);
+            rayDirWS = Float3::Normalize(rayDirWS);
 
-            params.RayDir = rayDir;
-            params.RayStart = rayStart + 0.1f * rayDir;
-            params.RayLen = FLT_MAX;
-            params.SampleSet = &sampleSet;
+            Float3 sampleResult;
 
-            float illuminance = 0.0f;
-            bool hitSky = false;
-            Float3 sampleResult = PathTrace(params, random, illuminance, hitSky);
-
-            if(addAreaLight)
+            Float2 directAreaLightSample = sampleSet.Lens();
+            if(addAreaLight && directAreaLightSample.x >= 0.5f)
             {
                 Float3 areaLightIrradiance;
                 sampleResult += SampleAreaLight(bakePoint.Position, bakePoint.Normal, context.SceneBVH->Scene,
                                                 1.0f, 0.0f, false, 0.0f, 1.0f, sampleSet.Lens().x,
-                                                sampleSet.Lens().y, areaLightIrradiance);
+                                                sampleSet.Lens().y, areaLightIrradiance, rayDirWS);
+                rayDirTS = Float3::Transform(rayDirWS, Float3x3::Transpose(tangentFrame));
+            }
+            else
+            {
+                params.RayDir = rayDirWS;
+                params.RayStart = rayStart + 0.1f * rayDirWS;
+                params.RayLen = FLT_MAX;
+                params.SampleSet = &sampleSet;
+
+                float illuminance = 0.0f;
+                bool hitSky = false;
+                sampleResult = PathTrace(params, random, illuminance, hitSky);
             }
 
-            baker.AddSample(rayDirTS, sampleIdx, sampleResult, hitSky);
+            // Account for equally distributing our samples among the area light and the rest of the environment
+            if(addAreaLight)
+                sampleResult *= 2.0f;
+
+            baker.AddSample(rayDirTS, sampleIdx, sampleResult);
         }
 
         baker.FinalResult(texelResults);
