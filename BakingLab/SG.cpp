@@ -209,6 +209,54 @@ static void SolveProjection(SGSolveParam& params)
         params.OutSGs[i].Amplitude *= monteCarloFactor;
 }
 
+void SGRunningAverage(const Float3& dir, const Float3& color, SG* outSGs, uint64 numSGs, float* lobeWeights, bool nonNegative)
+{
+    float sampleLobeWeights[AppSettings::MaxSGCount] = { };
+    Float3 currentValue;
+
+    for(uint64 lobeIdx = 0; lobeIdx < numSGs; ++lobeIdx)
+    {
+        float dotProduct = Float3::Dot(outSGs[lobeIdx].Axis, dir);
+        float weight = exp(outSGs[lobeIdx].Sharpness * (dotProduct - 1.0f));
+        currentValue += outSGs[lobeIdx].Amplitude * weight;
+
+        sampleLobeWeights[lobeIdx] = weight;
+    }
+
+    Float3 deltaValue = color - currentValue;
+
+    for(uint64 lobeIdx = 0; lobeIdx < numSGs; ++lobeIdx)
+    {
+        float weight = sampleLobeWeights[lobeIdx];
+        if(weight == 0.0f)
+            continue;
+
+        lobeWeights[lobeIdx] += weight;
+
+        float weightScale = weight / lobeWeights[lobeIdx];
+        outSGs[lobeIdx].Amplitude += deltaValue * weightScale;
+
+        if(nonNegative)
+        {
+            outSGs[lobeIdx].Amplitude.x = Max(outSGs[lobeIdx].Amplitude.x, 0.0f);
+            outSGs[lobeIdx].Amplitude.y = Max(outSGs[lobeIdx].Amplitude.y, 0.0f);
+            outSGs[lobeIdx].Amplitude.z = Max(outSGs[lobeIdx].Amplitude.z, 0.0f);
+        }
+    }
+}
+
+static void SolveRunningAverage(SGSolveParam& params, bool nonNegative)
+{
+    Assert_(params.XSamples != nullptr);
+    Assert_(params.YSamples != nullptr);
+
+    float lobeWeights[AppSettings::MaxSGCount] = { };
+
+    // Project color samples onto the SGs
+    for(uint32 i = 0; i < params.NumSamples; ++i)
+        SGRunningAverage(params.XSamples[i], params.YSamples[i], params.OutSGs, params.NumSGs, lobeWeights, nonNegative);
+}
+
 // Solve the set of spherical gaussians based on input set of data
 void SolveSGs(SGSolveParam& params)
 {
@@ -220,6 +268,10 @@ void SolveSGs(SGSolveParam& params)
         SolveNNLS(params);
     else if(AppSettings::SolveMode == SolveModes::SVD)
         SolveSVD(params);
+    else if(AppSettings::SolveMode == SolveModes::RunningAverage)
+        SolveRunningAverage(params, false);
+    else if(AppSettings::SolveMode == SolveModes::RunningAverageNN)
+        SolveRunningAverage(params, true);
     else
         SolveProjection(params);
 }

@@ -108,3 +108,5 @@ const SG* InitialGuess();
 void SolveSGs(SGSolveParam& params);
 
 void ProjectOntoSGs(const Float3& dir, const Float3& color, SG* outSGs, uint64 numSGs);
+
+void SGRunningAverage(const Float3& dir, const Float3& color, SG* outSGs, uint64 numSGs, float* lobeWeights, bool nonNegative);

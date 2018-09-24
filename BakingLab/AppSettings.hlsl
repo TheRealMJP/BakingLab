@@ -175,6 +175,8 @@ static const int BakeModes_SG12 = 9;
 static const int SolveModes_Projection = 0;
 static const int SolveModes_SVD = 1;
 static const int SolveModes_NNLS = 2;
+static const int SolveModes_RunningAverage = 3;
+static const int SolveModes_RunningAverageNN = 4;
 
 static const int Scenes_Box = 0;
 static const int Scenes_WhiteRoom = 1;

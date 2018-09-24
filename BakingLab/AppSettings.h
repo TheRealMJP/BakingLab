@@ -217,6 +217,8 @@ enum class SolveModes
     Projection = 0,
     SVD = 1,
     NNLS = 2,
+    RunningAverage = 3,
+    RunningAverageNN = 4,
 
     NumValues
 };

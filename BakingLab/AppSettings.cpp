@@ -154,11 +154,13 @@ static const char* BakeModesLabels[10] =
     "SG12",
 };
 
-static const char* SolveModesLabels[3] =
+static const char* SolveModesLabels[5] =
 {
     "Ad-Hoc Projection",
     "Least Squares",
     "Non-Negative Least Squares",
+    "Running Average",
+    "Running Average Non-Negative",
 };
 
 static const char* ScenesLabels[3] =
@@ -493,7 +495,7 @@ namespace AppSettings
         BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "", BakeModes::SG9, 10, BakeModesLabels);
         Settings.AddSetting(&BakeMode);
 
-        SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::NNLS, 3, SolveModesLabels);
+        SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::NNLS, 5, SolveModesLabels);
         Settings.AddSetting(&SolveMode);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);

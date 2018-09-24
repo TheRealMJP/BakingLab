@@ -289,6 +289,12 @@ enum SolveModes
 
     [EnumLabel("Non-Negative Least Squares")]
     NNLS,
+
+    [EnumLabel("Running Average")]
+    RunningAverage,
+
+    [EnumLabel("Running Average Non-Negative")]
+    RunningAverageNN,
 }
 
 enum SGDiffuseModes

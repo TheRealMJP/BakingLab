@@ -71,7 +71,7 @@ struct DiffuseBaker
     uint64 NumSamples = 0;
     Float3 ResultSum;
 
-    void Init(uint64 numSamples)
+    void Init(uint64 numSamples, Float4 prevResult[BasisCount])
     {
         NumSamples = numSamples;
         ResultSum = 0.0f;
@@ -111,7 +111,7 @@ struct HL2Baker
     uint64 NumSamples = 0;
     Float3 ResultSum[3];
 
-    void Init(uint64 numSamples)
+    void Init(uint64 numSamples, Float4 prevResult[BasisCount])
     {
         NumSamples = numSamples;
         ResultSum[0] = ResultSum[1] = ResultSum[2] = 0.0f;
@@ -164,7 +164,7 @@ struct SH4Baker
     uint64 NumSamples = 0;
     SH4Color ResultSum;
 
-    void Init(uint64 numSamples)
+    void Init(uint64 numSamples, Float4 prevResult[BasisCount])
     {
         NumSamples = numSamples;
         ResultSum = SH4Color();
@@ -208,7 +208,7 @@ struct SH9Baker
     uint64 NumSamples = 0;
     SH9Color ResultSum;
 
-    void Init(uint64 numSamples)
+    void Init(uint64 numSamples, Float4 prevResult[BasisCount])
     {
         NumSamples = numSamples;
         ResultSum = SH9Color();
@@ -252,7 +252,7 @@ struct H4Baker
     uint64 NumSamples = 0;
     SH9Color ResultSum;
 
-    void Init(uint64 numSamples)
+    void Init(uint64 numSamples, Float4 prevResult[BasisCount])
     {
         NumSamples = numSamples;
         ResultSum = SH9Color();
@@ -302,7 +302,7 @@ struct H6Baker
     uint64 NumSamples = 0;
     SH9Color ResultSum;
 
-    void Init(uint64 numSamples)
+    void Init(uint64 numSamples, Float4 prevResult[BasisCount])
     {
         NumSamples = numSamples;
         ResultSum = SH9Color();
@@ -355,8 +355,9 @@ template<uint64 SGCount> struct SGBaker
     FixedArray<Float3> SampleDirs;
     FixedArray<Float3> Samples;
     SG ProjectedResult[SGCount];
+    float RunningAverageWeights[SGCount] = { };
 
-    void Init(uint64 numSamples)
+    void Init(uint64 numSamples, Float4 prevResult[BasisCount])
     {
         CurrSampleIdx = 0;
         NumSamples = numSamples;
@@ -369,6 +370,15 @@ template<uint64 SGCount> struct SGBaker
         const SG* initialGuess = InitialGuess();
         for(uint64 i = 0; i < SGCount; ++i)
             ProjectedResult[i] = initialGuess[i];
+
+        if(AppSettings::SolveMode == SolveModes::RunningAverage || AppSettings::SolveMode == SolveModes::RunningAverageNN)
+        {
+            for(uint64 i = 0; i < SGCount; ++i)
+            {
+                ProjectedResult[i].Amplitude = prevResult[i].To3D();
+                RunningAverageWeights[i] = prevResult[i].w;
+            }
+        }
     }
 
     Float3 SampleDirection(Float2 samplePoint)
@@ -382,7 +392,12 @@ template<uint64 SGCount> struct SGBaker
         Samples[CurrSampleIdx] = sample;
         ++CurrSampleIdx;
 
-        ProjectOntoSGs(sampleDir, sample, ProjectedResult, SGCount);
+        if(AppSettings::SolveMode == SolveModes::RunningAverage)
+            SGRunningAverage(sampleDir, sample, ProjectedResult, SGCount, RunningAverageWeights, false);
+        else if(AppSettings::SolveMode == SolveModes::RunningAverageNN)
+            SGRunningAverage(sampleDir, sample, ProjectedResult, SGCount, RunningAverageWeights, true);
+        else
+            ProjectOntoSGs(sampleDir, sample, ProjectedResult, SGCount);
     }
 
     void FinalResult(Float4 bakeOutput[BasisCount])
@@ -403,13 +418,21 @@ template<uint64 SGCount> struct SGBaker
 
     void ProgressiveResult(Float4 bakeOutput[BasisCount], uint64 passIdx)
     {
-        const float lerpFactor = passIdx / (passIdx + 1.0f);
-        for(uint64 i = 0; i < BasisCount; ++i)
+        if(AppSettings::SolveMode == SolveModes::RunningAverage || AppSettings::SolveMode == SolveModes::RunningAverageNN)
         {
-            Float3 newSample = ProjectedResult[i].Amplitude * HemisphereMonteCarloFactor(1);
-            Float3 currValue = bakeOutput[i].To3D();
-            currValue = Lerp<Float3>(newSample, currValue, lerpFactor);
-            bakeOutput[i] = Float4(Float3::Clamp(currValue, -FP16Max, FP16Max), 1.0f);
+            for(uint64 i = 0; i < SGCount; ++i)
+                bakeOutput[i] = Float4(Float3::Clamp(ProjectedResult[i].Amplitude, -FP16Max, FP16Max), RunningAverageWeights[i]);
+        }
+        else
+        {
+            const float lerpFactor = passIdx / (passIdx + 1.0f);
+            for(uint64 i = 0; i < SGCount; ++i)
+            {
+                Float3 newSample = ProjectedResult[i].Amplitude * HemisphereMonteCarloFactor(1);
+                Float3 currValue = bakeOutput[i].To3D();
+                currValue = Lerp<Float3>(newSample, currValue, lerpFactor);
+                bakeOutput[i] = Float4(Float3::Clamp(currValue, -FP16Max, FP16Max), 1.0f);
+            }
         }
     }
 };
@@ -536,7 +559,11 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
                 if(bakePoint.Coverage == 0 || bakePoint.Coverage == 0xFFFFFFFF)
                     continue;
 
-                baker.Init(numSamplesPerTexel);
+                Float4 texelResults[TBaker::BasisCount];
+                for(uint64 basisIdx = 0; basisIdx < TBaker::BasisCount; ++basisIdx)
+                    texelResults[basisIdx] = context.BakeOutput[basisIdx][texelIdx].ToFloat4();
+
+                baker.Init(numSamplesPerTexel, texelResults);
 
                 IntegrationSampleSet sampleSet;
                 sampleSet.Init(integrationSamples, groupTexelIdx, sampleIdx);
@@ -571,9 +598,6 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
 
                 baker.AddSample(rayDirTS, sampleIdx, sampleResult, hitSky);
 
-                Float4 texelResults[TBaker::BasisCount];
-                for(uint64 basisIdx = 0; basisIdx < TBaker::BasisCount; ++basisIdx)
-                    texelResults[basisIdx] = context.BakeOutput[basisIdx][texelIdx].ToFloat4();
                 baker.ProgressiveResult(texelResults, sampleIdx);
 
                 for(uint64 basisIdx = 0; basisIdx < TBaker::BasisCount; ++basisIdx)
@@ -583,7 +607,8 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
     }
     else
     {
-        baker.Init(numSamplesPerTexel);
+        Float4 texelResults[TBaker::BasisCount];
+        baker.Init(numSamplesPerTexel, texelResults);
 
         // Figure out the texel within the group that we're working on (we do 64 passes per group, each one a different texel)
         const uint64 groupTexelIdx =  batchIdx / numBakeGroups;
@@ -638,7 +663,6 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
             baker.AddSample(rayDirTS, sampleIdx, sampleResult, hitSky);
         }
 
-        Float4 texelResults[TBaker::BasisCount];
         baker.FinalResult(texelResults);
         for(uint64 basisIdx = 0; basisIdx < TBaker::BasisCount; ++basisIdx)
             context.BakeOutput[basisIdx][texelIdx] = texelResults[basisIdx];
