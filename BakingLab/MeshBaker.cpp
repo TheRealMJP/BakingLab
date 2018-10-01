@@ -393,9 +393,9 @@ template<uint64 SGCount> struct SGBaker
         ++CurrSampleIdx;
 
         if(AppSettings::SolveMode == SolveModes::RunningAverage)
-            SGRunningAverage(sampleDir, sample, ProjectedResult, SGCount, RunningAverageWeights, false);
+            SGRunningAverage(sampleDir, sample, ProjectedResult, SGCount, (float)sampleIdx, RunningAverageWeights, false);
         else if(AppSettings::SolveMode == SolveModes::RunningAverageNN)
-            SGRunningAverage(sampleDir, sample, ProjectedResult, SGCount, RunningAverageWeights, true);
+            SGRunningAverage(sampleDir, sample, ProjectedResult, SGCount, (float)sampleIdx, RunningAverageWeights, true);
         else
             ProjectOntoSGs(sampleDir, sample, ProjectedResult, SGCount);
     }

@@ -19,8 +19,11 @@ using namespace SampleFramework11;
 struct SG
 {
     Float3 Amplitude;
+	float Sharpness = 1.0f;
     Float3 Axis;
-    float Sharpness = 1.0f;
+
+	// exp(2 * Sharpness * (dot(Axis, Direction) - 1.0f)) integrated over the sampling domain.
+	float BasisSqIntegralOverDomain;
 };
 
 // Evaluates an SG given a direction on a unit sphere
@@ -109,4 +112,4 @@ void SolveSGs(SGSolveParam& params);
 
 void ProjectOntoSGs(const Float3& dir, const Float3& color, SG* outSGs, uint64 numSGs);
 
-void SGRunningAverage(const Float3& dir, const Float3& color, SG* outSGs, uint64 numSGs, float* lobeWeights, bool nonNegative);
+void SGRunningAverage(const Float3& dir, const Float3& color, SG* outSGs, uint64 numSGs, float sampleIdx, float* lobeWeights, bool nonNegative);
