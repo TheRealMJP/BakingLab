@@ -260,8 +260,8 @@ void SGRunningAverage(const Float3& dir, const Float3& color, SG* outSGs, uint64
 
 		lobeWeights[lobeIdx] += (sphericalIntegralGuess - lobeWeights[lobeIdx]) * sampleWeightScale;
 
-		// Clamp the spherical integral estimate to within a reasonable factor of the true value.
-		float sphericalIntegral = std::max(lobeWeights[lobeIdx], outSGs[lobeIdx].BasisSqIntegralOverDomain * 0.75f);
+		// Clamp the spherical integral estimate to at least the true value to reduce variance.
+		float sphericalIntegral = std::max(lobeWeights[lobeIdx], outSGs[lobeIdx].BasisSqIntegralOverDomain);
 
 		Float3 otherLobesContribution = currentEstimate - outSGs[lobeIdx].Amplitude * weight;
 		Float3 newValue = (color - otherLobesContribution) * (weight / sphericalIntegral);
