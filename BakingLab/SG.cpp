@@ -65,7 +65,7 @@ static void GenerateUniformHemisphereSGs(SG* sgs, uint64 numSGs)
         sgs[i].Sharpness = sharpness;
 
 	
-	const uint64 sampleCount = 1024;
+	const uint64 sampleCount = 2048;
 	Float2 samples[sampleCount];
 	GenerateHammersleySamples2D(samples, sampleCount);
 
@@ -76,15 +76,12 @@ static void GenerateUniformHemisphereSGs(SG* sgs, uint64 numSGs)
 	{
 		Float3 dir = SampleDirectionHemisphere(samples[i].x, samples[i].y);
 
-		for (uint32 i = 0; i < numSGs; ++i) 
+		for (uint32 j = 0; j < numSGs; ++j)
 		{
-			float weight = std::exp(sgs[i].Sharpness * (Float3::Dot(dir, sgs[i].Axis) - 1.0f));
-			sgs[i].BasisSqIntegralOverDomain += weight * weight;
+			float weight = std::exp(sgs[j].Sharpness * (Float3::Dot(dir, sgs[j].Axis) - 1.0f));
+			sgs[j].BasisSqIntegralOverDomain += (weight * weight - sgs[j].BasisSqIntegralOverDomain) / float(i + 1);
 		}
 	}
-
-	for (uint32 i = 0; i < numSGs; ++i)
-		sgs[i].BasisSqIntegralOverDomain /= (float)sampleCount;
 }
 
 void InitializeSGSolver(uint64 numSGs)
@@ -260,8 +257,8 @@ void SGRunningAverage(const Float3& dir, const Float3& color, SG* outSGs, uint64
 
 		lobeWeights[lobeIdx] += (sphericalIntegralGuess - lobeWeights[lobeIdx]) * sampleWeightScale;
 
-		// Clamp the spherical integral estimate to within a reasonable factor of the true value.
-		float sphericalIntegral = std::max(lobeWeights[lobeIdx], outSGs[lobeIdx].BasisSqIntegralOverDomain * 0.75f);
+		// Clamp the spherical integral estimate to at least the true value to reduce variance.
+		float sphericalIntegral = std::max(lobeWeights[lobeIdx], outSGs[lobeIdx].BasisSqIntegralOverDomain);
 
 		Float3 otherLobesContribution = currentEstimate - outSGs[lobeIdx].Amplitude * weight;
 		Float3 newValue = (color - otherLobesContribution) * (weight / sphericalIntegral);
@@ -286,7 +283,7 @@ static void SolveRunningAverage(SGSolveParam& params, bool nonNegative)
 
     // Project color samples onto the SGs
     for(uint32 i = 0; i < params.NumSamples; ++i)
-        SGRunningAverage(params.XSamples[i], params.YSamples[i], params.OutSGs, params.NumSGs, (float)(i + 1), lobeWeights, nonNegative);
+        SGRunningAverage(params.XSamples[i], params.YSamples[i], params.OutSGs, params.NumSGs, (float)i, lobeWeights, nonNegative);
 }
 
 // Solve the set of spherical gaussians based on input set of data

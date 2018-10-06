@@ -458,10 +458,10 @@ struct BakeThreadContext
     SampleModes CurrSampleMode = SampleModes::Random;
     uint64 CurrNumSamples = 0;
     const std::vector<IntegrationSamples>* Samples;
-    FixedArray<Half4>* BakeOutput = nullptr;
+    FixedArray<Float4>* BakeOutput = nullptr;
     volatile int64* CurrBatch = nullptr;
 
-    void Init(FixedArray<Half4>* bakeOutput, const std::vector<IntegrationSamples>* samples,
+    void Init(FixedArray<Float4>* bakeOutput, const std::vector<IntegrationSamples>* samples,
               volatile int64* currBatch, const MeshBaker* meshBaker, uint64 newTag)
     {
         if(BakeTag == uint64(-1))
@@ -563,10 +563,11 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
                 if(sampleIdx > 0)
                 {
                     for(uint64 basisIdx = 0; basisIdx < TBaker::BasisCount; ++basisIdx)
-                        texelResults[basisIdx] = context.BakeOutput[basisIdx][texelIdx].ToFloat4();
+                        texelResults[basisIdx] = context.BakeOutput[basisIdx][texelIdx];
                 }
 
-                baker.Init(numSamplesPerTexel, texelResults);
+                // The baker only accumulates one sample per pixel in progressive rendering.
+                baker.Init(1, texelResults);
 
                 IntegrationSampleSet sampleSet;
                 sampleSet.Init(integrationSamples, groupTexelIdx, sampleIdx);
@@ -712,7 +713,7 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
 // Data passed to the bake thread entry point
 struct BakeThreadData
 {
-    FixedArray<Half4>* BakeOutput = nullptr;
+    FixedArray<Float4>* BakeOutput = nullptr;
     const std::vector<IntegrationSamples>* Samples = nullptr;
     volatile int64* CurrBatch = nullptr;
     const MeshBaker* Baker = nullptr;
@@ -1694,12 +1695,14 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         ZeroMemory(&mapped, sizeof(mapped));
         if(SUCCEEDED(deviceContext->Map(stagingTexture, 0, D3D11_MAP_WRITE, 0, &mapped)))
         {
-            uint8* dst = reinterpret_cast<uint8*>(mapped.pData);
-            const Half4* src = bakeResults[bakeTextureUpdateIdx].Data();
+            Half4* dst = reinterpret_cast<Half4*>(mapped.pData);
+            const Float4* src = bakeResults[bakeTextureUpdateIdx].Data();
             for(uint64 y = 0; y < LightMapSize; ++y)
             {
-                memcpy(dst, src, sizeof(Half4) * LightMapSize);
-                dst += mapped.RowPitch;
+                for(uint64 x = 0; x < LightMapSize; ++x)
+                    dst[x] = Half4(src[x]);
+
+                dst += mapped.RowPitch / sizeof(Half4);
                 src += LightMapSize;
             }
 
