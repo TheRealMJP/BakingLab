@@ -65,7 +65,7 @@ static void GenerateUniformHemisphereSGs(SG* sgs, uint64 numSGs)
         sgs[i].Sharpness = sharpness;
 
 	
-	const uint64 sampleCount = 1024;
+	const uint64 sampleCount = 2048;
 	Float2 samples[sampleCount];
 	GenerateHammersleySamples2D(samples, sampleCount);
 
@@ -76,15 +76,12 @@ static void GenerateUniformHemisphereSGs(SG* sgs, uint64 numSGs)
 	{
 		Float3 dir = SampleDirectionHemisphere(samples[i].x, samples[i].y);
 
-		for (uint32 i = 0; i < numSGs; ++i) 
+		for (uint32 j = 0; j < numSGs; ++j)
 		{
-			float weight = std::exp(sgs[i].Sharpness * (Float3::Dot(dir, sgs[i].Axis) - 1.0f));
-			sgs[i].BasisSqIntegralOverDomain += weight * weight;
+			float weight = std::exp(sgs[j].Sharpness * (Float3::Dot(dir, sgs[j].Axis) - 1.0f));
+			sgs[j].BasisSqIntegralOverDomain += (weight * weight - sgs[j].BasisSqIntegralOverDomain) / float(i + 1);
 		}
 	}
-
-	for (uint32 i = 0; i < numSGs; ++i)
-		sgs[i].BasisSqIntegralOverDomain /= (float)sampleCount;
 }
 
 void InitializeSGSolver(uint64 numSGs)
