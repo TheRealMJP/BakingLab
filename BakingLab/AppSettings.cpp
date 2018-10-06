@@ -495,7 +495,7 @@ namespace AppSettings
         BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "", BakeModes::SG9, 10, BakeModesLabels);
         Settings.AddSetting(&BakeMode);
 
-        SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::NNLS, 5, SolveModesLabels);
+        SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::RunningAverageNN, 5, SolveModesLabels);
         Settings.AddSetting(&SolveMode);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
