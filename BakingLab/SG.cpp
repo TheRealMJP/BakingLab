@@ -283,7 +283,7 @@ static void SolveRunningAverage(SGSolveParam& params, bool nonNegative)
 
     // Project color samples onto the SGs
     for(uint32 i = 0; i < params.NumSamples; ++i)
-        SGRunningAverage(params.XSamples[i], params.YSamples[i], params.OutSGs, params.NumSGs, (float)(i + 1), lobeWeights, nonNegative);
+        SGRunningAverage(params.XSamples[i], params.YSamples[i], params.OutSGs, params.NumSGs, (float)i, lobeWeights, nonNegative);
 }
 
 // Solve the set of spherical gaussians based on input set of data
