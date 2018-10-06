@@ -98,7 +98,7 @@ public:
     uint64 currNumTiles = 0;
 
     // Read/Write data shared with bake threads
-    FixedArray<Half4> bakeResults[AppSettings::MaxBasisCount];
+    FixedArray<Float4> bakeResults[AppSettings::MaxBasisCount];
     volatile int64 currBakeBatch = 0;
 
     // Read-only data shared with bake threads
