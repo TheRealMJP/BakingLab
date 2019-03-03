@@ -28,6 +28,9 @@
 #include "SG.h"
 #include "PathTracer.h"
 
+// Suppress vs2013: "new behavior: elements of array 'array' will be default initialized"
+#pragma warning(disable : 4351)
+
 static const uint64 TileSize = 16;
 static const uint64 BakeGroupSizeX = 8;
 static const uint64 BakeGroupSizeY = 8;

@@ -97,6 +97,8 @@ All instructions on how to use this code are in the accompanying header file.
 
 */
 
+#include "PCH.h"
+
 #include "ArHosekSkyModel.h"
 #include "ArHosekSkyModelData_Spectral.h"
 #include "ArHosekSkyModelData_CIEXYZ.h"
@@ -523,7 +525,7 @@ double arhosekskymodel_radiance(
         double                  wavelength
         )
 {
-    int low_wl = (wavelength - 320.0 ) / 40.0;
+    int low_wl = int((wavelength - 320.0 ) / 40.0);
 
     if ( low_wl < 0 || low_wl >= 11 )
         return 0.0f;

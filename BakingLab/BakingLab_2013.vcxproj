@@ -123,6 +123,7 @@
     <ClCompile Include="..\SampleFramework11\v1.02\Graphics\SpriteRenderer.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.02\Graphics\Textures.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.02\Graphics\WICTextureLoader.cpp" />
+    <ClCompile Include="..\SampleFramework11\v1.02\HosekSky\ArHosekSkyModel.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.02\Input.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.02\MurmurHash.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.02\PCH.cpp">
@@ -171,6 +172,7 @@
     <ClInclude Include="..\SampleFramework11\v1.02\Graphics\SpriteRenderer.h" />
     <ClInclude Include="..\SampleFramework11\v1.02\Graphics\Textures.h" />
     <ClInclude Include="..\SampleFramework11\v1.02\Graphics\WICTextureLoader.h" />
+    <ClInclude Include="..\SampleFramework11\v1.02\HosekSky\ArHosekSkyModel.h" />
     <ClInclude Include="..\SampleFramework11\v1.02\Input.h" />
     <ClInclude Include="..\SampleFramework11\v1.02\InterfacePointers.h" />
     <ClInclude Include="..\SampleFramework11\v1.02\MurmurHash.h" />

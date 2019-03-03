@@ -12,6 +12,7 @@
 #include "Skybox.h"
 
 #include "..\\Utility.h"
+#include "..\\HosekSky\\ArHosekSkyModel.h"
 #include "ShaderCompilation.h"
 #include "Textures.h"
 #include "Math.h"

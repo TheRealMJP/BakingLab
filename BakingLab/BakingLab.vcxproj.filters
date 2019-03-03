@@ -104,6 +104,9 @@
     </ClCompile>
     <ClCompile Include="SG.cpp" />
     <ClCompile Include="PathTracer.cpp" />
+    <ClCompile Include="..\SampleFramework11\v1.02\HosekSky\ArHosekSkyModel.cpp">
+      <Filter>SampleFramework11\HosekSky</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -230,6 +233,9 @@
     </ClInclude>
     <ClInclude Include="SG.h" />
     <ClInclude Include="PathTracer.h" />
+    <ClInclude Include="..\SampleFramework11\v1.02\HosekSky\ArHosekSkyModel.h">
+      <Filter>SampleFramework11\HosekSky</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Icon.ico" />
@@ -247,6 +253,9 @@
     </Filter>
     <Filter Include="SampleFramework11\External DLLs">
       <UniqueIdentifier>{f554bad2-3017-4de6-b296-a8d625a6d4df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SampleFramework11\HosekSky">
+      <UniqueIdentifier>{591ecf22-a66d-4ef9-8dd6-5598a9cf84d5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
