@@ -663,7 +663,7 @@ public class Settings
 
         BakeModes BakeMode = BakeModes.SG9;
 
-        SolveModes SolveMode = SolveModes.NNLS;
+        SolveModes SolveMode = SolveModes.RunningAverageNN;
     }
 
     [ExpandGroup(false)]
