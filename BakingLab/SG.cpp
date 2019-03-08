@@ -22,16 +22,19 @@
 #include "AppSettings.h"
 #include <Graphics/Sampling.h>
 
+enum class SGDistribution : uint32
+{
+    Spherical,
+    Hemispherical,
+};
 
 static SG defaultInitialGuess[AppSettings::MaxSGCount];
 static bool eigenInitialized = false;
 
 // Generate uniform spherical gaussians on the sphere or hemisphere
-static void GenerateUniformHemisphereSGs(SG* sgs, uint64 numSGs)
+void GenerateUniformSGs(SG* outSGs, uint64 numSGs, SGDistribution distribution)
 {
-    uint64 N = numSGs * 2;
-
-    Assert_(numSGs <= uint64(AppSettings::MaxSGCount));
+    const uint64 N = distribution == SGDistribution::Hemispherical ? numSGs * 2 : numSGs;
 
     Float3 means[AppSettings::MaxSGCount * 2];
 
@@ -50,38 +53,43 @@ static void GenerateUniformHemisphereSGs(SG* sgs, uint64 numSGs)
     {
         // For the sphere we always accept the sample point but for the hemisphere we only accept
         // sample points on the correct side of the hemisphere
-        if(Float3::Dot(means[i].z, Float3(0.0f, 0.0f, 1.0f)) >= 0.0f)
+        if(distribution == SGDistribution::Spherical || Float3::Dot(means[i].z, Float3(0.0f, 0.0f, 1.0f)) >= 0.0f)
         {
             SG sample;
             sample.Axis = Float3::Normalize(means[i]);
-            sgs[currSG++] = sample;
+            outSGs[currSG++] = sample;
         }
     }
 
-    Float3 h = Float3::Normalize(sgs[1].Axis + sgs[0].Axis);
-    float sharpness = (std::log(0.65f) * numSGs) / ((Float3::Dot(h, sgs[0].Axis) - 1.0f));
+    float minDP = 1.0f;
+    for(uint64 i = 1; i < numSGs; ++i)
+    {
+        Float3 h = Float3::Normalize(outSGs[i].Axis + outSGs[0].Axis);
+        minDP = Min(minDP, Float3::Dot(h, outSGs[0].Axis));
+    }
+
+    float sharpness = (std::log(0.65f) * numSGs) / (minDP - 1.0f);
 
     for(uint32 i = 0; i < numSGs; ++i)
-        sgs[i].Sharpness = sharpness;
+        outSGs[i].Sharpness = sharpness;
 
-	
-	const uint64 sampleCount = 2048;
-	Float2 samples[sampleCount];
-	GenerateHammersleySamples2D(samples, sampleCount);
+    const uint64 sampleCount = 2048;
+    Float2 samples[sampleCount];
+    GenerateHammersleySamples2D(samples, sampleCount);
 
-	for (uint32 i = 0; i < numSGs; ++i)
-		sgs[i].BasisSqIntegralOverDomain = 0.0f;
+    for(uint32 i = 0; i < numSGs; ++i)
+        outSGs[i].BasisSqIntegralOverDomain = 0.0f;
 
-	for (uint64 i = 0; i < sampleCount; ++i)
-	{
-		Float3 dir = SampleDirectionHemisphere(samples[i].x, samples[i].y);
-
-		for (uint32 j = 0; j < numSGs; ++j)
-		{
-			float weight = std::exp(sgs[j].Sharpness * (Float3::Dot(dir, sgs[j].Axis) - 1.0f));
-			sgs[j].BasisSqIntegralOverDomain += (weight * weight - sgs[j].BasisSqIntegralOverDomain) / float(i + 1);
-		}
-	}
+    for(uint64 i = 0; i < sampleCount; ++i)
+    {
+        Float3 dir = distribution == SGDistribution::Hemispherical ? SampleDirectionHemisphere(samples[i].x, samples[i].y)
+                                                                   : SampleDirectionSphere(samples[i].x, samples[i].y);
+        for(uint32 j = 0; j < numSGs; ++j)
+        {
+            float weight = std::exp(outSGs[j].Sharpness * (Float3::Dot(dir, outSGs[j].Axis) - 1.0f));
+            outSGs[j].BasisSqIntegralOverDomain += (weight * weight - outSGs[j].BasisSqIntegralOverDomain) / float(i + 1);
+        }
+    }
 }
 
 void InitializeSGSolver(uint64 numSGs)
@@ -92,7 +100,7 @@ void InitializeSGSolver(uint64 numSGs)
         eigenInitialized = true;
     }
 
-	GenerateUniformHemisphereSGs(defaultInitialGuess, numSGs);
+	GenerateUniformSGs(defaultInitialGuess, numSGs, SGDistribution::Hemispherical);
 }
 
 const SG* InitialGuess()
@@ -270,7 +278,7 @@ void SGRunningAverage(const Float3& dir, const Float3& color, SG* outSGs, uint64
             outSGs[lobeIdx].Amplitude.x = Max(outSGs[lobeIdx].Amplitude.x, 0.0f);
             outSGs[lobeIdx].Amplitude.y = Max(outSGs[lobeIdx].Amplitude.y, 0.0f);
             outSGs[lobeIdx].Amplitude.z = Max(outSGs[lobeIdx].Amplitude.z, 0.0f);
-        } 
+        }
     }
 }
 
