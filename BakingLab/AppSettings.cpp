@@ -701,6 +701,7 @@ namespace AppSettings
 #include <Graphics\\Spectrum.h>
 #include <Graphics\\Sampling.h>
 #include <SF11_Math.h>
+#include <HosekSky\\ArHosekSkyModel.h>
 
 namespace AppSettings
 {
