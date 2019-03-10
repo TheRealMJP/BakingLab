@@ -300,25 +300,6 @@ enum SGDiffuseModes
     Fitted,
 }
 
-enum ProbeModes
-{
-    CubeMap,
-    AmbientCube,
-
-    [EnumLabel("L1 SH")]
-    L1_SH,
-
-    [EnumLabel("L2 SH")]
-    L2_SH,
-}
-
-enum VoxelVisualizerModes
-{
-    None,
-    Geometry,
-    RayMarch
-};
-
 public class Settings
 {
     const float BaseSunSize = 0.27f;
@@ -684,8 +665,6 @@ public class Settings
     {
         bool UseProbes = false;
 
-        ProbeModes ProbeMode = ProbeModes.CubeMap;
-
         [MinValue(1)]
         [MaxValue(2048)]
         int ProbeResX = 4;
@@ -730,16 +709,6 @@ public class Settings
         int ProbeDistanceIntegrationSamples = 32;
     }
 
-    [ExpandGroup(true)]
-    public class VCT
-    {
-        bool BakeWithVCT = false;
-
-        [MinValue(2)]
-        [MaxValue(2048)]
-        [DisplayName("Voxel Resolution")]
-        int VoxelResolution = 64;
-    }
 
     [ExpandGroup(false)]
     public class Scene
@@ -883,13 +852,6 @@ public class Settings
 
         bool ViewIndirectSpecular = false;
 
-        [UseAsShaderConstant(false)]
-        VoxelVisualizerModes VoxelVisualizerMode = VoxelVisualizerModes.None;
-
-        [MinValue(0)]
-        [MaxValue(16)]
-        int VoxelVisualizerMipLevel = 0;
-
         [DisplayName("Save Light Settings")]
         [HelpText("Saves the lighting settings to a file")]
         Button SaveLightSettings;
@@ -907,9 +869,6 @@ public class Settings
 
         [UseAsShaderConstant(false)]
         bool AlwaysRegenerateProbes = false;
-
-        [UseAsShaderConstant(false)]
-        bool AlwaysRevoxelize = false;
 
         [MinValue(-100.0f)]
         [MaxValue(100.0f)]

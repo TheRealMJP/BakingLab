@@ -33,8 +33,6 @@ cbuffer Constants : register(b0)
 //=================================================================================================
 TextureCubeArray<float4> ProbeIrradianceCubeMap : register(t0);
 TextureCubeArray<float2> ProbeDistanceCubeMap : register(t1);
-Texture3D<float4> ProbeVolumeMaps[MaxBasisCount];
-Texture3D<float2> ProbeDistanceVolumeMaps[MaxBasisCount];
 SamplerState LinearSampler : register(s0);
 
 //=================================================================================================
@@ -88,49 +86,7 @@ VSOutput VS(in float3 SpherePosition : POSITION, in uint InstanceID : SV_Instanc
 //=================================================================================================
 float4 PS(in PSInput input) : SV_Target0
 {
-    float3 output = 0.0f;
-
-    if(ProbeMode == ProbeModes_CubeMap)
-    {
-        output = ProbeIrradianceCubeMap.Sample(LinearSampler, float4(input.NormalWS, input.ProbeIdx)).xyz * InvPi;
-    }
-    else if(ProbeMode == ProbeModes_AmbientCube)
-    {
-        float3 ambientCubeDirs[6] = { float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), float3(-1, 0, 0), float3(0, -1, 0), float3(0, 0, -1) };
-
-        float weightSum = 0.0f;
-
-        [unroll]
-        for(uint i = 0; i < 6; ++i)
-        {
-            float weight = saturate(dot(input.NormalWS, ambientCubeDirs[i]));
-            if(weight > 0.0f)
-                output += ProbeVolumeMaps[i].SampleLevel(LinearSampler, input.ProbeUVW, 0.0f).xyz * weight;
-            weightSum += weight;
-        }
-
-        output *= rcp(weightSum) * InvPi;
-    }
-    else if(ProbeMode == ProbeModes_L1_SH)
-    {
-        SH4Color sh;
-
-        [unroll]
-        for(uint i = 0; i < 4; ++i)
-            sh.c[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, input.ProbeUVW, 0.0f).xyz;
-
-        output = EvalSH4(input.NormalWS, sh);
-    }
-    else if(ProbeMode == ProbeModes_L2_SH)
-    {
-        SH9Color sh;
-
-        [unroll]
-        for(uint i = 0; i < 9; ++i)
-            sh.c[i] = ProbeVolumeMaps[i].SampleLevel(LinearSampler, input.ProbeUVW, 0.0f).xyz;
-
-        output = EvalSH9(input.NormalWS, sh);
-    }
+    float3 output = ProbeIrradianceCubeMap.Sample(LinearSampler, float4(input.NormalWS, input.ProbeIdx)).xyz * InvPi;
 
     return float4(output, 1.0f);
 }

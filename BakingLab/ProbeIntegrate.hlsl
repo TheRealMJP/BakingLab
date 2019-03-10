@@ -167,35 +167,6 @@ float3x3 MakeTangentFrame(in float3 normal, in uint faceIdx)
     return float3x3(tangent, bitangent, normal);
 }
 
-void IntegrateOntoBasis(in float3 dir, in float3 value, inout float3 output[MaxBasisCount])
-{
-    if(ProbeMode == ProbeModes_AmbientCube)
-    {
-        output[0] += value * saturate(dir.x);
-        output[1] += value * saturate(dir.y);
-        output[2] += value * saturate(dir.z);
-        output[3] += value * saturate(-dir.x);
-        output[4] += value * saturate(-dir.y);
-        output[5] += value * saturate(-dir.z);
-    }
-    else if(ProbeMode == ProbeModes_L1_SH)
-    {
-        SH4Color sh = ProjectOntoSH4Color(dir, value);
-
-        [unroll]
-        for(uint i = 0; i < 4; ++i)
-            output[i] += sh.c[i];
-    }
-    else if(ProbeMode == ProbeModes_L2_SH)
-    {
-        SH9Color sh = ProjectOntoSH9Color(dir, value);
-
-        [unroll]
-        for(uint i = 0; i < 9; ++i)
-            output[i] += sh.c[i];
-    }
-}
-
 // ================================================================================================
 
 TextureCube<float4> RadianceCaptureMap : register(t0);
@@ -227,40 +198,6 @@ void IntegrateIrradianceCubeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThr
     // irradiance = 16.0f;
 
     IrradianceCubeMap[uint3(outputPos, outputSliceIdx)] = float4(irradiance, 0.0f);
-}
-
-// ================================================================================================
-
-RWTexture3D<float4> OutputVolumeMaps[MaxBasisCount] : register(u0);
-
-[numthreads(1, 1, 1)]
-void IntegrateVolumeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : SV_GroupThreadID)
-{
-    uint3 outputTexelIdx;
-    outputTexelIdx.x = OutputProbeIdx % ProbeResX;
-    outputTexelIdx.y = (OutputProbeIdx / ProbeResX) % ProbeResY;
-    outputTexelIdx.z = OutputProbeIdx / (ProbeResX * ProbeResY);
-
-    float3 output[MaxBasisCount];
-    for(int b = 0; b < MaxBasisCount; ++b)
-        output[b] = 0.0f;
-
-    const uint numSamples = max(ProbeIntegrationSamples * ProbeIntegrationSamples, 1);
-    for(uint sampleIdx = 0; sampleIdx < numSamples; ++sampleIdx)
-    {
-        float2 samplePos = Hammersley2D(sampleIdx, numSamples);
-        float3 sampleDir = SampleDirectionSphere(samplePos.x, samplePos.y);
-        float3 radiance = RadianceCaptureMap.SampleLevel(LinearSampler, sampleDir, 0.0f).xyz;
-
-        IntegrateOntoBasis(sampleDir, radiance, output);
-    }
-
-    [unroll]
-    for(int i = 0; i < MaxBasisCount; ++i)
-    {
-        float3 outputValue = output[i] * (4 * Pi / numSamples);
-        OutputVolumeMaps[i][outputTexelIdx] = float4(clamp(outputValue, -FP16Max, FP16Max), 0.0f);
-    }
 }
 
 // ================================================================================================
@@ -313,38 +250,4 @@ void IntegrateDistanceCubeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThrea
     // outputDistance = DistanceCaptureMap.SampleLevel(LinearSampler, normal, 0.0f).xy;
 
     DistanceOutputCubeMap[uint3(outputPos, outputSliceIdx)] = outputDistance;
-}
-
-// ================================================================================================
-
-RWTexture3D<unorm float2> OutputVolumeDistanceMaps[MaxBasisCount] : register(u0);
-
-[numthreads(1, 1, 1)]
-void IntegrateDistanceVolumeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThreadID : SV_GroupThreadID)
-{
-    uint3 outputTexelIdx;
-    outputTexelIdx.x = OutputProbeIdx % ProbeResX;
-    outputTexelIdx.y = (OutputProbeIdx / ProbeResX) % ProbeResY;
-    outputTexelIdx.z = OutputProbeIdx / (ProbeResX * ProbeResY);
-
-    float3 output[MaxBasisCount];
-    for(int b = 0; b < MaxBasisCount; ++b)
-        output[b] = 0.0f;
-
-    const uint numSamples = max(ProbeIntegrationSamples * ProbeIntegrationSamples, 1);
-    for(uint sampleIdx = 0; sampleIdx < numSamples; ++sampleIdx)
-    {
-        float2 samplePos = Hammersley2D(sampleIdx, numSamples);
-        float3 sampleDir = SampleDirectionSphere(samplePos.x, samplePos.y);
-        float2 sampleDistance = DistanceCaptureMap.SampleLevel(LinearSampler, sampleDir, 0.0f);
-
-        IntegrateOntoBasis(sampleDir, float3(sampleDistance, 0.0f), output);
-    }
-
-    [unroll]
-    for(int i = 0; i < MaxBasisCount; ++i)
-    {
-        float2 outputValue = output[i].xy * (4 * Pi / numSamples);
-        OutputVolumeDistanceMaps[i][outputTexelIdx] = clamp(outputValue, -FP16Max, FP16Max);
-    }
 }

@@ -161,26 +161,11 @@ static const char* SolveModesLabels[3] =
     "Non-Negative Least Squares",
 };
 
-static const char* ProbeModesLabels[4] =
-{
-    "CubeMap",
-    "AmbientCube",
-    "L1 SH",
-    "L2 SH",
-};
-
 static const char* ScenesLabels[3] =
 {
     "Box",
     "White Room",
     "Sponza",
-};
-
-static const char* VoxelVisualizerModesLabels[3] =
-{
-    "None",
-    "Geometry",
-    "RayMarch",
 };
 
 namespace AppSettings
@@ -255,7 +240,6 @@ namespace AppSettings
     BakeModesSetting BakeMode;
     SolveModesSetting SolveMode;
     BoolSetting UseProbes;
-    ProbeModesSetting ProbeMode;
     IntSetting ProbeResX;
     IntSetting ProbeResY;
     IntSetting ProbeResZ;
@@ -268,8 +252,6 @@ namespace AppSettings
     FloatSetting DistanceFilterSharpness;
     IntSetting ProbeIntegrationSamples;
     IntSetting ProbeDistanceIntegrationSamples;
-    BoolSetting BakeWithVCT;
-    IntSetting VoxelResolution;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -296,14 +278,11 @@ namespace AppSettings
     BoolSetting ShowBakeDataVisualizer;
     BoolSetting ShowProbeVisualizer;
     BoolSetting ViewIndirectSpecular;
-    VoxelVisualizerModesSetting VoxelVisualizerMode;
-    IntSetting VoxelVisualizerMipLevel;
     Button SaveLightSettings;
     Button LoadLightSettings;
     Button SaveEXRScreenshot;
     BoolSetting ShowSunIntensity;
     BoolSetting AlwaysRegenerateProbes;
-    BoolSetting AlwaysRevoxelize;
     FloatSetting SceneBoundsOffsetX;
     FloatSetting SceneBoundsOffsetY;
     FloatSetting SceneBoundsOffsetZ;
@@ -538,9 +517,6 @@ namespace AppSettings
         UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", false);
         Settings.AddSetting(&UseProbes);
 
-        ProbeMode.Initialize(tweakBar, "ProbeMode", "Probes", "Probe Mode", "", ProbeModes::CubeMap, 4, ProbeModesLabels);
-        Settings.AddSetting(&ProbeMode);
-
         ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 4, 1, 2048);
         Settings.AddSetting(&ProbeResX);
 
@@ -576,12 +552,6 @@ namespace AppSettings
 
         ProbeDistanceIntegrationSamples.Initialize(tweakBar, "ProbeDistanceIntegrationSamples", "Probes", "Probe Distance Integration Samples", "", 32, 1, 64);
         Settings.AddSetting(&ProbeDistanceIntegrationSamples);
-
-        BakeWithVCT.Initialize(tweakBar, "BakeWithVCT", "VCT", "Bake With VCT", "", false);
-        Settings.AddSetting(&BakeWithVCT);
-
-        VoxelResolution.Initialize(tweakBar, "VoxelResolution", "VCT", "Voxel Resolution", "", 64, 2, 2048);
-        Settings.AddSetting(&VoxelResolution);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
@@ -661,12 +631,6 @@ namespace AppSettings
         ViewIndirectSpecular.Initialize(tweakBar, "ViewIndirectSpecular", "Debug", "View Indirect Specular", "", false);
         Settings.AddSetting(&ViewIndirectSpecular);
 
-        VoxelVisualizerMode.Initialize(tweakBar, "VoxelVisualizerMode", "Debug", "Voxel Visualizer Mode", "", VoxelVisualizerModes::None, 3, VoxelVisualizerModesLabels);
-        Settings.AddSetting(&VoxelVisualizerMode);
-
-        VoxelVisualizerMipLevel.Initialize(tweakBar, "VoxelVisualizerMipLevel", "Debug", "Voxel Visualizer Mip Level", "", 0, 0, 16);
-        Settings.AddSetting(&VoxelVisualizerMipLevel);
-
         SaveLightSettings.Initialize(tweakBar, "SaveLightSettings", "Debug", "Save Light Settings", "Saves the lighting settings to a file");
         Settings.AddSetting(&SaveLightSettings);
 
@@ -681,9 +645,6 @@ namespace AppSettings
 
         AlwaysRegenerateProbes.Initialize(tweakBar, "AlwaysRegenerateProbes", "Debug", "Always Regenerate Probes", "", false);
         Settings.AddSetting(&AlwaysRegenerateProbes);
-
-        AlwaysRevoxelize.Initialize(tweakBar, "AlwaysRevoxelize", "Debug", "Always Revoxelize", "", false);
-        Settings.AddSetting(&AlwaysRevoxelize);
 
         SceneBoundsOffsetX.Initialize(tweakBar, "SceneBoundsOffsetX", "Debug", "Scene Bounds Offset X", "", 0.0000f, -100.0000f, 100.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SceneBoundsOffsetX);
@@ -711,8 +672,6 @@ namespace AppSettings
         TwHelper::SetOpened(tweakBar, "Baking", false);
 
         TwHelper::SetOpened(tweakBar, "Probes", false);
-
-        TwHelper::SetOpened(tweakBar, "VCT", true);
 
         TwHelper::SetOpened(tweakBar, "Scene", false);
 
@@ -784,7 +743,6 @@ namespace AppSettings
         CBuffer.Data.BakeMode = BakeMode;
         CBuffer.Data.SolveMode = SolveMode;
         CBuffer.Data.UseProbes = UseProbes;
-        CBuffer.Data.ProbeMode = ProbeMode;
         CBuffer.Data.ProbeResX = ProbeResX;
         CBuffer.Data.ProbeResY = ProbeResY;
         CBuffer.Data.ProbeResZ = ProbeResZ;
@@ -796,8 +754,6 @@ namespace AppSettings
         CBuffer.Data.DistanceFilterSharpness = DistanceFilterSharpness;
         CBuffer.Data.ProbeIntegrationSamples = ProbeIntegrationSamples;
         CBuffer.Data.ProbeDistanceIntegrationSamples = ProbeDistanceIntegrationSamples;
-        CBuffer.Data.BakeWithVCT = BakeWithVCT;
-        CBuffer.Data.VoxelResolution = VoxelResolution;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;
@@ -813,7 +769,6 @@ namespace AppSettings
         CBuffer.Data.BloomMagnitude = BloomMagnitude;
         CBuffer.Data.BloomBlurSigma = BloomBlurSigma;
         CBuffer.Data.ViewIndirectSpecular = ViewIndirectSpecular;
-        CBuffer.Data.VoxelVisualizerMipLevel = VoxelVisualizerMipLevel;
 
         CBuffer.ApplyChanges(context);
         CBuffer.SetVS(context, 7);

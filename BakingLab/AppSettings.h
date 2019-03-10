@@ -223,18 +223,6 @@ enum class SolveModes
 
 typedef EnumSettingT<SolveModes> SolveModesSetting;
 
-enum class ProbeModes
-{
-    CubeMap = 0,
-    AmbientCube = 1,
-    L1_SH = 2,
-    L2_SH = 3,
-
-    NumValues
-};
-
-typedef EnumSettingT<ProbeModes> ProbeModesSetting;
-
 enum class Scenes
 {
     Box = 0,
@@ -245,17 +233,6 @@ enum class Scenes
 };
 
 typedef EnumSettingT<Scenes> ScenesSetting;
-
-enum class VoxelVisualizerModes
-{
-    None = 0,
-    Geometry = 1,
-    RayMarch = 2,
-
-    NumValues
-};
-
-typedef EnumSettingT<VoxelVisualizerModes> VoxelVisualizerModesSetting;
 
 namespace AppSettings
 {
@@ -333,7 +310,6 @@ namespace AppSettings
     extern BakeModesSetting BakeMode;
     extern SolveModesSetting SolveMode;
     extern BoolSetting UseProbes;
-    extern ProbeModesSetting ProbeMode;
     extern IntSetting ProbeResX;
     extern IntSetting ProbeResY;
     extern IntSetting ProbeResZ;
@@ -346,8 +322,6 @@ namespace AppSettings
     extern FloatSetting DistanceFilterSharpness;
     extern IntSetting ProbeIntegrationSamples;
     extern IntSetting ProbeDistanceIntegrationSamples;
-    extern BoolSetting BakeWithVCT;
-    extern IntSetting VoxelResolution;
     extern ScenesSetting CurrentScene;
     extern BoolSetting EnableDiffuse;
     extern BoolSetting EnableSpecular;
@@ -374,14 +348,11 @@ namespace AppSettings
     extern BoolSetting ShowBakeDataVisualizer;
     extern BoolSetting ShowProbeVisualizer;
     extern BoolSetting ViewIndirectSpecular;
-    extern VoxelVisualizerModesSetting VoxelVisualizerMode;
-    extern IntSetting VoxelVisualizerMipLevel;
     extern Button SaveLightSettings;
     extern Button LoadLightSettings;
     extern Button SaveEXRScreenshot;
     extern BoolSetting ShowSunIntensity;
     extern BoolSetting AlwaysRegenerateProbes;
-    extern BoolSetting AlwaysRevoxelize;
     extern FloatSetting SceneBoundsOffsetX;
     extern FloatSetting SceneBoundsOffsetY;
     extern FloatSetting SceneBoundsOffsetZ;
@@ -436,7 +407,6 @@ namespace AppSettings
         int32 BakeMode;
         int32 SolveMode;
         bool32 UseProbes;
-        int32 ProbeMode;
         int32 ProbeResX;
         int32 ProbeResY;
         int32 ProbeResZ;
@@ -448,8 +418,6 @@ namespace AppSettings
         float DistanceFilterSharpness;
         int32 ProbeIntegrationSamples;
         int32 ProbeDistanceIntegrationSamples;
-        bool32 BakeWithVCT;
-        int32 VoxelResolution;
         bool32 EnableDiffuse;
         bool32 EnableSpecular;
         bool32 EnableDirectLighting;
@@ -465,7 +433,6 @@ namespace AppSettings
         float BloomMagnitude;
         float BloomBlurSigma;
         bool32 ViewIndirectSpecular;
-        int32 VoxelVisualizerMipLevel;
     };
 
     extern ConstantBuffer<AppSettingsCBuffer> CBuffer;
@@ -652,39 +619,6 @@ namespace AppSettings
     inline uint64 NumProbes()
     {
         return ProbeResX * ProbeResY * ProbeResZ;
-    }
-
-    inline uint64 ProbeBasisCount(uint64 probeMode)
-    {
-        Assert_(probeMode < uint64(ProbeModes::NumValues));
-        static const uint64 BasisCounts[] = { 1, 6, 4, 9 };
-        StaticAssert_(ArraySize_(BasisCounts) == uint64(ProbeModes::NumValues));
-        Assert_(BasisCounts[probeMode] <= MaxBasisCount);
-        return BasisCounts[probeMode];
-    }
-
-    inline uint64 ProbeBasisCount(ProbeModes probeMode)
-    {
-        return BasisCount(uint64(probeMode));
-    }
-
-    inline uint64 ProbeBasisCount()
-    {
-        return BasisCount(uint64(ProbeMode));
-    }
-
-    inline uint64 ProbeSGCount(ProbeModes probeMode)
-    {
-        /*Assert_(uint64(probeMode) < uint64(ProbeModes::NumValues));
-        if(uint64(probeMode) >= uint64(ProbeModes::SG5))
-            return BasisCount(probeMode);
-        else*/
-            return 0;
-    }
-
-    inline uint64 ProbeSGCount()
-    {
-        return SGCount(BakeMode);
     }
 
     void UpdateUI();

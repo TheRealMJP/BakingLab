@@ -358,20 +358,12 @@ void MeshRenderer::LoadShaders()
     {
         CompileOptions opts;
         opts.Add("ProbeRendering_", 0);
-        opts.Add("Voxelize_", 0);
         meshVS = CompileVSFromFile(device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
         meshPS = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
 
         opts.Reset();
         opts.Add("ProbeRendering_", 1);
-        opts.Add("Voxelize_", 0);
         meshPSProbes = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
-
-        opts.Reset();
-        opts.Add("ProbeRendering_", 0);
-        opts.Add("Voxelize_", 1);
-        meshVSVoxelize = CompileVSFromFile(device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
-        meshPSVoxelize = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
     }
 
     areaLightVS = CompileVSFromFile(device, L"AreaLight.hlsl", "VS", "vs_5_0");
@@ -382,21 +374,6 @@ void MeshRenderer::LoadShaders()
 
     probeVisualizerVS = CompileVSFromFile(device, L"ProbeVisualizer.hlsl", "VS", "vs_5_0");
     probeVisualizerPS = CompilePSFromFile(device, L"ProbeVisualizer.hlsl", "PS", "ps_5_0");
-
-    voxelGeoVS = CompileVSFromFile(device, L"VoxelVisualizer.hlsl", "GeoVS", "vs_5_0");
-    voxelGeoPS = CompilePSFromFile(device, L"VoxelVisualizer.hlsl", "GeoPS", "ps_5_0");
-
-    {
-        CompileOptions opts;
-        opts.Add("FirstMip_", 1);
-
-        voxelRayMarchVS = CompileVSFromFile(device, L"VoxelVisualizer.hlsl", "RayMarchVS", "vs_5_0", opts);
-        voxelRayMarchFirstMipPS = CompilePSFromFile(device, L"VoxelVisualizer.hlsl", "RayMarchPS", "ps_5_0", opts);
-
-        opts.Reset();
-        opts.Add("FirstMip_", 0);
-        voxelRayMarchPS = CompilePSFromFile(device, L"VoxelVisualizer.hlsl", "RayMarchPS", "ps_5_0", opts);
-    }
 
     fullScreenVS = CompileVSFromFile(device, L"EVSMConvert.hlsl", "FullScreenVS");
 
@@ -459,7 +436,6 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
     visualizerConstants.Initialize(device);
     evsmConstants.Initialize(device);
     reductionConstants.Initialize(device);
-    voxelVisualizerConstants.Initialize(device);
 
     shSpecularLookupA = LoadTexture(device, L"..\\Content\\Textures\\SHSpecularA.dds");
     shSpecularLookupB = LoadTexture(device, L"..\\Content\\Textures\\SHSpecularB.dds");
@@ -484,8 +460,6 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
 
     GenerateSphere(16, 8, device, sphereVB, sphereIB, numSphereIndices);
 
-    GenerateBox(device, voxelVisualizerVB, voxelVisualizerIB);
-
     D3D11_INPUT_ELEMENT_DESC elements[1];
     elements[0].AlignedByteOffset = 0;
     elements[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
@@ -503,12 +477,6 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
 
     DXCall(device->CreateInputLayout(elements, 1, areaLightVS->ByteCode->GetBufferPointer(),
                                      areaLightVS->ByteCode->GetBufferSize(), &areaLightInputLayout));
-
-    DXCall(device->CreateInputLayout(elements, 1, voxelGeoVS->ByteCode->GetBufferPointer(),
-                                     voxelGeoVS->ByteCode->GetBufferSize(), &voxelGeoIL));
-
-    DXCall(device->CreateInputLayout(elements, 1, voxelRayMarchVS->ByteCode->GetBufferPointer(),
-                                     voxelRayMarchVS->ByteCode->GetBufferSize(), &voxelRayMarchIL));
 
     SetModel(model);
 }
@@ -751,21 +719,15 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
 
 // Renders all meshes in the model, with shadows
 void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status,
-                                  bool32 probeRendering, bool voxelizing)
+                                  bool32 probeRendering)
 {
-    Assert_(probeRendering == false || voxelizing == false);
-
     PIXEvent event(L"Mesh Rendering");
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
     context->OMSetBlendState(blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
     context->OMSetDepthStencilState(depthStencilStates.DepthEnabled(), 0);
-
-    if(voxelizing && 0)
-        context->RSSetState(rasterizerStates.NoCullConservative());
-    else
-        context->RSSetState(rasterizerStates.NoCull());
+    context->RSSetState(rasterizerStates.NoCull());
 
     ID3D11SamplerState* sampStates[] = {
         samplerStates.Anisotropic(),
@@ -814,12 +776,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
 
     ID3D11VertexShader* vs = meshVS;
     ID3D11PixelShader* ps = meshPS;
-    if(voxelizing)
-    {
-        ps = meshPSVoxelize;
-        vs = meshVSVoxelize;
-    }
-    else if(probeRendering)
+    if(probeRendering)
     {
         vs = meshVS;
         ps = meshPSProbes;
@@ -867,18 +824,6 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
             };
 
             context->PSSetShaderResources(0, ArraySize_(psTextures), psTextures);
-
-            uint32 offset = ArraySize_(psTextures);
-            context->PSSetShaderResources(offset, 1, &status.VoxelRadiance);
-
-            offset += 1;
-            context->PSSetShaderResources(offset, ArraySize_(status.VoxelRadianceMips), status.VoxelRadianceMips);
-
-            offset += ArraySize_(status.VoxelRadianceMips);
-            context->PSSetShaderResources(offset, ArraySize_(status.ProbeVolumeMaps), status.ProbeVolumeMaps);
-
-            offset += ArraySize_(status.ProbeVolumeMaps);
-            context->PSSetShaderResources(offset, ArraySize_(status.ProbeDistanceVolumeMaps), status.ProbeDistanceVolumeMaps);
 
             context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
         }
@@ -1303,12 +1248,6 @@ void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Cam
     ID3D11ShaderResourceView* psSrvs[] = { status.ProbeIrradianceCubeMap, status.ProbeDistanceCubeMap };
     context->PSSetShaderResources(0, ArraySize_(psSrvs), psSrvs);
 
-    uint32 offset = ArraySize_(psSrvs);
-    context->PSSetShaderResources(offset, ArraySize_(status.ProbeVolumeMaps), status.ProbeVolumeMaps);
-
-    offset += ArraySize_(status.ProbeVolumeMaps);
-    context->PSSetShaderResources(offset, ArraySize_(status.ProbeDistanceVolumeMaps), status.ProbeDistanceVolumeMaps);
-
     ID3D11SamplerState* psSamplers[] = { samplerStates.LinearClamp() };
     context->PSSetSamplers(0, ArraySize_(psSamplers), psSamplers);
 
@@ -1326,84 +1265,4 @@ void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Cam
 
     ID3D11ShaderResourceView* nullSRVs[2] = { };
     context->PSSetShaderResources(0, ArraySize_(nullSRVs), nullSRVs);
-}
-
-void MeshRenderer::RenderVoxelVisualizer(ID3D11DeviceContext* context, const Camera& camera, const MeshBakerStatus& status)
-{
-    PIXEvent event(L"Voxel Visualizer");
-
-    // Set constant buffers
-    voxelVisualizerConstants.Data.ViewProjection = Float4x4::Transpose(camera.ViewProjectionMatrix());
-    voxelVisualizerConstants.Data.SceneMinBounds = status.SceneMinBounds;
-    voxelVisualizerConstants.Data.SceneMaxBounds = status.SceneMaxBounds;
-    voxelVisualizerConstants.Data.CameraPos = camera.Position();
-
-    uint32 mipVoxelRes = AppSettings::VoxelResolution;
-    for(int32 i = 0; i < AppSettings::VoxelVisualizerMipLevel; ++i)
-        mipVoxelRes = Max(mipVoxelRes / 2, 1u);
-    voxelVisualizerConstants.Data.MipVoxelRes = float(mipVoxelRes);
-
-    voxelVisualizerConstants.ApplyChanges(context);
-    voxelVisualizerConstants.SetVS(context, 0);
-    voxelVisualizerConstants.SetPS(context, 0);
-
-    // Set shaders
-    context->DSSetShader(nullptr, nullptr, 0);
-    context->HSSetShader(nullptr, nullptr, 0);
-    context->GSSetShader(nullptr, nullptr, 0);
-
-    ID3D11ShaderResourceView* srvs[7] = { status.VoxelRadiance };
-    for(uint64 i = 0; i < 6; ++i)
-        srvs[i + 1] = status.VoxelRadianceMips[i];
-
-    context->VSSetShaderResources(0, ArraySize_(srvs), srvs);
-    context->PSSetShaderResources(0, ArraySize_(srvs), srvs);
-
-    ID3D11SamplerState* samplers[] = { samplerStates.Point() };
-    context->PSSetSamplers(0, ArraySize_(samplers), samplers);
-
-    // Draw a box for each voxel
-    ID3D11Buffer* vertexBuffers[1] = { voxelVisualizerVB };
-    uint32 vertexStrides[1] = { sizeof(Float3) };
-    uint32 offsets[1] = { 0 };
-    context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
-    context->IASetIndexBuffer(voxelVisualizerIB, DXGI_FORMAT_R16_UINT, 0);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    if(AppSettings::VoxelVisualizerMode == VoxelVisualizerModes::Geometry)
-    {
-        // Set states
-        float blendFactor[4] = {1, 1, 1, 1};
-        context->OMSetBlendState(blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
-        context->OMSetDepthStencilState(depthStencilStates.DepthWriteEnabled(), 0);
-        context->RSSetState(rasterizerStates.BackFaceCull());
-
-        context->IASetInputLayout(voxelGeoIL);
-
-        context->VSSetShader(voxelGeoVS , nullptr, 0);
-        context->PSSetShader(voxelGeoPS, nullptr, 0);
-
-        const uint32 numVoxels = AppSettings::VoxelResolution * AppSettings::VoxelResolution * AppSettings::VoxelResolution;
-        context->DrawIndexedInstanced(NumBoxIndices, numVoxels, 0, 0, 0);
-    }
-    else if(AppSettings::VoxelVisualizerMode == VoxelVisualizerModes::RayMarch)
-    {
-        // Set states
-        float blendFactor[4] = {1, 1, 1, 1};
-        context->OMSetBlendState(blendStates.AlphaBlend(), blendFactor, 0xFFFFFFFF);
-        context->OMSetDepthStencilState(depthStencilStates.DepthDisabled(), 0);
-        context->RSSetState(rasterizerStates.FrontFaceCull());
-
-        context->IASetInputLayout(voxelRayMarchIL);
-
-        context->VSSetShader(voxelRayMarchVS , nullptr, 0);
-        context->PSSetShader(AppSettings::VoxelVisualizerMipLevel == 0 ? voxelRayMarchFirstMipPS : voxelRayMarchPS, nullptr, 0);
-
-        context->DrawIndexedInstanced(NumBoxIndices, 1, 0, 0, 0);
-    }
-
-    for(uint64 i = 0; i < ArraySize_(srvs); ++i)
-        srvs[i] = nullptr;
-    context->VSSetShaderResources(0, ArraySize_(srvs), srvs);
-    context->PSSetShaderResources(0, ArraySize_(srvs), srvs);
 }

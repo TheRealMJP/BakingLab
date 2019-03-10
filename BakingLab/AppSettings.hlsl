@@ -48,7 +48,6 @@ cbuffer AppSettings : register(b7)
     int BakeMode;
     int SolveMode;
     bool UseProbes;
-    int ProbeMode;
     int ProbeResX;
     int ProbeResY;
     int ProbeResZ;
@@ -60,8 +59,6 @@ cbuffer AppSettings : register(b7)
     float DistanceFilterSharpness;
     int ProbeIntegrationSamples;
     int ProbeDistanceIntegrationSamples;
-    bool BakeWithVCT;
-    int VoxelResolution;
     bool EnableDiffuse;
     bool EnableSpecular;
     bool EnableDirectLighting;
@@ -77,7 +74,6 @@ cbuffer AppSettings : register(b7)
     float BloomMagnitude;
     float BloomBlurSigma;
     bool ViewIndirectSpecular;
-    int VoxelVisualizerMipLevel;
 }
 
 static const int SunDirectionTypes_UnitVector = 0;
@@ -192,18 +188,9 @@ static const int SolveModes_Projection = 0;
 static const int SolveModes_SVD = 1;
 static const int SolveModes_NNLS = 2;
 
-static const int ProbeModes_CubeMap = 0;
-static const int ProbeModes_AmbientCube = 1;
-static const int ProbeModes_L1_SH = 2;
-static const int ProbeModes_L2_SH = 3;
-
 static const int Scenes_Box = 0;
 static const int Scenes_WhiteRoom = 1;
 static const int Scenes_Sponza = 2;
-
-static const int VoxelVisualizerModes_None = 0;
-static const int VoxelVisualizerModes_Geometry = 1;
-static const int VoxelVisualizerModes_RayMarch = 2;
 
 static const float BaseSunSize = 0.2700f;
 static const int MaxSGCount = 12;
