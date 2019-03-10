@@ -75,6 +75,7 @@ cbuffer AppSettings : register(b7)
     float BloomBlurSigma;
     int ProbeVisualizerMode;
     bool ViewIndirectSpecular;
+    bool ViewProbeSelection;
 }
 
 static const int SunDirectionTypes_UnitVector = 0;

@@ -286,6 +286,7 @@ namespace AppSettings
     BoolSetting ShowProbeVisualizer;
     ProbeVisualizerModesSetting ProbeVisualizerMode;
     BoolSetting ViewIndirectSpecular;
+    BoolSetting ViewProbeSelection;
     Button SaveLightSettings;
     Button LoadLightSettings;
     Button SaveEXRScreenshot;
@@ -642,6 +643,9 @@ namespace AppSettings
         ViewIndirectSpecular.Initialize(tweakBar, "ViewIndirectSpecular", "Debug", "View Indirect Specular", "", false);
         Settings.AddSetting(&ViewIndirectSpecular);
 
+        ViewProbeSelection.Initialize(tweakBar, "ViewProbeSelection", "Debug", "View Probe Selection", "", false);
+        Settings.AddSetting(&ViewProbeSelection);
+
         SaveLightSettings.Initialize(tweakBar, "SaveLightSettings", "Debug", "Save Light Settings", "Saves the lighting settings to a file");
         Settings.AddSetting(&SaveLightSettings);
 
@@ -682,7 +686,7 @@ namespace AppSettings
 
         TwHelper::SetOpened(tweakBar, "Baking", false);
 
-        TwHelper::SetOpened(tweakBar, "Probes", false);
+        TwHelper::SetOpened(tweakBar, "Probes", true);
 
         TwHelper::SetOpened(tweakBar, "Scene", false);
 
@@ -781,6 +785,7 @@ namespace AppSettings
         CBuffer.Data.BloomBlurSigma = BloomBlurSigma;
         CBuffer.Data.ProbeVisualizerMode = ProbeVisualizerMode;
         CBuffer.Data.ViewIndirectSpecular = ViewIndirectSpecular;
+        CBuffer.Data.ViewProbeSelection = ViewProbeSelection;
 
         CBuffer.ApplyChanges(context);
         CBuffer.SetVS(context, 7);

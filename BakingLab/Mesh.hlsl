@@ -66,11 +66,13 @@ Texture2D<float> RoughnessMap : register(t2);
 Texture2D<float> MetallicMap : register(t3);
 Texture2DArray SunShadowMap : register(t4);
 Texture2DArray<float4> BakedLightingMap : register(t5);
-TextureCube<float> AreaLightShadowMap : register(t6);
-Texture3D<float4> SHSpecularLookupA : register(t7);
-Texture3D<float2> SHSpecularLookupB : register(t8);
-TextureCubeArray<float4> ProbeIrradianceCubeMaps : register(t9);
-TextureCubeArray<float2> ProbeDistanceCubeMaps : register(t10);
+Texture2D<uint> ProbeSelectMap : register(t6);
+TextureCube<float> AreaLightShadowMap : register(t7);
+Texture3D<float4> SHSpecularLookupA : register(t8);
+Texture3D<float2> SHSpecularLookupB : register(t9);
+TextureCubeArray<float4> ProbeSpecularCubeMaps : register(t10);
+TextureCubeArray<float4> ProbeIrradianceCubeMaps : register(t11);
+TextureCubeArray<float2> ProbeDistanceCubeMaps : register(t12);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -476,9 +478,20 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     }
 }
 
-void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
+void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, in float2 lightMapUV, out float3 indirectIrradiance, out float3 indirectSpecular,
+                                      out float outProbeIdx)
 {
-    float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
+    const uint2 lmTexelCoord = uint2(lightMapUV * LightMapResolution);
+    const uint probeIdx = ProbeSelectMap[lmTexelCoord];
+    indirectIrradiance = ProbeIrradianceCubeMaps.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
+
+    float3 reflectDir = reflect(-surface.ViewWS, surface.NormalWS);
+    float3 fresnel = Fresnel(surface.SpecularAlbedo, surface.ViewWS, surface.NormalWS);
+    indirectSpecular = ProbeSpecularCubeMaps.Sample(LinearSampler, float4(reflectDir, probeIdx)).xyz * fresnel;
+
+    outProbeIdx = probeIdx;
+
+    /*float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
     float3 probeDims = float3(ProbeResX, ProbeResY, ProbeResZ);
 
     float3 halfTexelSize = 0.5f / probeDims;
@@ -523,7 +536,7 @@ void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indi
     // irradianceSum *= 1.0f / max(weightSum, 0.0002f);
 
     indirectIrradiance = irradianceSum;
-    indirectSpecular = 0.0f;
+    indirectSpecular = 0.0f;*/
 }
 
 
@@ -615,13 +628,14 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
     }
 
 	// Add in the indirect
-    if(EnableIndirectLighting || ViewIndirectSpecular)
+    if(EnableIndirectLighting || ViewIndirectSpecular || ViewProbeSelection)
     {
         float3 indirectIrradiance = 0.0f;
         float3 indirectSpecular = 0.0f;
+        float probeIdx = 0.0f;
 
         if(UseProbes || ProbeRendering_)
-            ComputeIndirectFromProbeCubeMaps(surface, indirectIrradiance, indirectSpecular);
+            ComputeIndirectFromProbeCubeMaps(surface, input.LightMapUV, indirectIrradiance, indirectSpecular, probeIdx);
         else
             ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
 
@@ -636,9 +650,15 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
 
         if(ViewIndirectSpecular)
             lighting = indirectSpecular;
+
+        if(ViewProbeSelection)
+            lighting = probeIdx * FP16Scale;
     }
 
     float illuminance = dot(irradiance, float3(0.2126f, 0.7152f, 0.0722f));
+
+    if(ViewProbeSelection)
+        illuminance = lighting.x;
 
     PSOutput output;
     output.Lighting = clamp(float4(lighting, illuminance), 0.0f, FP16Max);

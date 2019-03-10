@@ -667,7 +667,7 @@ public class Settings
         SolveModes SolveMode = SolveModes.NNLS;
     }
 
-    [ExpandGroup(false)]
+    [ExpandGroup(true)]
     public class Probes
     {
         bool UseProbes = true;
@@ -745,7 +745,7 @@ public class Settings
 
         [DisplayName("Enable Indirect Specular")]
         [HelpText("Enables indirect specular lighting")]
-        bool EnableIndirectSpecular = false;
+        bool EnableIndirectSpecular = true;
 
         [DisplayName("Enable Albedo Maps")]
         [HelpText("Enables albedo maps")]
@@ -860,6 +860,8 @@ public class Settings
         ProbeVisualizerModes ProbeVisualizerMode = ProbeVisualizerModes.Specular;
 
         bool ViewIndirectSpecular = false;
+
+        bool ViewProbeSelection = false;
 
         [DisplayName("Save Light Settings")]
         [HelpText("Saves the lighting settings to a file")]

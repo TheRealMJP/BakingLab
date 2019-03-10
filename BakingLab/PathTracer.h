@@ -39,6 +39,8 @@ struct BVHData
 {
     RTCDevice Device = nullptr;
     RTCScene Scene = nullptr;
+    Float3 SceneMin;
+    Float3 SceneMax;
     std::vector<Uint3> Triangles;
     std::vector<Vertex> Vertices;
     std::vector<uint16> MaterialIndices;
@@ -217,4 +219,4 @@ struct PathTracerParams
 
 // Returns the incoming radiance along the ray specified by "RayDir", computed using unidirectional
 // path tracing
-Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float& illuminance, bool& hitSky);
+Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float& illuminance, bool& hitSky, Float3& hitPos);

@@ -59,6 +59,7 @@ struct MeshBakerStatus
     ID3D11ShaderResourceView* GroundTruth = nullptr;
     ID3D11ShaderResourceView* LightMap = nullptr;
     ID3D11ShaderResourceView* BakePoints = nullptr;
+    ID3D11ShaderResourceView* ProbeSelectMap = nullptr;
     ID3D11ShaderResourceView* ProbeSpecularCubeMap = nullptr;
     ID3D11ShaderResourceView* ProbeIrradianceCubeMap = nullptr;
     ID3D11ShaderResourceView* ProbeDistanceCubeMap = nullptr;
@@ -108,6 +109,7 @@ public:
     // Read/Write data shared with bake threads
     FixedArray<Half4> bakeResults[AppSettings::MaxBasisCount];
     volatile int64 currBakeBatch = 0;
+    FixedArray<uint16> probeSelectResults;
 
     // Read-only data shared with bake threads
     volatile int64 bakeTag = 0;
@@ -158,6 +160,11 @@ private:
     uint64 bakeStagingTextureIdx = 0;
     ID3D11Texture2DPtr bakeStagingTextures[NumStagingTextures];
     uint64 bakeTextureUpdateIdx = 0;
+
+    ID3D11Texture2DPtr probeSelectTexture;
+    ID3D11ShaderResourceViewPtr probeSelectTextureSRV;
+    uint64 probeSelectStagingTextureIdx = 0;
+    ID3D11Texture2DPtr probeSelectStagingTextures[NumStagingTextures];
 
     uint64 numThreads = 0;
     std::vector<HANDLE> bakeThreads;

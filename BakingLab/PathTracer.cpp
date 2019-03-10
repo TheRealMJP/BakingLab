@@ -247,7 +247,7 @@ void GenerateIntegrationSamples(IntegrationSamples& samples, uint64 sqrtNumSampl
 
 // Returns the incoming radiance along the ray specified by params.RayDir, computed using unidirectional
 // path tracing
-Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float& illuminance, bool& hitSky)
+Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float& illuminance, bool& hitSky, Float3& hitPos)
 {
     // Initialize to the view parameters, must be reset every loop iteration
     EmbreeRay ray(params.RayStart, params.RayDir, 0.0f, params.RayLen);
@@ -314,6 +314,9 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
             hitSurface.Normal = Float3::Normalize(hitSurface.Normal);
             hitSurface.Tangent = Float3::Normalize(hitSurface.Tangent);
             hitSurface.Bitangent = Float3::Normalize(hitSurface.Bitangent);
+
+            if(pathLength == 1)
+                hitPos = hitSurface.Position;
 
             // Look up the material data
             const uint64 materialIdx = bvh.MaterialIndices[ray.primID];

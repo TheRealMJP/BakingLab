@@ -436,9 +436,10 @@ struct BakeThreadContext
     uint64 CurrNumSamples = 0;
     const std::vector<IntegrationSamples>* Samples;
     FixedArray<Half4>* BakeOutput = nullptr;
+    FixedArray<uint16>* ProbeSelectOutput = nullptr;
     volatile int64* CurrBatch = nullptr;
 
-    void Init(FixedArray<Half4>* bakeOutput, const std::vector<IntegrationSamples>* samples,
+    void Init(FixedArray<Half4>* bakeOutput, FixedArray<uint16>* probeSelectOutput, const std::vector<IntegrationSamples>* samples,
               volatile int64* currBatch, const MeshBaker* meshBaker, uint64 newTag)
     {
         if(BakeTag == uint64(-1))
@@ -454,6 +455,7 @@ struct BakeThreadContext
         CurrBakeMode = meshBaker->currBakeMode;
         CurrSolveMode = meshBaker->currSolveMode;
         BakeOutput = bakeOutput;
+        ProbeSelectOutput = probeSelectOutput;
         CurrBatch = currBatch;
         CurrSampleMode = AppSettings::BakeSampleMode;
         CurrNumSamples = AppSettings::NumBakeSamples;
@@ -512,6 +514,38 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
     params.SkyCache = &context.SkyCache;
     params.EnvMaps = context.EnvMaps;
 
+    const uint64 numProbes = AppSettings::NumProbes();
+
+    FixedArray<float> probeWeights;
+    probeWeights.Init(numProbes, 0.0f);
+
+    FixedArray<Float3> probePositions;
+    probePositions.Init(numProbes);
+
+    Float3 sceneCenter = (context.SceneBVH->SceneMin + context.SceneBVH->SceneMax) / 2.0f;;
+    Float3 currSceneMin = Lerp(sceneCenter, context.SceneBVH->SceneMin, AppSettings::SceneBoundsScale);
+    Float3 currSceneMax = Lerp(sceneCenter, context.SceneBVH->SceneMax, AppSettings::SceneBoundsScale);
+    currSceneMin.x += AppSettings::SceneBoundsOffsetX;
+    currSceneMin.y += AppSettings::SceneBoundsOffsetY;
+    currSceneMin.z += AppSettings::SceneBoundsOffsetZ;
+    currSceneMax.x += AppSettings::SceneBoundsOffsetX;
+    currSceneMax.y += AppSettings::SceneBoundsOffsetY;
+    currSceneMax.z += AppSettings::SceneBoundsOffsetZ;
+
+    for(uint64 probeIdx = 0; probeIdx < numProbes; ++probeIdx)
+    {
+        uint64 probeX = probeIdx % AppSettings::ProbeResX;
+        uint64 probeY = (probeIdx / AppSettings::ProbeResX) % AppSettings::ProbeResY;
+        uint64 probeZ = probeIdx / (AppSettings::ProbeResX * AppSettings::ProbeResY);
+
+        Float3 probePos;
+        probePos.x = Lerp(currSceneMin.x, currSceneMax.x, (probeX + 0.5f) / AppSettings::ProbeResX);
+        probePos.y = Lerp(currSceneMin.y, currSceneMax.y, (probeY + 0.5f) / AppSettings::ProbeResY);
+        probePos.z = Lerp(currSceneMin.z, currSceneMax.z, (probeZ + 0.5f) / AppSettings::ProbeResZ);
+
+        probePositions[probeIdx] = probePos;
+    }
+
     if(progressiveintegration)
     {
         const uint64 sampleIdx = batchIdx / numBakeGroups;
@@ -559,7 +593,8 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
 
                 float illuminance = 0.0f;
                 bool hitSky = false;
-                Float3 sampleResult = PathTrace(params, random, illuminance, hitSky);
+                Float3 hitPos;
+                Float3 sampleResult = PathTrace(params, random, illuminance, hitSky, hitPos);
 
                 if(addAreaLight)
                 {
@@ -607,6 +642,9 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
         tangentFrame.SetYBasis(bakePoint.Bitangent);
         tangentFrame.SetZBasis(bakePoint.Normal);
 
+        for(uint64 probeIdx = 0; probeIdx < numProbes; ++probeIdx)
+            probeWeights[probeIdx] = 0.0f;
+
         for(uint64 sampleIdx = 0; sampleIdx < numSamplesPerTexel; ++sampleIdx)
         {
             IntegrationSampleSet sampleSet;
@@ -625,7 +663,8 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
 
             float illuminance = 0.0f;
             bool hitSky = false;
-            Float3 sampleResult = PathTrace(params, random, illuminance, hitSky);
+            Float3 hitPos = Float3(FLT_MAX, FLT_MAX, FLT_MAX);
+            Float3 sampleResult = PathTrace(params, random, illuminance, hitSky, hitPos);
 
             if(addAreaLight)
             {
@@ -636,12 +675,41 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
             }
 
             baker.AddSample(rayDirTS, sampleIdx, sampleResult, hitSky);
+
+            if(hitPos != Float3(FLT_MAX, FLT_MAX, FLT_MAX))
+            {
+                for(uint64 probeIdx  = 0; probeIdx < numProbes; ++probeIdx)
+                {
+                    Float3 hitToProbe = probePositions[probeIdx] - hitPos;
+                    float distToProbe = Float3::Length(hitToProbe);
+                    Float3 hitToProbeDir = Float3::Normalize(hitToProbe);
+
+                    EmbreeRay ray(hitPos, hitToProbeDir, 0.001f, distToProbe);
+                    rtcOccluded(context.SceneBVH->Scene, ray);
+                    if(ray.Hit() == false)
+                        probeWeights[probeIdx] += 1.0f / distToProbe;
+                }
+            }
         }
 
         Float4 texelResults[TBaker::BasisCount];
         baker.FinalResult(texelResults);
         for(uint64 basisIdx = 0; basisIdx < TBaker::BasisCount; ++basisIdx)
             context.BakeOutput[basisIdx][texelIdx] = texelResults[basisIdx];
+
+        // Pick the best probe
+        uint64 bestProbeIdx = 0;
+        float bestProbeWeight = probeWeights[0];
+        for(uint64 probeIdx = 1; probeIdx < numProbes; ++probeIdx)
+        {
+            if(probeWeights[probeIdx] > bestProbeWeight)
+            {
+                bestProbeIdx = probeIdx;
+                bestProbeWeight = probeWeights[probeIdx];
+            }
+        }
+
+        (*context.ProbeSelectOutput)[texelIdx] = uint16(bestProbeIdx);
 
         // Temporarily fill in the rest of the texels in the group
         for(uint64 i = groupTexelIdx; i < BakeGroupSize; ++i)
@@ -656,6 +724,7 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
             uint64 neighborTexelIdx = neighborY * context.CurrLightMapSize + neighborX;
             for(uint64 basisIdx = 0; basisIdx < TBaker::BasisCount; ++basisIdx)
                 context.BakeOutput[basisIdx][neighborTexelIdx] = texelResults[basisIdx];
+            (*context.ProbeSelectOutput)[neighborTexelIdx] = uint16(bestProbeIdx);
         }
     }
 
@@ -666,6 +735,7 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
 struct BakeThreadData
 {
     FixedArray<Half4>* BakeOutput = nullptr;
+    FixedArray<uint16>* ProbeSelectOutput = nullptr;
     const std::vector<IntegrationSamples>* Samples = nullptr;
     volatile int64* CurrBatch = nullptr;
     const MeshBaker* Baker = nullptr;
@@ -684,7 +754,7 @@ template<typename TBaker> uint32 __stdcall BakeThread(void* data)
     {
         const uint64 currTag = meshBaker->bakeTag;
         if(context.BakeTag != currTag)
-            context.Init(threadData->BakeOutput, threadData->Samples,
+            context.Init(threadData->BakeOutput, threadData->ProbeSelectOutput, threadData->Samples,
                          threadData->CurrBatch, threadData->Baker, currTag);
 
         if(BakeDriver<TBaker>(context, baker) == false)
@@ -725,6 +795,9 @@ static void BuildBVH(const Model& model, BVHData& bvhData, ID3D11Device* d3dDevi
     uint32 vtxOffset = 0;
     uint32 triOffset = 0;
 
+    bvhData.SceneMin = FLT_MAX;
+    bvhData.SceneMax = -FLT_MAX;
+
     // Add the data for each mesh
     for(uint64 meshIdx = 0; meshIdx < model.Meshes().size(); ++meshIdx)
     {
@@ -760,6 +833,13 @@ static void BuildBVH(const Model& model, BVHData& bvhData, ID3D11Device* d3dDevi
             const Float3& position = vertexData[i].Position;
             vertices[i + vtxOffset] = Float4(position, 0.0f);
             bvhData.Vertices[i + vtxOffset] = vertexData[i];
+
+            bvhData.SceneMin.x = Min(bvhData.SceneMin.x, position.x);
+            bvhData.SceneMin.y = Min(bvhData.SceneMin.y, position.y);
+            bvhData.SceneMin.z = Min(bvhData.SceneMin.z, position.z);
+            bvhData.SceneMax.x = Max(bvhData.SceneMax.x, position.x);
+            bvhData.SceneMax.y = Max(bvhData.SceneMax.y, position.y);
+            bvhData.SceneMax.z = Max(bvhData.SceneMax.z, position.z);
         }
 
         triOffset += numTriangles;
@@ -1184,6 +1264,8 @@ static bool RenderDriver(RenderThreadContext& context)
 
             float illuminance = 0.0f;
             bool hitSky;
+            Float3 hitPos;
+
             PathTracerParams params;
             params.RayDir = rayDir;
             params.RayStart = rayStart;
@@ -1201,7 +1283,7 @@ static bool RenderDriver(RenderThreadContext& context)
             params.MaxPathLength = pathLength;
             params.RussianRouletteDepth = AppSettings::RenderRussianRouletteDepth;
             params.RussianRouletteProbability = AppSettings::RenderRussianRouletteProbability;
-            Float3 radiance = PathTrace(params, context.RandomGenerator, illuminance, hitSky);
+            Float3 radiance = PathTrace(params, context.RandomGenerator, illuminance, hitSky, hitPos);
 
             FixedArray<Half4>& renderBuffer = *context.RenderBuffer;
             FixedArray<float>& renderWeightBuffer = *context.RenderWeightBuffer;
@@ -1373,6 +1455,8 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
             for(uint64 i = 0; i < basisCount; ++i)
                 bakeResults[i].Init(numTexels);
 
+            probeSelectResults.Init(numTexels, 0);
+
             const uint64 numGroupsX = (lightMapSize + (BakeGroupSizeX - 1)) / BakeGroupSizeX;
             const uint64 numGroupsY = (lightMapSize + (BakeGroupSizeY - 1)) / BakeGroupSizeY;
             if(AppSettings::SupportsProgressiveIntegration(bakeMode, solveMode))
@@ -1395,7 +1479,7 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
             for(uint64  i = 0; i < sgCount; ++i)
                 sgDirections[i] = initalGuess[i].Axis;
 
-            D3D11_TEXTURE2D_DESC texDesc;
+            D3D11_TEXTURE2D_DESC texDesc = { };
             texDesc.Width = lightMapSize;
             texDesc.Height = lightMapSize;
             texDesc.ArraySize = uint32(basisCount);
@@ -1413,8 +1497,7 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
             DXCall(input.Device->CreateTexture2D(&texDesc, nullptr, &bakeTexture));
 
             // Force the SRV to be a texture array view
-            D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-            ZeroMemory(&srvDesc, sizeof(srvDesc));
+            D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = { };
             srvDesc.Format = texDesc.Format;
             srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
             srvDesc.Texture2DArray.MostDetailedMip = 0;
@@ -1431,6 +1514,20 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
             stagingDesc.ArraySize = 1;
             for(uint64 i = 0; i < NumStagingTextures; ++i)
                 DXCall(input.Device->CreateTexture2D(&stagingDesc, nullptr, &bakeStagingTextures[i]));
+
+            // Probe selection textures
+            probeSelectTexture = nullptr;
+            probeSelectTextureSRV = nullptr;
+
+            texDesc.Format = DXGI_FORMAT_R16_UINT;
+            texDesc.ArraySize = 1;
+            DXCall(input.Device->CreateTexture2D(&texDesc, nullptr, &probeSelectTexture));
+
+            DXCall(input.Device->CreateShaderResourceView(probeSelectTexture, nullptr, &probeSelectTextureSRV));
+
+            stagingDesc.Format = DXGI_FORMAT_R16_UINT;
+            for(uint64 i = 0; i < NumStagingTextures; ++i)
+                DXCall(input.Device->CreateTexture2D(&stagingDesc, nullptr, &probeSelectStagingTextures[i]));
         }
 
         if(AppSettings::BakeSampleMode != bakeSampleMode || AppSettings::NumBakeSamples != numBakeSamples)
@@ -1559,7 +1656,14 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
     // Change checks for baking only
     if(AppSettings::BakeDirectAreaLight.Changed() || AppSettings::BakeRussianRouletteDepth.Changed()
        || AppSettings::BakeRussianRouletteProbability.Changed() || AppSettings::MaxBakePathLength.Changed()
-       || AppSettings::SolveMode.Changed())
+       || AppSettings::SolveMode.Changed()
+       || AppSettings::ProbeResX.Changed()
+       || AppSettings::ProbeResY.Changed()
+       || AppSettings::ProbeResZ.Changed()
+       || AppSettings::SceneBoundsOffsetX.Changed()
+       || AppSettings::SceneBoundsOffsetY.Changed()
+       || AppSettings::SceneBoundsOffsetZ.Changed()
+       || AppSettings::SceneBoundsScale.Changed())
     {
         InterlockedIncrement64(&bakeTag);
         currBakeBatch = 0;
@@ -1596,6 +1700,7 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
 
     status.GroundTruth = renderTextureSRV;
     status.LightMap = bakeTextureSRV;
+    status.ProbeSelectMap = probeSelectTextureSRV;
     status.BakePoints = bakePointBuffer.SRView;
     status.NumBakePoints = bakePointBuffer.NumElements;
 
@@ -1647,8 +1752,7 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         bakeTextureUpdateIdx = (bakeTextureUpdateIdx + 1) % basisCount;
         ID3D11Texture2D* stagingTexture = bakeStagingTextures[bakeStagingTextureIdx];
 
-        D3D11_MAPPED_SUBRESOURCE mapped;
-        ZeroMemory(&mapped, sizeof(mapped));
+        D3D11_MAPPED_SUBRESOURCE mapped = { };
         if(SUCCEEDED(deviceContext->Map(stagingTexture, 0, D3D11_MAP_WRITE, 0, &mapped)))
         {
             uint8* dst = reinterpret_cast<uint8*>(mapped.pData);
@@ -1675,6 +1779,36 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         }
 
         deviceContext->CopySubresourceRegion(bakeTexture, uint32(bakeTextureUpdateIdx), 0, 0, 0, stagingTexture, 0, nullptr);
+
+        probeSelectStagingTextureIdx = (probeSelectStagingTextureIdx + 1) % NumStagingTextures;
+        stagingTexture = probeSelectStagingTextures[bakeStagingTextureIdx];
+
+        if(SUCCEEDED(deviceContext->Map(stagingTexture, 0, D3D11_MAP_WRITE, 0, &mapped)))
+        {
+            uint8* dst = reinterpret_cast<uint8*>(mapped.pData);
+            const uint16* src = probeSelectResults.Data();
+            for(uint64 y = 0; y < LightMapSize; ++y)
+            {
+                memcpy(dst, src, sizeof(uint16) * LightMapSize);
+                dst += mapped.RowPitch;
+                src += LightMapSize;
+            }
+
+            const uint64 numGutterTexels = gutterTexels.size();
+            for(uint64 i = 0; i < numGutterTexels; ++i)
+            {
+                const GutterTexel& gutterTexel = gutterTexels[i];
+                const uint64 srcIdx = gutterTexel.NeighborPos.y * LightMapSize + gutterTexel.NeighborPos.x;
+                uint8* gutterDst = reinterpret_cast<uint8*>(mapped.pData) + gutterTexel.TexelPos.y * mapped.RowPitch;
+                gutterDst += gutterTexel.TexelPos.x * sizeof(Half4);
+                const uint16 gutterSrc = probeSelectResults[srcIdx];
+                *reinterpret_cast<uint16*>(gutterDst) = gutterSrc;
+            }
+
+            deviceContext->Unmap(stagingTexture, 0);
+        }
+
+        deviceContext->CopySubresourceRegion(probeSelectTexture, 0, 0, 0, 0, stagingTexture, 0, nullptr);
     }
 
     Sleep(0);
@@ -1736,6 +1870,7 @@ void MeshBaker::StartBakeThreads()
     {
         BakeThreadData* threadData = &bakeThreadData[i];
         threadData->BakeOutput = bakeResults;
+        threadData->ProbeSelectOutput = &probeSelectResults;
         threadData->Samples = &bakeSamples;
         threadData->CurrBatch = &currBakeBatch;
         threadData->Baker = this;

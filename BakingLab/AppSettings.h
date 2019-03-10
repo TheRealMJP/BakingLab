@@ -360,6 +360,7 @@ namespace AppSettings
     extern BoolSetting ShowProbeVisualizer;
     extern ProbeVisualizerModesSetting ProbeVisualizerMode;
     extern BoolSetting ViewIndirectSpecular;
+    extern BoolSetting ViewProbeSelection;
     extern Button SaveLightSettings;
     extern Button LoadLightSettings;
     extern Button SaveEXRScreenshot;
@@ -446,6 +447,7 @@ namespace AppSettings
         float BloomBlurSigma;
         int32 ProbeVisualizerMode;
         bool32 ViewIndirectSpecular;
+        bool32 ViewProbeSelection;
     };
 
     extern ConstantBuffer<AppSettingsCBuffer> CBuffer;
@@ -623,10 +625,12 @@ namespace AppSettings
 
     inline bool SupportsProgressiveIntegration(BakeModes bakeMode, SolveModes solveMode)
     {
-        if(SGCount(bakeMode) > 0 && (solveMode == SolveModes::SVD || solveMode == SolveModes::NNLS))
+        /*if(SGCount(bakeMode) > 0 && (solveMode == SolveModes::SVD || solveMode == SolveModes::NNLS))
             return false;
         else
-            return true;
+            return true;*/
+
+        return false;
     }
 
     inline uint64 NumProbes()

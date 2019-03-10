@@ -816,9 +816,11 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
                 material.MetallicMap,
                 sunVSM.SRView,
                 status.LightMap,
+                status.ProbeSelectMap,
                 areaLightShadowMap.SRView,
                 shSpecularLookupA,
                 shSpecularLookupB,
+                status.ProbeSpecularCubeMap,
                 status.ProbeIrradianceCubeMap,
                 status.ProbeDistanceCubeMap,
             };
