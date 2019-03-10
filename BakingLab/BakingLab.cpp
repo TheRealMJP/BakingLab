@@ -54,8 +54,7 @@ static const Float2 SceneCameraRotations[] = { Float2(0.0f, 0.0f), Float2(0.0f, 
 static const float SceneAlbedoScales[] = { 0.5f, 0.5f, 1.0f };
 
 static const Uint3 SceneDefaultProbeRes[] = { Uint3(4, 4, 4), Uint3(5, 3, 5), Uint3(5, 5, 5) };
-// static const float SceneDefaultBoundsScales[] = { 1.5f, 1.65f, 1.0f };
-static const float SceneDefaultBoundsScales[] = { 1.1f, 1.1f, 1.1f };
+static const float SceneDefaultBoundsScales[] = { 1.5f, 1.65f, 1.0f };
 
 StaticAssert_(ArraySize_(ScenePaths) >= uint64(Scenes::NumValues));
 StaticAssert_(ArraySize_(SceneCameraPositions) >= uint64(Scenes::NumValues));
@@ -672,6 +671,8 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
         probeCaptureMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, false, 6, true);
         probeDistanceCaptureMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, false, 6, true);
         probeDepthBuffer.Initialize(device, resolution, resolution, DXGI_FORMAT_D24_UNORM_S8_UINT, true);
+
+        probeSpecularCubeMap.Initialize(device, resolution, resolution, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, false, true, numProbes * 6, true);
     }
 
     if(AppSettings::ProbeResX.Changed() || AppSettings::ProbeResY.Changed() ||
@@ -717,7 +718,7 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
     PerspectiveCamera probeCam(1.0f, Pi_2, NearClip, FarClip);
     probeCam.SetPosition(probePos);
 
-    for(uint64 i = 0; i < 6; ++i)
+    for(uint32 i = 0; i < 6; ++i)
     {
         Quaternion orientation;
         if(i == 0)
@@ -736,6 +737,8 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
         probeCam.SetOrientation(orientation);
         RenderScene(status, probeCaptureMap.RTVArraySlices[i], probeDistanceCaptureMap.RTVArraySlices[i], probeDepthBuffer, probeCam,
                     false, false, AppSettings::BakeDirectAreaLight, false, true);
+
+        context->CopySubresourceRegion(probeSpecularCubeMap.Texture, uint32(currProbeIdx) * 6 + i, 0, 0, 0, probeCaptureMap.Texture, i, nullptr);
     }
 
     AppSettings::UseProbes.SetValue(prevUseProbes);
@@ -839,6 +842,7 @@ void BakingLab::Render(const Timer& timer)
     }
     else
     {
+        status.ProbeSpecularCubeMap = probeSpecularCubeMap.SRView;
         status.ProbeIrradianceCubeMap = probeIrradianceCubeMap.SRView;
         status.ProbeDistanceCubeMap = probeDistanceCubeMap.SRView;
 

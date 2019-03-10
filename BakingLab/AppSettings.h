@@ -234,6 +234,17 @@ enum class Scenes
 
 typedef EnumSettingT<Scenes> ScenesSetting;
 
+enum class ProbeVisualizerModes
+{
+    Specular = 0,
+    Irradiance = 1,
+    Distance = 2,
+
+    NumValues
+};
+
+typedef EnumSettingT<ProbeVisualizerModes> ProbeVisualizerModesSetting;
+
 namespace AppSettings
 {
     static const float BaseSunSize = 0.2700f;
@@ -347,6 +358,7 @@ namespace AppSettings
     extern BoolSetting EnableLuminancePicker;
     extern BoolSetting ShowBakeDataVisualizer;
     extern BoolSetting ShowProbeVisualizer;
+    extern ProbeVisualizerModesSetting ProbeVisualizerMode;
     extern BoolSetting ViewIndirectSpecular;
     extern Button SaveLightSettings;
     extern Button LoadLightSettings;
@@ -432,6 +444,7 @@ namespace AppSettings
         float BloomExposure;
         float BloomMagnitude;
         float BloomBlurSigma;
+        int32 ProbeVisualizerMode;
         bool32 ViewIndirectSpecular;
     };
 

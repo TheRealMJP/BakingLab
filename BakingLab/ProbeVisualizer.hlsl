@@ -31,8 +31,9 @@ cbuffer Constants : register(b0)
 //=================================================================================================
 // Resources
 //=================================================================================================
-TextureCubeArray<float4> ProbeIrradianceCubeMap : register(t0);
-TextureCubeArray<float2> ProbeDistanceCubeMap : register(t1);
+TextureCubeArray<float4> ProbeSpecularCubeMap : register(t0);
+TextureCubeArray<float4> ProbeIrradianceCubeMap : register(t1);
+TextureCubeArray<float2> ProbeDistanceCubeMap : register(t2);
 SamplerState LinearSampler : register(s0);
 
 //=================================================================================================
@@ -86,7 +87,11 @@ VSOutput VS(in float3 SpherePosition : POSITION, in uint InstanceID : SV_Instanc
 //=================================================================================================
 float4 PS(in PSInput input) : SV_Target0
 {
-    float3 output = ProbeIrradianceCubeMap.Sample(LinearSampler, float4(input.NormalWS, input.ProbeIdx)).xyz * InvPi;
+    float3 output = ProbeSpecularCubeMap.Sample(LinearSampler, float4(input.NormalWS, input.ProbeIdx)).xyz;
+    if(ProbeVisualizerMode == ProbeVisualizerModes_Irradiance)
+        output = ProbeIrradianceCubeMap.Sample(LinearSampler, float4(input.NormalWS, input.ProbeIdx)).xyz * InvPi;
+    else if(ProbeVisualizerMode == ProbeVisualizerModes_Distance)
+        output = float3(ProbeDistanceCubeMap.Sample(LinearSampler, float4(input.NormalWS, input.ProbeIdx)), 0.0f);
 
     return float4(output, 1.0f);
 }

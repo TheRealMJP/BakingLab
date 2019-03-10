@@ -79,6 +79,7 @@ protected:
 
     RenderTarget2D probeCaptureMap;
     RenderTarget2D probeDistanceCaptureMap;
+    RenderTarget2D probeSpecularCubeMap;
     RenderTarget2D probeIrradianceCubeMap;
     RenderTarget2D probeDistanceCubeMap;
     DepthStencilBuffer probeDepthBuffer;

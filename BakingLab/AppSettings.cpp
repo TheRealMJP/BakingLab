@@ -168,6 +168,13 @@ static const char* ScenesLabels[3] =
     "Sponza",
 };
 
+static const char* ProbeVisualizerModesLabels[3] =
+{
+    "Specular",
+    "Irradiance",
+    "Distance",
+};
+
 namespace AppSettings
 {
     BoolSetting EnableSun;
@@ -277,6 +284,7 @@ namespace AppSettings
     BoolSetting EnableLuminancePicker;
     BoolSetting ShowBakeDataVisualizer;
     BoolSetting ShowProbeVisualizer;
+    ProbeVisualizerModesSetting ProbeVisualizerMode;
     BoolSetting ViewIndirectSpecular;
     Button SaveLightSettings;
     Button LoadLightSettings;
@@ -514,7 +522,7 @@ namespace AppSettings
         SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::NNLS, 3, SolveModesLabels);
         Settings.AddSetting(&SolveMode);
 
-        UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", false);
+        UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", true);
         Settings.AddSetting(&UseProbes);
 
         ProbeResX.Initialize(tweakBar, "ProbeResX", "Probes", "Probe Res X", "", 4, 1, 2048);
@@ -535,7 +543,7 @@ namespace AppSettings
         ProbeDistanceCubemapRes.Initialize(tweakBar, "ProbeDistanceCubemapRes", "Probes", "Probe Distance Cubemap Res", "", 128, 1, 4096);
         Settings.AddSetting(&ProbeDistanceCubemapRes);
 
-        SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.2500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.5000f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SceneBoundsScale);
 
         WeightProbesByNormal.Initialize(tweakBar, "WeightProbesByNormal", "Probes", "Weight Probes By Normal", "", false);
@@ -627,6 +635,9 @@ namespace AppSettings
 
         ShowProbeVisualizer.Initialize(tweakBar, "ShowProbeVisualizer", "Debug", "Show Probe Visualizer", "", false);
         Settings.AddSetting(&ShowProbeVisualizer);
+
+        ProbeVisualizerMode.Initialize(tweakBar, "ProbeVisualizerMode", "Debug", "Probe Visualizer Mode", "", ProbeVisualizerModes::Specular, 3, ProbeVisualizerModesLabels);
+        Settings.AddSetting(&ProbeVisualizerMode);
 
         ViewIndirectSpecular.Initialize(tweakBar, "ViewIndirectSpecular", "Debug", "View Indirect Specular", "", false);
         Settings.AddSetting(&ViewIndirectSpecular);
@@ -768,6 +779,7 @@ namespace AppSettings
         CBuffer.Data.BloomExposure = BloomExposure;
         CBuffer.Data.BloomMagnitude = BloomMagnitude;
         CBuffer.Data.BloomBlurSigma = BloomBlurSigma;
+        CBuffer.Data.ProbeVisualizerMode = ProbeVisualizerMode;
         CBuffer.Data.ViewIndirectSpecular = ViewIndirectSpecular;
 
         CBuffer.ApplyChanges(context);

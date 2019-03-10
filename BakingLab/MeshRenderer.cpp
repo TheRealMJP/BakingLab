@@ -1245,7 +1245,7 @@ void MeshRenderer::RenderProbeVisualizer(ID3D11DeviceContext* context, const Cam
     context->VSSetShader(probeVisualizerVS , nullptr, 0);
     context->PSSetShader(probeVisualizerPS, nullptr, 0);
 
-    ID3D11ShaderResourceView* psSrvs[] = { status.ProbeIrradianceCubeMap, status.ProbeDistanceCubeMap };
+    ID3D11ShaderResourceView* psSrvs[] = { status.ProbeSpecularCubeMap, status.ProbeIrradianceCubeMap, status.ProbeDistanceCubeMap };
     context->PSSetShaderResources(0, ArraySize_(psSrvs), psSrvs);
 
     ID3D11SamplerState* psSamplers[] = { samplerStates.LinearClamp() };

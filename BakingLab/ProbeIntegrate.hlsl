@@ -10,6 +10,7 @@
 
 #include <Constants.hlsl>
 #include <SH.hlsl>
+#include <Sampling.hlsl>
 #include "AppSettings.hlsl"
 
 cbuffer IntegrateConstants : register(b0)
@@ -71,51 +72,6 @@ float2 Hammersley2D(in uint sampleIdx, in uint numSamples)
     return float2(float(sampleIdx) / float(numSamples), RadicalInverseBase2(sampleIdx));
 }
 
-float2 SquareToConcentricDiskMapping(float x, float y)
-{
-    float phi = 0.0f;
-    float r = 0.0f;
-
-    // -- (a,b) is now on [-1,1]ˆ2
-    float a = 2.0f * x - 1.0f;
-    float b = 2.0f * y - 1.0f;
-
-    if(a > -b)                      // region 1 or 2
-    {
-        if(a > b)                   // region 1, also |a| > |b|
-        {
-            r = a;
-            phi = (Pi / 4.0f) * (b / a);
-        }
-        else                        // region 2, also |b| > |a|
-        {
-            r = b;
-            phi = (Pi / 4.0f) * (2.0f - (a / max(b, 0.00001f)));
-        }
-    }
-    else                            // region 3 or 4
-    {
-        if(a < b)                   // region 3, also |a| >= |b|, a != 0
-        {
-            r = -a;
-            phi = (Pi / 4.0f) * (4.0f + (b / a));
-        }
-        else                        // region 4, |b| >= |a|, but a==0 and b==0 could occur.
-        {
-            r = -b;
-            if(b != 0)
-                phi = (Pi / 4.0f) * (6.0f - (a / max(b, 0.00001f)));
-            else
-                phi = 0;
-        }
-    }
-
-    float2 result;
-    result.x = r * cos(phi);
-    result.y = r * sin(phi);
-    return result;
-}
-
 float3 SampleCosineHemisphere(in float u1, in float u2)
 {
     float2 uv = SquareToConcentricDiskMapping(u1, u2);
@@ -131,18 +87,6 @@ float3 SampleCosineHemisphere(in float u1, in float u2)
     dir.z = sqrt(max(0.0f, 1.0f - r));
 
     return dir;
-}
-
-// Returns a random direction on the unit sphere
-float3 SampleDirectionSphere(float u1, float u2)
-{
-    float z = u1 * 2.0f - 1.0f;
-    float r = sqrt(max(0.0f, 1.0f - z * z));
-    float phi = 2 * Pi * u2;
-    float x = r * cos(phi);
-    float y = r * sin(phi);
-
-    return float3(x, y, z);
 }
 
 float3x3 MakeTangentFrame(in float3 normal, in uint faceIdx)
@@ -186,7 +130,9 @@ void IntegrateIrradianceCubeMap(in uint3 GroupID : SV_GroupID, in uint3 GroupThr
     float3 irradiance = 0.0f;
     for(uint i = 0; i < numSamples; ++i)
     {
-        float2 samplePos = Hammersley2D(i, numSamples);
+        // float2 samplePos = Hammersley2D(i, numSamples);
+        uint pattern = (outputSliceIdx * ProbeIrradianceCubemapRes * ProbeIrradianceCubemapRes) + (outputPos.y * ProbeIrradianceCubemapRes) + outputPos.x;
+        float2 samplePos = SampleCMJ2D(i, ProbeIntegrationSamples, ProbeIntegrationSamples, pattern);
         float3 sampleDir = SampleCosineHemisphere(samplePos.x, samplePos.y);
         sampleDir = mul(sampleDir, tangentFrame);
         float3 radiance = RadianceCaptureMap.SampleLevel(LinearSampler, sampleDir, 0.0f).xyz;

@@ -300,6 +300,13 @@ enum SGDiffuseModes
     Fitted,
 }
 
+enum ProbeVisualizerModes
+{
+    Specular = 0,
+    Irradiance,
+    Distance,
+}
+
 public class Settings
 {
     const float BaseSunSize = 0.27f;
@@ -663,7 +670,7 @@ public class Settings
     [ExpandGroup(false)]
     public class Probes
     {
-        bool UseProbes = false;
+        bool UseProbes = true;
 
         [MinValue(1)]
         [MaxValue(2048)]
@@ -690,7 +697,7 @@ public class Settings
         int ProbeDistanceCubemapRes = 128;
 
         [UseAsShaderConstant(false)]
-        float SceneBoundsScale = 1.25f;
+        float SceneBoundsScale = 1.5f;
 
         bool WeightProbesByNormal = false;
 
@@ -849,6 +856,8 @@ public class Settings
 
         [UseAsShaderConstant(false)]
         bool ShowProbeVisualizer = false;
+
+        ProbeVisualizerModes ProbeVisualizerMode = ProbeVisualizerModes.Specular;
 
         bool ViewIndirectSpecular = false;
 

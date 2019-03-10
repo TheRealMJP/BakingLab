@@ -73,6 +73,7 @@ cbuffer AppSettings : register(b7)
     float BloomExposure;
     float BloomMagnitude;
     float BloomBlurSigma;
+    int ProbeVisualizerMode;
     bool ViewIndirectSpecular;
 }
 
@@ -191,6 +192,10 @@ static const int SolveModes_NNLS = 2;
 static const int Scenes_Box = 0;
 static const int Scenes_WhiteRoom = 1;
 static const int Scenes_Sponza = 2;
+
+static const int ProbeVisualizerModes_Specular = 0;
+static const int ProbeVisualizerModes_Irradiance = 1;
+static const int ProbeVisualizerModes_Distance = 2;
 
 static const float BaseSunSize = 0.2700f;
 static const int MaxSGCount = 12;
