@@ -1800,7 +1800,7 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
                 const GutterTexel& gutterTexel = gutterTexels[i];
                 const uint64 srcIdx = gutterTexel.NeighborPos.y * LightMapSize + gutterTexel.NeighborPos.x;
                 uint8* gutterDst = reinterpret_cast<uint8*>(mapped.pData) + gutterTexel.TexelPos.y * mapped.RowPitch;
-                gutterDst += gutterTexel.TexelPos.x * sizeof(Half4);
+                gutterDst += gutterTexel.TexelPos.x * sizeof(uint16);
                 const uint16 gutterSrc = probeSelectResults[srcIdx];
                 *reinterpret_cast<uint16*>(gutterDst) = gutterSrc;
             }

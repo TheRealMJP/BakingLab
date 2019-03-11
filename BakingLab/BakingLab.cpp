@@ -700,6 +700,9 @@ void BakingLab::RenderProbes(MeshBakerStatus& status)
         return;
     }
 
+    if(status.BakeProgress < 1.0f)
+        return;
+
     if(AppSettings::UseProbes == false)
         return;
 

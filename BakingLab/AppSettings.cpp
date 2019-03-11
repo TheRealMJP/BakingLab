@@ -580,7 +580,7 @@ namespace AppSettings
         EnableIndirectDiffuse.Initialize(tweakBar, "EnableIndirectDiffuse", "Scene", "Enable Indirect Diffuse", "Enables indirect diffuse lighting", true);
         Settings.AddSetting(&EnableIndirectDiffuse);
 
-        EnableIndirectSpecular.Initialize(tweakBar, "EnableIndirectSpecular", "Scene", "Enable Indirect Specular", "Enables indirect specular lighting", false);
+        EnableIndirectSpecular.Initialize(tweakBar, "EnableIndirectSpecular", "Scene", "Enable Indirect Specular", "Enables indirect specular lighting", true);
         Settings.AddSetting(&EnableIndirectSpecular);
 
         EnableAlbedoMaps.Initialize(tweakBar, "EnableAlbedoMaps", "Scene", "Enable Albedo Maps", "Enables albedo maps", true);
