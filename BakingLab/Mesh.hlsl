@@ -478,68 +478,45 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     }
 }
 
-void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, in float2 lightMapUV, out float3 indirectIrradiance, out float3 indirectSpecular,
-                                      out float outProbeIdx)
+float3 ComputeIndirectSpecFromProbeCubeMaps(in SurfaceContext surface, in float2 lightMapUV, out float outProbeIdx)
 {
     const uint2 lmTexelCoord = uint2(lightMapUV * LightMapResolution);
     const uint probeIdx = ProbeSelectMap[lmTexelCoord];
-    indirectIrradiance = ProbeIrradianceCubeMaps.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
 
     float3 reflectDir = reflect(-surface.ViewWS, surface.NormalWS);
     float3 fresnel = Fresnel(surface.SpecularAlbedo, surface.ViewWS, surface.NormalWS);
-    indirectSpecular = ProbeSpecularCubeMaps.Sample(LinearSampler, float4(reflectDir, probeIdx)).xyz * fresnel;
+    float3 indirectSpecular = ProbeSpecularCubeMaps.Sample(LinearSampler, float4(reflectDir, probeIdx)).xyz * fresnel;
 
     outProbeIdx = probeIdx;
 
-    float3 lmSpec = 0.0f;
-    ComputeIndirectFromLightmap(surface, lightMapUV, indirectIrradiance, lmSpec);
+    float2 texSize = float2(LightMapResolution, LightMapResolution);
+    float2 halfTexelSize = 0.5f / texSize;
+    float2 samplePos = frac(lightMapUV - halfTexelSize);
+    /*if(samplePos.x < 0.0f)
+        samplePos.x = 1.0f + samplePos.x;
+    if(samplePos.y < 0.0f)
+        samplePos.y = 1.0f + samplePos.y;*/
+    samplePos *= texSize;
 
-    /*float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
-    float3 probeDims = float3(ProbeResX, ProbeResY, ProbeResZ);
+    float2 lerpAmts = float2(frac(samplePos.x), frac(samplePos.y));
 
-    float3 halfTexelSize = 0.5f / probeDims;
-    float3 baseSamplePos = saturate(normalizedSamplePos - halfTexelSize) * probeDims;
-    float3 lerpAmts = frac(baseSamplePos);
+    uint probeIndices[4];
+    probeIndices[0] = ProbeSelectMap[uint2(samplePos)];
+    probeIndices[1] = ProbeSelectMap[uint2(samplePos + float2(1.0f, 0.0f))];
+    probeIndices[2] = ProbeSelectMap[uint2(samplePos + float2(0.0f, 1.0f))];
+    probeIndices[3] = ProbeSelectMap[uint2(samplePos + 1.0f)];
 
-    float3 irradianceSum = 0.0f;
-    float weightSum = 0.0f;
-    for(uint i = 0; i < 8; ++i)
-    {
-        uint3 sampleOffset = uint3(i, i >> 1, i >> 2) & 0x1;
-        uint3 probeIndices = min(uint3(baseSamplePos) + sampleOffset, probeDims - 1.0f);
-        float probeIdx = uint(probeIndices.z) * (ProbeResX * ProbeResY) + uint(probeIndices.y) * ProbeResX + uint(probeIndices.x);
-        float3 triLinear = lerp(1.0f - lerpAmts, lerpAmts, float3(sampleOffset));
-        float sampleWeight = triLinear.x * triLinear.y * triLinear.z;
+    // lerp between the shadow values to calculate our light amount
+    float3 samples[4];
+    samples[0] = ProbeSpecularCubeMaps.Sample(LinearSampler, float4(reflectDir, probeIndices[0])).xyz;
+    samples[1] = ProbeSpecularCubeMaps.Sample(LinearSampler, float4(reflectDir, probeIndices[1])).xyz;
+    samples[2] = ProbeSpecularCubeMaps.Sample(LinearSampler, float4(reflectDir, probeIndices[2])).xyz;
+    samples[3] = ProbeSpecularCubeMaps.Sample(LinearSampler, float4(reflectDir, probeIndices[3])).xyz;
 
-        float3 probePosWS = lerp(SceneMinBounds, SceneMaxBounds, (probeIndices + 0.5f) / probeDims);
-        float3 dirToProbe = normalize(probePosWS - surface.PositionWS);
-        float distToProbe = length(probePosWS - surface.PositionWS);
+    indirectSpecular = lerp(lerp(samples[0], samples[1], lerpAmts.x),
+                       lerp(samples[2], samples[3], lerpAmts.x), lerpAmts.y) * fresnel;
 
-        if(WeightProbesByNormal)
-            sampleWeight *= max(0.05f, dot(dirToProbe, surface.VtxNormalWS));
-
-        if(WeightProbesByVisibility)
-        {
-            float maxDistance = length((SceneMaxBounds - SceneMinBounds) * rcp(float3(ProbeResX, ProbeResY, ProbeResZ)));
-            float compareDistance = saturate(distToProbe * rcp(maxDistance));
-
-            float2 distSample = ProbeDistanceCubeMaps.Sample(LinearSampler, float4(-dirToProbe, probeIdx));
-            float visTerm = ChebyshevUpperBound(distSample, compareDistance, 0.0001f, 0.25f);
-            sampleWeight *= visTerm;
-        }
-
-        sampleWeight = max(0.0002f, sampleWeight);
-
-        float3 irradianceSample = ProbeIrradianceCubeMaps.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
-        irradianceSum += irradianceSample * sampleWeight;
-        weightSum += sampleWeight;
-    }
-
-    irradianceSum *= 1.0f / weightSum;
-    // irradianceSum *= 1.0f / max(weightSum, 0.0002f);
-
-    indirectIrradiance = irradianceSum;
-    indirectSpecular = 0.0f;*/
+    return indirectSpecular;
 }
 
 
@@ -637,10 +614,10 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         float3 indirectSpecular = 0.0f;
         float probeIdx = 0.0f;
 
+        ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
+
         if(UseProbes && ProbeRendering_ == 0)
-            ComputeIndirectFromProbeCubeMaps(surface, input.LightMapUV, indirectIrradiance, indirectSpecular, probeIdx);
-        else
-            ComputeIndirectFromLightmap(surface, input.LightMapUV, indirectIrradiance, indirectSpecular);
+            indirectSpecular = ComputeIndirectSpecFromProbeCubeMaps(surface, input.LightMapUV, probeIdx);
 
         if(EnableIndirectDiffuse)
         {
