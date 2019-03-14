@@ -385,22 +385,36 @@ float3 FrostbiteSHSpecular(in float3 view, in float3 normal, in float3 specularA
     return CalcLighting(normal, specDir, specLightColor, 0.0f, specularAlbedo, roughness, view, irradiance);
 }
 
+float Square(in float x)
+{
+    return x * x;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Computes approximated specular from radiance encoded as a set of SH coefficients by
-// approximating a directional light in the direction of the reflection vector
+// treating the SH radiance as a pre-filtered environment map
 // ------------------------------------------------------------------------------------------------
-float3 ReflectSHSpecular(in float3 view, in float3 normal, in float3 specularAlbedo,
+float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3 specularAlbedo,
                            in float sqrtRoughness, in SH9Color shRadiance)
 {
     float3 reflectDir = reflect(-view, normal);
 
-    sqrtRoughness = max(sqrtRoughness, 0.5f);
     float roughness = sqrtRoughness * sqrtRoughness;
+    shRadiance.c[0] *= exp(-Square(roughness * 0.0f));
+    shRadiance.c[1] *= exp(-Square(roughness * 1.0f));
+    shRadiance.c[2] *= exp(-Square(roughness * 1.0f));
+    shRadiance.c[3] *= exp(-Square(roughness * 1.0f));
+    shRadiance.c[4] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[5] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[6] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[7] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[8] *= exp(-Square(roughness * 2.0f));
 
     float3 specLightColor = EvalSH9(reflectDir, shRadiance);
 
-    float3 irradiance;
-    return CalcLighting(normal, reflectDir, specLightColor, 0.0f, specularAlbedo, roughness, view, irradiance);
+    float3 envBRDF = specularAlbedo + (1.0f - specularAlbedo) * pow(1.0f - saturate(dot(normal, view)), 5.0f) / (4 - 4.0f * (1.0f - sqrtRoughness));
+
+    return envBRDF * specLightColor;
 }
 
 //=================================================================================================
@@ -536,8 +550,8 @@ PSOutput PS(in PSInput input)
 
             if(SHSpecularMode == SHSpecularModes_Frostbite)
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
-            else if(SHSpecularMode == SHSpecularModes_Reflect)
-                indirectSpecular = ReflectSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
+            else if(SHSpecularMode == SHSpecularModes_Prefiltered)
+                indirectSpecular = PrefilteredSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
             else
                 indirectSpecular = ConvolutionSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
         }
@@ -553,8 +567,8 @@ PSOutput PS(in PSInput input)
 
             if(SHSpecularMode == SHSpecularModes_Frostbite)
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH4(shRadiance));
-            else if(SHSpecularMode == SHSpecularModes_Reflect)
-                indirectSpecular = ReflectSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
+            else if(SHSpecularMode == SHSpecularModes_Prefiltered)
+                indirectSpecular = PrefilteredSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
             else
                 indirectSpecular = ConvolutionSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
         }

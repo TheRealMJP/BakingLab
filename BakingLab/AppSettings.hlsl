@@ -164,7 +164,7 @@ static const int SH4DiffuseModes_Geomerics = 1;
 
 static const int SHSpecularModes_Convolution = 0;
 static const int SHSpecularModes_Frostbite = 1;
-static const int SHSpecularModes_Reflect = 2;
+static const int SHSpecularModes_Prefiltered = 2;
 
 static const int SampleModes_Random = 0;
 static const int SampleModes_Stratified = 1;

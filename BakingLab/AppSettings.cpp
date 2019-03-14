@@ -141,7 +141,7 @@ static const char* SHSpecularModesLabels[3] =
 {
     "Convolution",
     "Frostbite",
-    "Reflect",
+    "Prefiltered",
 };
 
 static const char* SampleModesLabels[5] =
