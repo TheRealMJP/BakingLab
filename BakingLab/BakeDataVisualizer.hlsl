@@ -40,6 +40,7 @@ struct VSOutput
 {
     float4 PositionCS 		: SV_Position;
     float3 NormalTS 		: NORMALTS;
+    float3 NormalWS         : NORMALWS;
     float2 LightMapUV       : LIGHTMAPUV;
 };
 
@@ -47,6 +48,7 @@ struct PSInput
 {
     float4 PositionSS 		: SV_Position;
     float3 NormalTS 		: NORMALTS;
+    float3 NormalWS         : NORMALWS;
     float2 LightMapUV       : LIGHTMAPUV;
 };
 
@@ -72,6 +74,7 @@ VSOutput VS(in float3 SpherePosition : POSITION, in uint InstanceID : SV_Instanc
     float3 positionWS = mul(float4(SpherePosition * size, 1.0f), transform).xyz;
     output.PositionCS = mul(float4(positionWS, 1.0f), ViewProjection);
     output.NormalTS = SpherePosition;
+    output.NormalWS = mul(output.NormalTS, float3x3(bakePoint.Tangent, bitangent, bakePoint.Normal));
     output.LightMapUV = (bakePoint.TexelPos + 0.5f) / LightMapResolution;
 
     return output;
@@ -103,7 +106,9 @@ float4 PS(in PSInput input) : SV_Target0
     float3 output = 0.0f;
 
     float3 normalTS = normalize(input.NormalTS);
+    float3 normalWS = normalize(input.NormalWS);
     float2 uv = input.LightMapUV;
+    float3 normalSHSG = WorldSpaceBake ? normalWS : normalTS;
 
     if(BakeMode == BakeModes_Diffuse)
     {
@@ -133,7 +138,7 @@ float4 PS(in PSInput input) : SV_Target0
         for(uint i = 0; i < 4; ++i)
             shRadiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(uv, i), 0.0f).xyz;
 
-        output = EvalSH4(normalTS, shRadiance);
+        output = EvalSH4(normalSHSG, shRadiance);
     }
     else if(BakeMode == BakeModes_SH9)
     {
@@ -143,7 +148,7 @@ float4 PS(in PSInput input) : SV_Target0
         for(uint i = 0; i < 9; ++i)
             shRadiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(uv, i), 0.0f).xyz;
 
-        output = EvalSH9(normalTS, shRadiance);
+        output = EvalSH9(normalSHSG, shRadiance);
     }
     else if(BakeMode == BakeModes_H4)
     {
@@ -167,19 +172,19 @@ float4 PS(in PSInput input) : SV_Target0
     }
     else if(BakeMode == BakeModes_SG5)
     {
-        output = EvalSGs(uv, 5, normalTS);
+        output = EvalSGs(uv, 5, normalSHSG);
     }
     else if(BakeMode == BakeModes_SG6)
     {
-        output = EvalSGs(uv, 6, normalTS);
+        output = EvalSGs(uv, 6, normalSHSG);
     }
     else if(BakeMode == BakeModes_SG9)
     {
-        output = EvalSGs(uv, 9, normalTS);
+        output = EvalSGs(uv, 9, normalSHSG);
     }
     else if(BakeMode == BakeModes_SG12)
     {
-        output = EvalSGs(uv, 12, normalTS);
+        output = EvalSGs(uv, 12, normalSHSG);
     }
 
     return float4(output, 1.0f);

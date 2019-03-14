@@ -103,8 +103,13 @@ struct SGSolveParam
     SG* OutSGs;                                     // output of final SG's we solve for
 };
 
+enum class SGDistribution : uint32
+{
+    Spherical,
+    Hemispherical,
+};
 
-void InitializeSGSolver(uint64 numSGs);
+void InitializeSGSolver(uint64 numSGs, SGDistribution distribution);
 const SG* InitialGuess();
 
 // Solve for k-number of SG's based on a hemisphere of radiance

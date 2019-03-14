@@ -22,12 +22,6 @@
 #include "AppSettings.h"
 #include <Graphics/Sampling.h>
 
-enum class SGDistribution : uint32
-{
-    Spherical,
-    Hemispherical,
-};
-
 static SG defaultInitialGuess[AppSettings::MaxSGCount];
 static bool eigenInitialized = false;
 
@@ -92,7 +86,7 @@ void GenerateUniformSGs(SG* outSGs, uint64 numSGs, SGDistribution distribution)
     }
 }
 
-void InitializeSGSolver(uint64 numSGs)
+void InitializeSGSolver(uint64 numSGs, SGDistribution distribution)
 {
     if(eigenInitialized == false)
     {
@@ -100,7 +94,7 @@ void InitializeSGSolver(uint64 numSGs)
         eigenInitialized = true;
     }
 
-	GenerateUniformSGs(defaultInitialGuess, numSGs, SGDistribution::Hemispherical);
+	GenerateUniformSGs(defaultInitialGuess, numSGs, distribution);
 }
 
 const SG* InitialGuess()

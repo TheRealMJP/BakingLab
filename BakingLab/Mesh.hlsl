@@ -292,7 +292,7 @@ float3 SGIrradiance(in SG lightingLobe, in float3 normal, in int diffuseMode)
 // Computes the specular contribution from an SG light source
 // ------------------------------------------------------------------------------------------------
 float3 SpecularTermSG(in SG light, in float3 normal, in float roughness,
-                          in float3 view, in float3 specAlbedo)
+                      in float3 view, in float3 specAlbedo)
 {
     if(UseASGWarp)
         return SpecularTermASGWarp(light, normal, roughness, view, specAlbedo);
@@ -303,8 +303,8 @@ float3 SpecularTermSG(in SG light, in float3 normal, in float roughness,
 // ------------------------------------------------------------------------------------------------
 // Determine the exit radiance towards the eye from the SG's stored in the lightmap
 // ------------------------------------------------------------------------------------------------
-void ComputeSGContribution(in Texture2DArray<float4> bakedLightingMap, in float2 lightMapUV, in float3 normalTS,
-                          in float3 specularAlbedo, in float roughness, in float3 viewTS, in uint numSGs,
+void ComputeSGContribution(in Texture2DArray<float4> bakedLightingMap, in float2 lightMapUV, in float3 normal,
+                          in float3 specularAlbedo, in float roughness, in float3 view, in uint numSGs,
                           out float3 irradiance, out float3 specular)
 {
     irradiance = 0.0f;
@@ -317,21 +317,24 @@ void ComputeSGContribution(in Texture2DArray<float4> bakedLightingMap, in float2
         sg.Axis = SGDirections[i].xyz;
         sg.Sharpness = SGSharpness;
 
-        irradiance += SGIrradiance(sg, normalTS, SGDiffuseMode);
-        specular += SpecularTermSG(sg, normalTS, roughness, viewTS, specularAlbedo);
+        irradiance += SGIrradiance(sg, normal, SGDiffuseMode);
+        specular += SpecularTermSG(sg, normal, roughness, view, specularAlbedo);
     }
 }
 
-SH9Color GetSHSpecularBRDF(in float3 viewTS, in float3x3 tangentToWorld, in float3 normalTS,
-                           in float3 specularAlbedo, in float sqrtRoughness)
+// ------------------------------------------------------------------------------------------------
+// Gets a set of SH coeffecients representing the current specular BRDF slice
+// ------------------------------------------------------------------------------------------------
+SH9Color GetSHSpecularBRDF(in float3 view, in float3 normal, in float3 specularAlbedo,
+                           in float sqrtRoughness)
 {
-    // Make a local coordinate frame in tangent space, with the x-axis
+    // Make a local coordinate frame in tangent space or world space, with the x-axis
     // aligned with the view direction and the z-axis aligned with the normal
-    float3 zBasis = normalTS;
-    float3 yBasis = normalize(cross(zBasis, viewTS));
+    float3 zBasis = normal;
+    float3 yBasis = normalize(cross(zBasis, view));
     float3 xBasis = normalize(cross(yBasis, zBasis));
     float3x3 localFrame = float3x3(xBasis, yBasis, zBasis);
-    float viewAngle = saturate(dot(normalTS, viewTS));
+    float viewAngle = saturate(dot(normal, view));
 
     // Look up coefficients from the SH lookup texture to make the SH BRDF
     SH9Color shBrdf = (SH9Color)0.0f;
@@ -349,7 +352,7 @@ SH9Color GetSHSpecularBRDF(in float3 viewTS, in float3x3 tangentToWorld, in floa
         shBrdf.c[8][i] = t1.y;
     }
 
-    // Transform the SH BRDF to tangent space
+    // Transform the SH BRDF to tangent space/world space
     return RotateSH9(shBrdf, localFrame);
 }
 
@@ -358,14 +361,14 @@ SH9Color GetSHSpecularBRDF(in float3 viewTS, in float3x3 tangentToWorld, in floa
 //=================================================================================================
 PSOutput PS(in PSInput input)
 {
-	float3 vtxNormal = normalize(input.NormalWS);
-    float3 positionWS = input.PositionWS;
+	const float3 vtxNormal = normalize(input.NormalWS);
+    const float3 positionWS = input.PositionWS;
 
-    float3 viewWS = normalize(CameraPosWS - positionWS);
+    const float3 viewWS = normalize(CameraPosWS - positionWS);
 
     float3 normalWS = vtxNormal;
 
-    float2 uv = input.TexCoord;
+    const float2 uv = input.TexCoord;
 
 	float3 normalTS = float3(0, 0, 1);
 	float3 tangentWS = normalize(input.TangentWS);
@@ -381,7 +384,10 @@ PSOutput PS(in PSInput input)
         normalWS = normalize(mul(normalTS, tangentToWorld));
     }
 
-    float3 viewTS = mul(viewWS, transpose(tangentToWorld));
+    const float3 viewTS = mul(viewWS, transpose(tangentToWorld));
+
+    const float3 normalSHSG = WorldSpaceBake ? normalWS : normalTS;
+    const float3 viewSHSG = WorldSpaceBake ? viewWS : viewTS;
 
     // Gather material parameters
     float3 albedoMap = 1.0f;
@@ -476,9 +482,9 @@ PSOutput PS(in PSInput input)
             for(uint i = 0; i < 4; ++i)
                 shRadiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, i), 0.0f).xyz;
 
-            indirectIrradiance = EvalSH4Irradiance(normalTS, shRadiance);
+            indirectIrradiance = EvalSH4Irradiance(normalSHSG, shRadiance);
 
-            SH4Color shSpecularBRDF = ConvertToSH4(GetSHSpecularBRDF(viewTS, tangentToWorld, normalTS, specularAlbedo, sqrtRoughness));
+            SH4Color shSpecularBRDF = ConvertToSH4(GetSHSpecularBRDF(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness));
             indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
         }
         else if(BakeMode == BakeModes_SH9)
@@ -489,9 +495,9 @@ PSOutput PS(in PSInput input)
             for(uint i = 0; i < 9; ++i)
                 shRadiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, i), 0.0f).xyz;
 
-            indirectIrradiance = EvalSH9Irradiance(normalTS, shRadiance);
+            indirectIrradiance = EvalSH9Irradiance(normalSHSG, shRadiance);
 
-            SH9Color shSpecularBRDF = GetSHSpecularBRDF(viewTS, tangentToWorld, normalTS, specularAlbedo, sqrtRoughness);
+            SH9Color shSpecularBRDF = GetSHSpecularBRDF(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness);
             indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
         }
         else if(BakeMode == BakeModes_H4)
@@ -516,23 +522,23 @@ PSOutput PS(in PSInput input)
         }
         else if(BakeMode == BakeModes_SG5)
         {
-            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalTS, specularAlbedo, roughness,
-                                  viewTS, 5, indirectIrradiance, indirectSpecular);
+            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalSHSG, specularAlbedo, roughness,
+                                  viewSHSG, 5, indirectIrradiance, indirectSpecular);
         }
         else if(BakeMode == BakeModes_SG6)
         {
-            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalTS, specularAlbedo, roughness,
-                                  viewTS, 6, indirectIrradiance, indirectSpecular);
+            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalSHSG, specularAlbedo, roughness,
+                                  viewSHSG, 6, indirectIrradiance, indirectSpecular);
         }
         else if(BakeMode == BakeModes_SG9)
         {
-            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalTS, specularAlbedo, roughness,
-                                  viewTS, 9, indirectIrradiance, indirectSpecular);
+            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalSHSG, specularAlbedo, roughness,
+                                  viewSHSG, 9, indirectIrradiance, indirectSpecular);
         }
         else if(BakeMode == BakeModes_SG12)
         {
-            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalTS, specularAlbedo, roughness,
-                                  viewTS, 12, indirectIrradiance, indirectSpecular);
+            ComputeSGContribution(BakedLightingMap, input.LightMapUV, normalSHSG, specularAlbedo, roughness,
+                                  viewSHSG, 12, indirectIrradiance, indirectSpecular);
         }
 
         if(EnableIndirectDiffuse)

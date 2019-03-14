@@ -85,7 +85,7 @@ struct DiffuseBaker
         return SampleCosineHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
     {
         ResultSum += sample;
     }
@@ -125,7 +125,7 @@ struct HL2Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
     {
         static const Float3 BasisDirs[BasisCount] =
         {
@@ -134,7 +134,7 @@ struct HL2Baker
             Float3(std::sqrt(2.0f / 3.0f), 0.0f, 1.0f / std::sqrt(3.0f)),
         };
         for(uint64 i = 0; i < BasisCount; ++i)
-            ResultSum[i] += sample * Float3::Dot(sampleDir, BasisDirs[i]);
+            ResultSum[i] += sample * Float3::Dot(sampleDirTS, BasisDirs[i]);
     }
 
     void FinalResult(Float4 bakeOutput[BasisCount])
@@ -178,8 +178,9 @@ struct SH4Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
     {
+        const Float3 sampleDir = AppSettings::WorldSpaceBake ? sampleDirWS : sampleDirTS;
         ResultSum += ProjectOntoSH4Color(sampleDir, sample);
     }
 
@@ -222,8 +223,9 @@ struct SH9Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
     {
+        const Float3 sampleDir = AppSettings::WorldSpaceBake ? sampleDirWS : sampleDirTS;
         ResultSum += ProjectOntoSH9Color(sampleDir, sample);
     }
 
@@ -266,9 +268,9 @@ struct H4Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
     {
-        ResultSum += ProjectOntoSH9Color(sampleDir, sample);
+        ResultSum += ProjectOntoSH9Color(sampleDirTS, sample);
     }
 
     void FinalResult(Float4 bakeOutput[BasisCount])
@@ -316,9 +318,9 @@ struct H6Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
     {
-        ResultSum += ProjectOntoSH9Color(sampleDir, sample);
+        ResultSum += ProjectOntoSH9Color(sampleDirTS, sample);
     }
 
     void FinalResult(Float4 bakeOutput[BasisCount])
@@ -389,8 +391,9 @@ template<uint64 SGCount> struct SGBaker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDir, uint64 sampleIdx, Float3 sample)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
     {
+        const Float3 sampleDir = AppSettings::WorldSpaceBake ? sampleDirWS : sampleDirTS;
         SampleDirs[CurrSampleIdx] = sampleDir;
         Samples[CurrSampleIdx] = sample;
         ++CurrSampleIdx;
@@ -613,7 +616,7 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
                 if(addAreaLight)
                     sampleResult *= 2.0f;
 
-                baker.AddSample(rayDirTS, sampleIdx, sampleResult);
+                baker.AddSample(rayDirTS, sampleIdx, sampleResult, rayDirWS);
 
                 baker.ProgressiveResult(texelResults, sampleIdx);
 
@@ -687,7 +690,7 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
             if(addAreaLight)
                 sampleResult *= 2.0f;
 
-            baker.AddSample(rayDirTS, sampleIdx, sampleResult);
+            baker.AddSample(rayDirTS, sampleIdx, sampleResult, rayDirWS);
         }
 
         baker.FinalResult(texelResults);
@@ -1405,7 +1408,7 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         const uint32 lightMapSize = AppSettings::LightMapResolution;
         const BakeModes bakeMode = AppSettings::BakeMode;
         const SolveModes solveMode = AppSettings::SolveMode;
-        if(lightMapSize != currLightMapSize || bakeMode != currBakeMode || solveMode != currSolveMode)
+        if(lightMapSize != currLightMapSize || bakeMode != currBakeMode || solveMode != currSolveMode || AppSettings::WorldSpaceBake.Changed())
         {
             KillBakeThreads();
             KillRenderThreads();
@@ -1436,8 +1439,9 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
             currBakeBatch = 0;
 
             const uint64 sgCount = AppSettings::SGCount(currBakeMode);
+            SGDistribution distribution = AppSettings::WorldSpaceBake ? SGDistribution::Spherical : SGDistribution::Hemispherical;
             if(sgCount > 0)
-                InitializeSGSolver(sgCount);
+                InitializeSGSolver(sgCount, distribution);
 
             const SG* initalGuess = InitialGuess();
             sgSharpness = initalGuess[0].Sharpness;

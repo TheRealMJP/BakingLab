@@ -661,9 +661,14 @@ public class Settings
         [DisplayName("Russian Roullette Probability")]
         float BakeRussianRouletteProbability = 0.5f;
 
-        BakeModes BakeMode = BakeModes.SG9;
+        [HelpText("The current encoding/basis used for baking light map sample points")]
+        BakeModes BakeMode = BakeModes.SG5;
 
+        [HelpText("Controls how path tracer radiance samples are converted into a set of per-texel SG lobes")]
         SolveModes SolveMode = SolveModes.RunningAverageNN;
+
+        [HelpText("If true, the sample points are baked in a world-space orientation instead of tangent space (SH and SG bake modes only)")]
+        bool WorldSpaceBake = false;
     }
 
     [ExpandGroup(false)]

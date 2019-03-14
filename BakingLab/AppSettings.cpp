@@ -241,6 +241,7 @@ namespace AppSettings
     FloatSetting BakeRussianRouletteProbability;
     BakeModesSetting BakeMode;
     SolveModesSetting SolveMode;
+    BoolSetting WorldSpaceBake;
     ScenesSetting CurrentScene;
     BoolSetting EnableDiffuse;
     BoolSetting EnableSpecular;
@@ -492,11 +493,14 @@ namespace AppSettings
         BakeRussianRouletteProbability.Initialize(tweakBar, "BakeRussianRouletteProbability", "Baking", "Russian Roullette Probability", "Maximum probability for continuing when Russian roulette is used", 0.5000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&BakeRussianRouletteProbability);
 
-        BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "", BakeModes::SG9, 10, BakeModesLabels);
+        BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "The current encoding/basis used for baking light map sample points", BakeModes::SG5, 10, BakeModesLabels);
         Settings.AddSetting(&BakeMode);
 
-        SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::RunningAverageNN, 5, SolveModesLabels);
+        SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "Controls how path tracer radiance samples are converted into a set of per-texel SG lobes", SolveModes::RunningAverageNN, 5, SolveModesLabels);
         Settings.AddSetting(&SolveMode);
+
+        WorldSpaceBake.Initialize(tweakBar, "WorldSpaceBake", "Baking", "World Space Bake", "If true, the sample points are baked in a world-space orientation instead of tangent space (SH and SG bake modes only)", false);
+        Settings.AddSetting(&WorldSpaceBake);
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene", "Current Scene", "", Scenes::Box, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
@@ -670,6 +674,7 @@ namespace AppSettings
         CBuffer.Data.LightMapResolution = LightMapResolution;
         CBuffer.Data.BakeMode = BakeMode;
         CBuffer.Data.SolveMode = SolveMode;
+        CBuffer.Data.WorldSpaceBake = WorldSpaceBake;
         CBuffer.Data.EnableDiffuse = EnableDiffuse;
         CBuffer.Data.EnableSpecular = EnableSpecular;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;
