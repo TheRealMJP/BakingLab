@@ -238,6 +238,27 @@ SH4Color ConvertToSH4(in SH9Color sh9)
 }
 
 //-------------------------------------------------------------------------------------------------
+// Converts from 2-band to 3-band SH
+//-------------------------------------------------------------------------------------------------
+SH9 ConvertToSH9(in SH4 sh4)
+{
+    SH9 sh9 = (SH9)0.0f;
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        sh9.c[i] = sh4.c[i];
+    return sh9;
+}
+
+SH9Color ConvertToSH9(in SH4Color sh4)
+{
+    SH9Color sh9 = (SH9Color)0.0f;
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        sh9.c[i] = sh4.c[i];
+    return sh9;
+}
+
+//-------------------------------------------------------------------------------------------------
 // Computes the "optimal linear direction" for a set of SH coefficients
 //-------------------------------------------------------------------------------------------------
 float3 OptimalLinearDirection(in SH4 sh)

@@ -322,10 +322,12 @@ void ComputeSGContribution(in Texture2DArray<float4> bakedLightingMap, in float2
 }
 
 // ------------------------------------------------------------------------------------------------
-// Gets a set of SH coeffecients representing the current specular BRDF slice
+// Computes the specular reflection from radiance encoded as a set of SH coefficients by
+// convolving the radiance with another set of SH coefficients representing the current
+// specular BRDF slice
 // ------------------------------------------------------------------------------------------------
-SH9Color GetSHSpecularBRDF(in float3 view, in float3 normal, in float3 specularAlbedo,
-                           in float sqrtRoughness)
+float3 ConvolutionSHSpecular(in float3 view, in float3 normal, in float3 specularAlbedo,
+                             in float sqrtRoughness, in SH9Color shRadiance)
 {
     // Make a local coordinate frame in tangent space or world space, with the x-axis
     // aligned with the view direction and the z-axis aligned with the normal
@@ -352,7 +354,10 @@ SH9Color GetSHSpecularBRDF(in float3 view, in float3 normal, in float3 specularA
     }
 
     // Transform the SH BRDF to tangent space/world space
-    return RotateSH9(shBrdf, localFrame);
+    shBrdf = RotateSH9(shBrdf, localFrame);
+
+    // Convolve the BRDF slice with the environment radiance
+    return SHDotProduct(shBrdf, shRadiance);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -513,14 +518,9 @@ PSOutput PS(in PSInput input)
                 indirectIrradiance = EvalSH4Irradiance(normalSHSG, shRadiance);
 
             if(SHSpecularMode == SHSpecularModes_Frostbite)
-            {
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
-            }
             else
-            {
-                SH4Color shSpecularBRDF = ConvertToSH4(GetSHSpecularBRDF(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness));
-                indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
-            }
+                indirectSpecular = ConvolutionSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
         }
         else if(BakeMode == BakeModes_SH9)
         {
@@ -533,14 +533,9 @@ PSOutput PS(in PSInput input)
             indirectIrradiance = EvalSH9Irradiance(normalSHSG, shRadiance);
 
             if(SHSpecularMode == SHSpecularModes_Frostbite)
-            {
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH4(shRadiance));
-            }
             else
-            {
-                SH9Color shSpecularBRDF = GetSHSpecularBRDF(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness);
-                indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
-            }
+                indirectSpecular = ConvolutionSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
         }
         else if(BakeMode == BakeModes_H4)
         {
