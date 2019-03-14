@@ -475,7 +475,7 @@ void UpdateShaders(ID3D11Device* device)
         for(uint64 i = 0; i < file->Shaders.size(); ++i)
         {
             // Retry a few times to avoid file conflicts with text editors
-            const uint64 NumRetries = 10;
+            const uint64 NumRetries = 1000;
             for(uint64 retryCount = 0; retryCount < NumRetries; ++retryCount)
             {
                 try
