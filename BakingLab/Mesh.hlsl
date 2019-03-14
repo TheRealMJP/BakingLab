@@ -254,11 +254,10 @@ float AreaLightShadowVisibility(in float3 positionWS)
 //-------------------------------------------------------------------------------------------------
 float3 CalcLighting(in float3 normal, in float3 lightDir, in float3 lightColor,
 					in float3 diffuseAlbedo, in float3 specularAlbedo, in float roughness,
-					in float3 positionWS, inout float3 irradiance)
+					in float3 view, inout float3 irradiance)
 {
     float3 lighting = diffuseAlbedo * (1.0f / 3.14159f);
 
-    float3 view = normalize(CameraPosWS - positionWS);
     const float nDotL = saturate(dot(normal, lightDir));
     if(nDotL > 0.0f)
     {
@@ -356,6 +355,32 @@ SH9Color GetSHSpecularBRDF(in float3 view, in float3 normal, in float3 specularA
     return RotateSH9(shBrdf, localFrame);
 }
 
+// ------------------------------------------------------------------------------------------------
+// Computes approximated specular from radiance encoded as a set of SH coefficients by
+// approximating a directional light in the "dominant" direction.
+// From "Precomputed Global Illumination in Frostbite"
+// https://www.ea.com/frostbite/news/precomputed-global-illumination-in-frostbite
+// ------------------------------------------------------------------------------------------------
+float3 FrostbiteSHSpecular(in float3 view, in float3 normal, in float3 specularAlbedo,
+                           in float sqrtRoughness, in SH4Color shRadiance)
+{
+    float3 avgL1 = float3(-dot(shRadiance.c[3] / shRadiance.c[0], 0.333f),
+                          -dot(shRadiance.c[1] / shRadiance.c[0], 0.333f),
+                           dot(shRadiance.c[2] / shRadiance.c[0], 0.333f));
+    avgL1 *= 0.5f;
+    float avgL1len = length(avgL1);
+    float3 specDir = avgL1 / avgL1len;
+
+    SH4Color specDirSH = ProjectOntoSH4Color(specDir, Pi);
+    float3 specLightColor = SHDotProduct(specDirSH, shRadiance);
+
+    sqrtRoughness = saturate(sqrtRoughness * 1.0f / sqrt(avgL1len));
+    float roughness = sqrtRoughness * sqrtRoughness;
+
+    float3 irradiance;
+    return CalcLighting(normal, specDir, specLightColor, 0.0f, specularAlbedo, roughness, view, irradiance);
+}
+
 //=================================================================================================
 // Pixel Shader
 //=================================================================================================
@@ -425,7 +450,7 @@ PSOutput PS(in PSInput input)
             sunDirection = DDotR < d ? normalize(d * D + normalize(S) * r) : R;
         }
         lighting += CalcLighting(normalWS, sunDirection, SunIlluminance, diffuseAlbedo, specularAlbedo,
-                                 roughness, positionWS, sunIrradiance) * sunShadowVisibility;
+                                 roughness, viewWS, sunIrradiance) * sunShadowVisibility;
         irradiance += sunIrradiance * sunShadowVisibility;
     }
 
@@ -447,7 +472,7 @@ PSOutput PS(in PSInput input)
     }
 
 	// Add in the indirect
-    if(EnableIndirectLighting || ViewIndirectSpecular)
+    if(EnableIndirectLighting || ViewIndirectDiffuse || ViewIndirectSpecular)
     {
         float3 indirectIrradiance = 0.0f;
         float3 indirectSpecular = 0.0f;
@@ -482,10 +507,20 @@ PSOutput PS(in PSInput input)
             for(uint i = 0; i < 4; ++i)
                 shRadiance.c[i] = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, i), 0.0f).xyz;
 
-            indirectIrradiance = EvalSH4Irradiance(normalSHSG, shRadiance);
+            if(SH4DiffuseMode == SH4DiffuseModes_Geomerics)
+                indirectIrradiance = EvalSH4IrradianceGeomerics(normalSHSG, shRadiance);
+            else
+                indirectIrradiance = EvalSH4Irradiance(normalSHSG, shRadiance);
 
-            SH4Color shSpecularBRDF = ConvertToSH4(GetSHSpecularBRDF(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness));
-            indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
+            if(SHSpecularMode == SHSpecularModes_Frostbite)
+            {
+                indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
+            }
+            else
+            {
+                SH4Color shSpecularBRDF = ConvertToSH4(GetSHSpecularBRDF(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness));
+                indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
+            }
         }
         else if(BakeMode == BakeModes_SH9)
         {
@@ -497,8 +532,15 @@ PSOutput PS(in PSInput input)
 
             indirectIrradiance = EvalSH9Irradiance(normalSHSG, shRadiance);
 
-            SH9Color shSpecularBRDF = GetSHSpecularBRDF(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness);
-            indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
+            if(SHSpecularMode == SHSpecularModes_Frostbite)
+            {
+                indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH4(shRadiance));
+            }
+            else
+            {
+                SH9Color shSpecularBRDF = GetSHSpecularBRDF(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness);
+                indirectSpecular = SHDotProduct(shSpecularBRDF, shRadiance);
+            }
         }
         else if(BakeMode == BakeModes_H4)
         {
@@ -549,6 +591,9 @@ PSOutput PS(in PSInput input)
 
         if(EnableIndirectSpecular)
             lighting += indirectSpecular;
+
+        if(ViewIndirectDiffuse)
+            lighting = indirectIrradiance / Pi;
 
         if(ViewIndirectSpecular)
             lighting = indirectSpecular;

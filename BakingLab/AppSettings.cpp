@@ -131,6 +131,18 @@ static const char* SGDiffuseModesLabels[3] =
     "Fitted (Hill 16)",
 };
 
+static const char* SH4DiffuseModesLabels[2] =
+{
+    "Convolution",
+    "Geomerics",
+};
+
+static const char* SHSpecularModesLabels[2] =
+{
+    "Convolution",
+    "Frostbite",
+};
+
 static const char* SampleModesLabels[5] =
 {
     "Random",
@@ -233,6 +245,8 @@ namespace AppSettings
     FloatSetting JitterScale;
     SGDiffuseModesSetting SGDiffuseMode;
     BoolSetting UseASGWarp;
+    SH4DiffuseModesSetting SH4DiffuseMode;
+    SHSpecularModesSetting SHSpecularMode;
     IntSetting LightMapResolution;
     IntSetting NumBakeSamples;
     SampleModesSetting BakeSampleMode;
@@ -266,6 +280,7 @@ namespace AppSettings
     FloatSetting BloomBlurSigma;
     BoolSetting EnableLuminancePicker;
     BoolSetting ShowBakeDataVisualizer;
+    BoolSetting ViewIndirectDiffuse;
     BoolSetting ViewIndirectSpecular;
     Button SaveLightSettings;
     Button LoadLightSettings;
@@ -475,6 +490,12 @@ namespace AppSettings
         UseASGWarp.Initialize(tweakBar, "UseASGWarp", "SG Settings", "Use ASG Warp", "", true);
         Settings.AddSetting(&UseASGWarp);
 
+        SH4DiffuseMode.Initialize(tweakBar, "SH4DiffuseMode", "SH Settings", "L1 SH Diffuse Mode", "", SH4DiffuseModes::Convolution, 2, SH4DiffuseModesLabels);
+        Settings.AddSetting(&SH4DiffuseMode);
+
+        SHSpecularMode.Initialize(tweakBar, "SHSpecularMode", "SH Settings", "SH Specular Mode", "", SHSpecularModes::Convolution, 2, SHSpecularModesLabels);
+        Settings.AddSetting(&SHSpecularMode);
+
         LightMapResolution.Initialize(tweakBar, "LightMapResolution", "Baking", "Light Map Resolution", "The texture resolution of the light map", 256, 64, 4096);
         Settings.AddSetting(&LightMapResolution);
 
@@ -574,6 +595,9 @@ namespace AppSettings
         ShowBakeDataVisualizer.Initialize(tweakBar, "ShowBakeDataVisualizer", "Debug", "Show Bake Data Visualizer", "", false);
         Settings.AddSetting(&ShowBakeDataVisualizer);
 
+        ViewIndirectDiffuse.Initialize(tweakBar, "ViewIndirectDiffuse", "Debug", "View Indirect Diffuse", "", false);
+        Settings.AddSetting(&ViewIndirectDiffuse);
+
         ViewIndirectSpecular.Initialize(tweakBar, "ViewIndirectSpecular", "Debug", "View Indirect Specular", "", false);
         Settings.AddSetting(&ViewIndirectSpecular);
 
@@ -602,6 +626,8 @@ namespace AppSettings
         TwHelper::SetOpened(tweakBar, "Anti Aliasing", false);
 
         TwHelper::SetOpened(tweakBar, "SG Settings", false);
+
+        TwHelper::SetOpened(tweakBar, "SH Settings", false);
 
         TwHelper::SetOpened(tweakBar, "Baking", false);
 
@@ -671,6 +697,8 @@ namespace AppSettings
         CBuffer.Data.GaussianSigma = GaussianSigma;
         CBuffer.Data.SGDiffuseMode = SGDiffuseMode;
         CBuffer.Data.UseASGWarp = UseASGWarp;
+        CBuffer.Data.SH4DiffuseMode = SH4DiffuseMode;
+        CBuffer.Data.SHSpecularMode = SHSpecularMode;
         CBuffer.Data.LightMapResolution = LightMapResolution;
         CBuffer.Data.BakeMode = BakeMode;
         CBuffer.Data.SolveMode = SolveMode;
@@ -689,6 +717,7 @@ namespace AppSettings
         CBuffer.Data.BloomExposure = BloomExposure;
         CBuffer.Data.BloomMagnitude = BloomMagnitude;
         CBuffer.Data.BloomBlurSigma = BloomBlurSigma;
+        CBuffer.Data.ViewIndirectDiffuse = ViewIndirectDiffuse;
         CBuffer.Data.ViewIndirectSpecular = ViewIndirectSpecular;
 
         CBuffer.ApplyChanges(context);
@@ -921,6 +950,9 @@ namespace AppSettings
 
         SGDiffuseMode.SetEditable(useSGSettings);
         SolveMode.SetEditable(useSGSettings);
+
+        SH4DiffuseMode.SetEditable(BakeMode == BakeModes::SH4);
+        SHSpecularMode.SetEditable(BakeMode == BakeModes::SH4 || BakeMode == BakeModes::SH9);
 
         if(AppSettings::HasSunDirChanged())
         {

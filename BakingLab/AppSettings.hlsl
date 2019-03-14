@@ -44,6 +44,8 @@ cbuffer AppSettings : register(b7)
     float GaussianSigma;
     int SGDiffuseMode;
     bool UseASGWarp;
+    int SH4DiffuseMode;
+    int SHSpecularMode;
     int LightMapResolution;
     int BakeMode;
     int SolveMode;
@@ -62,6 +64,7 @@ cbuffer AppSettings : register(b7)
     float BloomExposure;
     float BloomMagnitude;
     float BloomBlurSigma;
+    bool ViewIndirectDiffuse;
     bool ViewIndirectSpecular;
 }
 
@@ -155,6 +158,12 @@ static const int JitterModes_Hammersley16x = 4;
 static const int SGDiffuseModes_InnerProduct = 0;
 static const int SGDiffuseModes_Punctual = 1;
 static const int SGDiffuseModes_Fitted = 2;
+
+static const int SH4DiffuseModes_Convolution = 0;
+static const int SH4DiffuseModes_Geomerics = 1;
+
+static const int SHSpecularModes_Convolution = 0;
+static const int SHSpecularModes_Frostbite = 1;
 
 static const int SampleModes_Random = 0;
 static const int SampleModes_Stratified = 1;

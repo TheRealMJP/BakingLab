@@ -306,6 +306,18 @@ enum SGDiffuseModes
     Fitted,
 }
 
+enum SH4DiffuseModes
+{
+    Convolution = 0,
+    Geomerics,
+}
+
+enum SHSpecularModes
+{
+    Convolution = 0,
+    Frostbite,
+}
+
 public class Settings
 {
     const float BaseSunSize = 0.27f;
@@ -623,6 +635,17 @@ public class Settings
     }
 
     [ExpandGroup(false)]
+    [DisplayName("SH Settings")]
+    public class SHSettings
+    {
+        [DisplayName("L1 SH Diffuse Mode")]
+        SH4DiffuseModes SH4DiffuseMode = SH4DiffuseModes.Convolution;
+
+        [DisplayName("SH Specular Mode")]
+        SHSpecularModes SHSpecularMode = SHSpecularModes.Convolution;
+    }
+
+    [ExpandGroup(false)]
     public class Baking
     {
         [DisplayName("Light Map Resolution")]
@@ -808,6 +831,7 @@ public class Settings
         [UseAsShaderConstant(false)]
         bool ShowBakeDataVisualizer = false;
 
+        bool ViewIndirectDiffuse = false;
         bool ViewIndirectSpecular = false;
 
         [DisplayName("Save Light Settings")]

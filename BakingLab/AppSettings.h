@@ -181,6 +181,26 @@ enum class SGDiffuseModes
 
 typedef EnumSettingT<SGDiffuseModes> SGDiffuseModesSetting;
 
+enum class SH4DiffuseModes
+{
+    Convolution = 0,
+    Geomerics = 1,
+
+    NumValues
+};
+
+typedef EnumSettingT<SH4DiffuseModes> SH4DiffuseModesSetting;
+
+enum class SHSpecularModes
+{
+    Convolution = 0,
+    Frostbite = 1,
+
+    NumValues
+};
+
+typedef EnumSettingT<SHSpecularModes> SHSpecularModesSetting;
+
 enum class SampleModes
 {
     Random = 0,
@@ -303,6 +323,8 @@ namespace AppSettings
     extern FloatSetting JitterScale;
     extern SGDiffuseModesSetting SGDiffuseMode;
     extern BoolSetting UseASGWarp;
+    extern SH4DiffuseModesSetting SH4DiffuseMode;
+    extern SHSpecularModesSetting SHSpecularMode;
     extern IntSetting LightMapResolution;
     extern IntSetting NumBakeSamples;
     extern SampleModesSetting BakeSampleMode;
@@ -336,6 +358,7 @@ namespace AppSettings
     extern FloatSetting BloomBlurSigma;
     extern BoolSetting EnableLuminancePicker;
     extern BoolSetting ShowBakeDataVisualizer;
+    extern BoolSetting ViewIndirectDiffuse;
     extern BoolSetting ViewIndirectSpecular;
     extern Button SaveLightSettings;
     extern Button LoadLightSettings;
@@ -388,6 +411,8 @@ namespace AppSettings
         float GaussianSigma;
         int32 SGDiffuseMode;
         bool32 UseASGWarp;
+        int32 SH4DiffuseMode;
+        int32 SHSpecularMode;
         int32 LightMapResolution;
         int32 BakeMode;
         int32 SolveMode;
@@ -406,6 +431,7 @@ namespace AppSettings
         float BloomExposure;
         float BloomMagnitude;
         float BloomBlurSigma;
+        bool32 ViewIndirectDiffuse;
         bool32 ViewIndirectSpecular;
     };
 

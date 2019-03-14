@@ -186,6 +186,37 @@ float3 EvalSH4Irradiance(in float3 dir, in SH4Color sh)
 }
 
 //-------------------------------------------------------------------------------------------------
+// Evaluates the irradiance from a set of SH4 coeffecients using the non-linear fit from
+// the paper by Graham Hazel from Geomerics.
+// https://grahamhazel.com/blog/2017/12/22/converting-sh-radiance-to-irradiance/
+//-------------------------------------------------------------------------------------------------
+float EvalSH4IrradianceGeomerics(in float3 dir, in SH4 sh)
+{
+    float R0 = sh.c[0];
+
+    float3 R1 = 0.5f * float3(-sh.c[3], -sh.c[1], sh.c[2]);
+    float lenR1 = length(R1);
+
+    float q = 0.5f * (1.0f + dot(R1 / lenR1, dir));
+
+    float p = 1.0f + 2.0f * lenR1 / R0;
+    float a = (1.0f - lenR1 / R0) / (1.0f + lenR1 / R0);
+
+    return R0 * (a + (1.0f - a) * (p + 1.0f) * pow(abs(q), p));
+}
+
+float3 EvalSH4IrradianceGeomerics(in float3 dir, in SH4Color sh)
+{
+    SH4 shr = { sh.c[0].x, sh.c[1].x, sh.c[2].x, sh.c[3].x };
+    SH4 shg = { sh.c[0].y, sh.c[1].y, sh.c[2].y, sh.c[3].y };
+    SH4 shb = { sh.c[0].z, sh.c[1].z, sh.c[2].z, sh.c[3].z };
+
+    return float3(EvalSH4IrradianceGeomerics(dir, shr),
+                  EvalSH4IrradianceGeomerics(dir, shg),
+                  EvalSH4IrradianceGeomerics(dir, shb));
+}
+
+//-------------------------------------------------------------------------------------------------
 // Converts from 3-band to 2-band SH
 //-------------------------------------------------------------------------------------------------
 SH4 ConvertToSH4(in SH9 sh9)
