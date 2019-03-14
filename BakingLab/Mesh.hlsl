@@ -400,15 +400,15 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3 specula
     float3 reflectDir = reflect(-view, normal);
 
     float roughness = sqrtRoughness * sqrtRoughness;
-    shRadiance.c[0] *= exp(-Square(roughness * 0.0f));
-    shRadiance.c[1] *= exp(-Square(roughness * 1.0f));
-    shRadiance.c[2] *= exp(-Square(roughness * 1.0f));
-    shRadiance.c[3] *= exp(-Square(roughness * 1.0f));
-    shRadiance.c[4] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[5] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[6] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[7] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[8] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[0] *= exp(-Square(roughness * 1.0f)));
+    shRadiance.c[1] *= exp(-Square(roughness * 2.0f)));
+    shRadiance.c[2] *= exp(-Square(roughness * 2.0f)));
+    shRadiance.c[3] *= exp(-Square(roughness * 2.0f)));
+    shRadiance.c[4] *= exp(-Square(roughness * 3.0f)));
+    shRadiance.c[5] *= exp(-Square(roughness * 3.0f)));
+    shRadiance.c[6] *= exp(-Square(roughness * 3.0f)));
+    shRadiance.c[7] *= exp(-Square(roughness * 3.0f)));
+    shRadiance.c[8] *= exp(-Square(roughness * 3.0f)));
 
     float3 specLightColor = EvalSH9(reflectDir, shRadiance);
 
@@ -462,6 +462,7 @@ PSOutput PS(in PSInput input)
 
     float sqrtRoughness = RoughnessMap.Sample(AnisoSampler, uv);
     sqrtRoughness *= RoughnessScale;
+    sqrtRoughness = saturate(sqrtRoughness);
     float roughness = sqrtRoughness * sqrtRoughness;
 
     float depthVS = input.DepthVS;
