@@ -137,10 +137,11 @@ static const char* SH4DiffuseModesLabels[2] =
     "Geomerics",
 };
 
-static const char* SHSpecularModesLabels[2] =
+static const char* SHSpecularModesLabels[3] =
 {
     "Convolution",
     "Frostbite",
+    "Reflect",
 };
 
 static const char* SampleModesLabels[5] =
@@ -493,7 +494,7 @@ namespace AppSettings
         SH4DiffuseMode.Initialize(tweakBar, "SH4DiffuseMode", "SH Settings", "L1 SH Diffuse Mode", "", SH4DiffuseModes::Convolution, 2, SH4DiffuseModesLabels);
         Settings.AddSetting(&SH4DiffuseMode);
 
-        SHSpecularMode.Initialize(tweakBar, "SHSpecularMode", "SH Settings", "SH Specular Mode", "", SHSpecularModes::Convolution, 2, SHSpecularModesLabels);
+        SHSpecularMode.Initialize(tweakBar, "SHSpecularMode", "SH Settings", "SH Specular Mode", "", SHSpecularModes::Convolution, 3, SHSpecularModesLabels);
         Settings.AddSetting(&SHSpecularMode);
 
         LightMapResolution.Initialize(tweakBar, "LightMapResolution", "Baking", "Light Map Resolution", "The texture resolution of the light map", 256, 64, 4096);

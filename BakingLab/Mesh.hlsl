@@ -376,14 +376,31 @@ float3 FrostbiteSHSpecular(in float3 view, in float3 normal, in float3 specularA
     float avgL1len = length(avgL1);
     float3 specDir = avgL1 / avgL1len;
 
-    SH4Color specDirSH = ProjectOntoSH4Color(specDir, Pi);
-    float3 specLightColor = SHDotProduct(specDirSH, shRadiance);
+    float3 specLightColor = EvalSH4(specDir, shRadiance) * Pi;
 
     sqrtRoughness = saturate(sqrtRoughness * 1.0f / sqrt(avgL1len));
     float roughness = sqrtRoughness * sqrtRoughness;
 
     float3 irradiance;
     return CalcLighting(normal, specDir, specLightColor, 0.0f, specularAlbedo, roughness, view, irradiance);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Computes approximated specular from radiance encoded as a set of SH coefficients by
+// approximating a directional light in the direction of the reflection vector
+// ------------------------------------------------------------------------------------------------
+float3 ReflectSHSpecular(in float3 view, in float3 normal, in float3 specularAlbedo,
+                           in float sqrtRoughness, in SH9Color shRadiance)
+{
+    float3 reflectDir = reflect(-view, normal);
+
+    sqrtRoughness = max(sqrtRoughness, 0.5f);
+    float roughness = sqrtRoughness * sqrtRoughness;
+
+    float3 specLightColor = EvalSH9(reflectDir, shRadiance);
+
+    float3 irradiance;
+    return CalcLighting(normal, reflectDir, specLightColor, 0.0f, specularAlbedo, roughness, view, irradiance);
 }
 
 //=================================================================================================
@@ -519,6 +536,8 @@ PSOutput PS(in PSInput input)
 
             if(SHSpecularMode == SHSpecularModes_Frostbite)
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
+            else if(SHSpecularMode == SHSpecularModes_Reflect)
+                indirectSpecular = ReflectSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
             else
                 indirectSpecular = ConvolutionSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
         }
@@ -534,6 +553,8 @@ PSOutput PS(in PSInput input)
 
             if(SHSpecularMode == SHSpecularModes_Frostbite)
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH4(shRadiance));
+            else if(SHSpecularMode == SHSpecularModes_Reflect)
+                indirectSpecular = ReflectSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
             else
                 indirectSpecular = ConvolutionSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
         }

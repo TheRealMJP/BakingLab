@@ -316,6 +316,7 @@ enum SHSpecularModes
 {
     Convolution = 0,
     Frostbite,
+    Reflect,
 }
 
 public class Settings
