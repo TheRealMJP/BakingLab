@@ -410,7 +410,7 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3 specula
     shRadiance.c[7] *= exp(-Square(roughness * 3.0f));
     shRadiance.c[8] *= exp(-Square(roughness * 3.0f));
 
-    float3 specLightColor = EvalSH9(reflectDir, shRadiance);
+    float3 specLightColor = max(EvalSH9(reflectDir, shRadiance), 0.0f);
 
     float fresnelfactor = pow(1.0f - saturate(dot(normal, view)), 5.0f) / (4 - 3.0f * (1.0f - sqrtRoughness));
     float3 envBRDF = specularAlbedo + (1.0f - specularAlbedo) * fresnelfactor;
