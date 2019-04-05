@@ -138,7 +138,7 @@ static Float3 SampleSphericalAreaLight(const Float3& position, const Float3& nor
     {
         sampleDir /= sampleDirLen;
 
-        visible = Occluded(scene, position, sampleDir, 0.1f, sampleDirLen) == false;
+        visible = (AppSettings::EnableAreaLightShadows == false) || (Occluded(scene, position, sampleDir, 0.1f, sampleDirLen) == false);
     }
 
     float areaNDotL = std::abs(Float3::Dot(sampleDir, Float3::Normalize(samplePos - lightPos)));
@@ -352,6 +352,7 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
             float roughness = sqrtRoughness * sqrtRoughness;
 
             const bool indirectSpecOnly = params.ViewIndirectSpecular && pathLength == 1;
+            const bool indirectDiffuseOnly = params.ViewIndirectDiffuse && pathLength == 1;
             const bool enableSpecular = (params.EnableBounceSpecular || pathLength == 1) && params.EnableSpecular;
             const bool enableDiffuse = params.EnableDiffuse ? true : false;
 
@@ -392,7 +393,7 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
             if(AppSettings::EnableIndirectLighting || params.ViewIndirectSpecular)
             {
                 const bool enableDiffuseSampling = metallic < 1.0f && AppSettings::EnableIndirectDiffuse && enableDiffuse && indirectSpecOnly == false;
-                const bool enableSpecularSampling = enableSpecular && AppSettings::EnableIndirectSpecular;
+                const bool enableSpecularSampling = enableSpecular && AppSettings::EnableIndirectSpecular && !indirectDiffuseOnly;
                 if(enableDiffuseSampling || enableSpecularSampling)
                 {
                     // Randomly select if we should sample our diffuse BRDF, or our specular BRDF
@@ -439,7 +440,7 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
                         // Compute both BRDF's
                         Float3 brdf = 0.0f;
                         if(enableDiffuseSampling)
-                            brdf += diffuseAlbedo * InvPi;
+                            brdf += ((AppSettings::ShowGroundTruth && params.ViewIndirectDiffuse && pathLength == 1) ? Float3(1, 1, 1) : diffuseAlbedo) * InvPi;
 
                         if(enableSpecularSampling)
                         {
@@ -457,6 +458,11 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
                     }
                 }
             }
+
+			if(AppSettings::ShowGroundTruth && (!AppSettings::EnableDirectLighting || indirectDiffuseOnly) && pathLength == 1)
+			{
+				radiance *= 0.0f;
+			}
         }
         else {
             // We hit the sky, so we'll sample the sky radiance and then bail out
