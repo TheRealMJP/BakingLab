@@ -201,7 +201,7 @@ RWTexture2DArray<unorm float2> DistanceOutputCubeMap : register(u0);
 float3 SampleCosinePower(in float2 xi, in float n)
 {
     float phi = 2.0f * Pi * xi.x;
-    float theta = acos(pow(1.0f - xi.y, 1.0f /(n + 1.0f)));
+    float theta = acos(pow(saturate(1.0f - xi.y), 1.0f /(n + 1.0f)));
 
     float3 dir;
     dir.x = sin(theta) * cos(phi);
