@@ -1252,6 +1252,7 @@ static bool RenderDriver(RenderThreadContext& context)
             params.EnableSpecular = AppSettings::EnableSpecular;
             params.EnableBounceSpecular = uint8(AppSettings::EnableRenderBounceSpecular);
             params.ViewIndirectSpecular = uint8(AppSettings::ViewIndirectSpecular);
+            params.ViewIndirectDiffuse = uint8(AppSettings::ViewIndirectDiffuse);
             params.MaxPathLength = pathLength;
             params.RussianRouletteDepth = AppSettings::RenderRussianRouletteDepth;
             params.RussianRouletteProbability = AppSettings::RenderRussianRouletteProbability;
@@ -1598,7 +1599,8 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         || AppSettings::Turbidity.Changed() || AppSettings::HasSunDirChanged()
         || AppSettings::SunTintColor.Changed() || AppSettings::SunIntensityScale.Changed()
         || AppSettings::SunSize.Changed() || AppSettings::NormalizeSunIntensity.Changed()
-        || AppSettings::DiffuseAlbedoScale.Changed() || AppSettings::EnableAlbedoMaps.Changed())
+        || AppSettings::DiffuseAlbedoScale.Changed() || AppSettings::EnableAlbedoMaps.Changed()
+        || AppSettings::EnableAreaLightShadows.Changed())
     {
         InterlockedIncrement64(&renderTag);
         InterlockedIncrement64(&bakeTag);
@@ -1638,7 +1640,7 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         || AppSettings::RenderRussianRouletteDepth.Changed() || AppSettings::RenderRussianRouletteProbability.Changed()
         || AppSettings::EnableRenderBounceSpecular.Changed() || AppSettings::MaxRenderPathLength.Changed()
         || AppSettings::EnableDiffuse.Changed() || AppSettings::EnableSpecular.Changed()
-        || AppSettings::ViewIndirectSpecular.Changed())
+        || AppSettings::ViewIndirectSpecular.Changed() || AppSettings::ViewIndirectDiffuse.Changed())
     {
         InterlockedIncrement64(&renderTag);
         currTile = 0;

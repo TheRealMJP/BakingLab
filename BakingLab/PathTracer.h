@@ -204,6 +204,7 @@ struct PathTracerParams
     uint8 EnableSpecular = false;
     uint8 EnableBounceSpecular = false;
     uint8 ViewIndirectSpecular = false;
+    uint8 ViewIndirectDiffuse = false;
     int32 MaxPathLength = -1;
     int32 RussianRouletteDepth = -1;
     float RussianRouletteProbability = 0.5f;
