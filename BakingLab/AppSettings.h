@@ -347,6 +347,7 @@ namespace AppSettings
     extern FloatSetting NormalMapIntensity;
     extern FloatSetting DiffuseAlbedoScale;
     extern FloatSetting RoughnessScale;
+    extern FloatSetting MetallicOffset;
     extern BoolSetting ShowGroundTruth;
     extern IntSetting NumRenderSamples;
     extern SampleModesSetting RenderSampleMode;
@@ -361,6 +362,7 @@ namespace AppSettings
     extern BoolSetting ShowBakeDataVisualizer;
     extern BoolSetting ViewIndirectDiffuse;
     extern BoolSetting ViewIndirectSpecular;
+    extern FloatSetting RoughnessOverride;
     extern Button SaveLightSettings;
     extern Button LoadLightSettings;
     extern Button SaveEXRScreenshot;
@@ -429,11 +431,13 @@ namespace AppSettings
         float NormalMapIntensity;
         float DiffuseAlbedoScale;
         float RoughnessScale;
+        float MetallicOffset;
         float BloomExposure;
         float BloomMagnitude;
         float BloomBlurSigma;
         bool32 ViewIndirectDiffuse;
         bool32 ViewIndirectSpecular;
+        float RoughnessOverride;
     };
 
     extern ConstantBuffer<AppSettingsCBuffer> CBuffer;

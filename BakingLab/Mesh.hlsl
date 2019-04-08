@@ -459,12 +459,15 @@ PSOutput PS(in PSInput input)
     if(EnableAlbedoMaps)
         albedoMap = AlbedoMap.Sample(AnisoSampler, uv).xyz;
 
-    float metallic = saturate(MetallicMap.Sample(AnisoSampler, uv));
-    float3 diffuseAlbedo = lerp(albedoMap.xyz, 0.0f, metallic) * DiffuseAlbedoScale * EnableDiffuse;
-    float3 specularAlbedo = lerp(0.03f, albedoMap.xyz, metallic) * EnableSpecular;
+    const float metallic = saturate(MetallicMap.Sample(AnisoSampler, uv) + MetallicOffset);
+    const float3 diffuseAlbedo = lerp(albedoMap.xyz, 0.0f, metallic) * DiffuseAlbedoScale * EnableDiffuse;
+    const float3 specularAlbedo = lerp(0.03f, albedoMap.xyz, metallic) * EnableSpecular;
 
     float sqrtRoughness = RoughnessMap.Sample(AnisoSampler, uv);
     sqrtRoughness *= RoughnessScale;
+    if(RoughnessOverride >= 0.01f)
+        sqrtRoughness = RoughnessOverride;
+
     sqrtRoughness = saturate(sqrtRoughness);
     float roughness = sqrtRoughness * sqrtRoughness;
 

@@ -345,10 +345,15 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
 
             float sqrtRoughness = Float3(SampleTexture2D(hitSurface.TexCoord, bvh.MaterialRoughnessMaps[materialIdx])).x;
             float metallic =  Float3(SampleTexture2D(hitSurface.TexCoord, bvh.MaterialMetallicMaps[materialIdx])).x;
+            metallic = Saturate(metallic + AppSettings::MetallicOffset);
 
             Float3 diffuseAlbedo = Lerp(albedo, Float3(0.0f), metallic) * AppSettings::DiffuseAlbedoScale;
             Float3 specAlbedo = Lerp(Float3(0.03f), albedo, metallic);
             sqrtRoughness *= AppSettings::RoughnessScale;
+            if(AppSettings::RoughnessOverride >= 0.01f)
+                sqrtRoughness = AppSettings::RoughnessOverride;
+
+            sqrtRoughness = Saturate(sqrtRoughness);
             float roughness = sqrtRoughness * sqrtRoughness;
 
             const bool indirectSpecOnly = params.ViewIndirectSpecular && pathLength == 1;

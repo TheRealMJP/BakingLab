@@ -269,6 +269,7 @@ namespace AppSettings
     FloatSetting NormalMapIntensity;
     FloatSetting DiffuseAlbedoScale;
     FloatSetting RoughnessScale;
+    FloatSetting MetallicOffset;
     BoolSetting ShowGroundTruth;
     IntSetting NumRenderSamples;
     SampleModesSetting RenderSampleMode;
@@ -283,6 +284,7 @@ namespace AppSettings
     BoolSetting ShowBakeDataVisualizer;
     BoolSetting ViewIndirectDiffuse;
     BoolSetting ViewIndirectSpecular;
+    FloatSetting RoughnessOverride;
     Button SaveLightSettings;
     Button LoadLightSettings;
     Button SaveEXRScreenshot;
@@ -560,6 +562,9 @@ namespace AppSettings
         RoughnessScale.Initialize(tweakBar, "RoughnessScale", "Scene", "Specular Roughness Scale", "Global scale applied to all material roughness values", 2.0000f, 0.0100f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&RoughnessScale);
 
+        MetallicOffset.Initialize(tweakBar, "MetallicOffset", "Scene", "Metallic Offset", "", 0.0000f, -1.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&MetallicOffset);
+
         ShowGroundTruth.Initialize(tweakBar, "ShowGroundTruth", "Ground Truth", "Show Ground Truth", "If enabled, shows a ground truth image rendered on the CPU", false);
         Settings.AddSetting(&ShowGroundTruth);
 
@@ -601,6 +606,9 @@ namespace AppSettings
 
         ViewIndirectSpecular.Initialize(tweakBar, "ViewIndirectSpecular", "Debug", "View Indirect Specular", "", false);
         Settings.AddSetting(&ViewIndirectSpecular);
+
+        RoughnessOverride.Initialize(tweakBar, "RoughnessOverride", "Debug", "Roughness Override", "", 0.0000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&RoughnessOverride);
 
         SaveLightSettings.Initialize(tweakBar, "SaveLightSettings", "Debug", "Save Light Settings", "Saves the lighting settings to a file");
         Settings.AddSetting(&SaveLightSettings);
@@ -715,11 +723,13 @@ namespace AppSettings
         CBuffer.Data.NormalMapIntensity = NormalMapIntensity;
         CBuffer.Data.DiffuseAlbedoScale = DiffuseAlbedoScale;
         CBuffer.Data.RoughnessScale = RoughnessScale;
+        CBuffer.Data.MetallicOffset = MetallicOffset;
         CBuffer.Data.BloomExposure = BloomExposure;
         CBuffer.Data.BloomMagnitude = BloomMagnitude;
         CBuffer.Data.BloomBlurSigma = BloomBlurSigma;
         CBuffer.Data.ViewIndirectDiffuse = ViewIndirectDiffuse;
         CBuffer.Data.ViewIndirectSpecular = ViewIndirectSpecular;
+        CBuffer.Data.RoughnessOverride = RoughnessOverride;
 
         CBuffer.ApplyChanges(context);
         CBuffer.SetVS(context, 7);

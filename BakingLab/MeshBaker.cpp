@@ -1600,7 +1600,7 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         || AppSettings::SunTintColor.Changed() || AppSettings::SunIntensityScale.Changed()
         || AppSettings::SunSize.Changed() || AppSettings::NormalizeSunIntensity.Changed()
         || AppSettings::DiffuseAlbedoScale.Changed() || AppSettings::EnableAlbedoMaps.Changed()
-        || AppSettings::EnableAreaLightShadows.Changed())
+        || AppSettings::EnableAreaLightShadows.Changed() || AppSettings::MetallicOffset.Changed())
     {
         InterlockedIncrement64(&renderTag);
         InterlockedIncrement64(&bakeTag);
@@ -1640,7 +1640,8 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         || AppSettings::RenderRussianRouletteDepth.Changed() || AppSettings::RenderRussianRouletteProbability.Changed()
         || AppSettings::EnableRenderBounceSpecular.Changed() || AppSettings::MaxRenderPathLength.Changed()
         || AppSettings::EnableDiffuse.Changed() || AppSettings::EnableSpecular.Changed()
-        || AppSettings::ViewIndirectSpecular.Changed() || AppSettings::ViewIndirectDiffuse.Changed())
+        || AppSettings::ViewIndirectSpecular.Changed() || AppSettings::ViewIndirectDiffuse.Changed()
+        || AppSettings::RoughnessOverride.Changed())
     {
         InterlockedIncrement64(&renderTag);
         currTile = 0;

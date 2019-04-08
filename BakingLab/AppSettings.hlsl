@@ -61,11 +61,13 @@ cbuffer AppSettings : register(b7)
     float NormalMapIntensity;
     float DiffuseAlbedoScale;
     float RoughnessScale;
+    float MetallicOffset;
     float BloomExposure;
     float BloomMagnitude;
     float BloomBlurSigma;
     bool ViewIndirectDiffuse;
     bool ViewIndirectSpecular;
+    float RoughnessOverride;
 }
 
 static const int SunDirectionTypes_UnitVector = 0;

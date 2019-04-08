@@ -751,6 +751,10 @@ public class Settings
         [StepSize(0.01f)]
         [HelpText("Global scale applied to all material roughness values")]
         float RoughnessScale = 2.0f;
+
+        [MinValue(-1.0f)]
+        [MaxValue(1.0f)]
+        float MetallicOffset = 0.0f;
     }
 
     [ExpandGroup(false)]
@@ -834,6 +838,10 @@ public class Settings
 
         bool ViewIndirectDiffuse = false;
         bool ViewIndirectSpecular = false;
+
+        [MinValue(0.0f)]
+        [MaxValue(1.0f)]
+        float RoughnessOverride = 0.0f;
 
         [DisplayName("Save Light Settings")]
         [HelpText("Saves the lighting settings to a file")]
