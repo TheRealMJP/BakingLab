@@ -414,7 +414,7 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3 specula
     const float3 specLightColor = max(EvalSH9(reflectDir, shRadiance), 0.0f);
 
     const float nDotV = saturate(dot(normal, view));
-    const float2 AB = EnvSpecularLookup.SampleLevel(LinearSampler, float2(sqrtRoughness, nDotV), 0.0f);
+    const float2 AB = EnvSpecularLookup.SampleLevel(LinearSampler, float2(nDotV, sqrtRoughness), 0.0f);
     const float3 envBRDF = specularAlbedo * AB.x + AB.y;
 
     return envBRDF * specLightColor;

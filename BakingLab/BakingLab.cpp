@@ -406,7 +406,7 @@ void BakingLab::Initialize()
     ID3D11DeviceContextPtr deviceContext = deviceManager.ImmediateContext();
 
     // Uncomment this line to re-generate the lookup textures for the SH specular BRDF
-    GenerateSHSpecularLookupTextures(device);
+    // GenerateSHSpecularLookupTextures(device);
 
     // Create a font + SpriteRenderer
     font.Initialize(L"Arial", 18, SpriteFont::Regular, true, device);
