@@ -372,6 +372,90 @@ static void GenerateSHSpecularLookupTextures(ID3D11Device* device)
     SaveTextureAsDDS(texture1, L"..\\Content\\Textures\\SHSpecularB.dds");
 }
 
+// Bakes a lookup texture containing a scale bias that can be used for sampling a pre-filtered environment map
+// with a split-sum approximation
+static void GenerateEnvSpecularLookupTexture(ID3D11Device* device)
+{
+    const uint32 NumVSamples = 64;
+    const uint32 NumRSamples = 64;
+    const uint32 SqrtNumSamples = 32;
+    const uint32 NumSamples = SqrtNumSamples * SqrtNumSamples;
+
+    FixedArray<Half2> texels;
+    texels.Init(NumVSamples * NumRSamples);
+    uint32 texelIdx = 0;
+
+    const Float3 n = Float3(0.0f, 0.0f, 1.0f);
+
+    for(uint32 rIdx = 0; rIdx < NumRSamples; ++rIdx)
+    {
+        const float sqrtRoughness = (rIdx + 0.5f) / NumRSamples;
+        const float roughness = Max(sqrtRoughness * sqrtRoughness, 0.001f);
+
+        for(uint32 vIdx = 0; vIdx < NumVSamples; ++vIdx)
+        {
+            const float nDotV = (vIdx + 0.5f) / NumVSamples;
+
+            Float3 v = 0.0f;
+            v.z = nDotV;
+            v.x = std::sqrt(1.0f - Saturate(v.z * v.z));
+
+            float A = 0.0f;
+            float B = 0.0f;
+
+            for(uint32 sIdx = 0; sIdx < NumSamples; ++sIdx)
+            {
+
+                const Float2 u1u2 = SampleCMJ2D(sIdx, SqrtNumSamples, SqrtNumSamples, 0);
+
+                const Float3 h = SampleGGXMicrofacet(v, n, roughness, u1u2.x, u1u2.y);
+                const float hDotV = Saturate(Float3::Dot(h, v));
+                const Float3 l = 2.0f * hDotV * h - v;
+
+                const float nDotL = l.z;
+
+                if(nDotL > 0.0f)
+                {
+                    const float pdf = GGX_PDF(n, h, v, roughness);
+                    const float sampleWeight = GGX_Specular(roughness, n, h, v, l) * nDotL / pdf;
+
+                    const float fc = std::pow(1 - hDotV, 5.0f);
+
+                    A += (1.0f - fc) * sampleWeight;
+                    B += fc * sampleWeight;
+                }
+            }
+
+            A /= NumSamples;
+            B /= NumSamples;
+            texels[texelIdx] = Half2(A, B);
+
+            ++texelIdx;
+        }
+    }
+
+    D3D11_TEXTURE2D_DESC desc = { };
+    desc.Width = NumRSamples;
+    desc.Height = NumVSamples;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R16G16_FLOAT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.Usage = D3D11_USAGE_IMMUTABLE;
+    desc.MipLevels = 1;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+    desc.SampleDesc.Count = 1;
+
+    D3D11_SUBRESOURCE_DATA srData = { };
+    srData.pSysMem = texels.Data();
+    srData.SysMemPitch = sizeof(Half2) * desc.Width;
+
+    ID3D11Texture2DPtr texture;
+    DXCall(device->CreateTexture2D(&desc, &srData, &texture));
+
+    SaveTextureAsDDS(texture, L"..\\Content\\Textures\\EnvSpecularLookup.dds");
+}
+
 BakingLab::BakingLab() : App(L"Baking Lab", MAKEINTRESOURCEW(IDI_DEFAULT)),
                          camera(16.0f / 9.0f, Pi_4 * 0.75f, NearClip, FarClip)
 {
@@ -407,6 +491,8 @@ void BakingLab::Initialize()
 
     // Uncomment this line to re-generate the lookup textures for the SH specular BRDF
     // GenerateSHSpecularLookupTextures(device);
+
+    // GenerateEnvSpecularLookupTexture(device);
 
     // Create a font + SpriteRenderer
     font.Initialize(L"Arial", 18, SpriteFont::Regular, true, device);

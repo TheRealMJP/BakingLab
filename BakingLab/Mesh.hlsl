@@ -404,7 +404,7 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3 specula
     shRadiance.c[0] *= exp(-Square(roughness * 0.0f));
     shRadiance.c[1] *= exp(-Square(roughness * 1.0f));
     shRadiance.c[2] *= exp(-Square(roughness * 1.0f));
-    shRadiance.c[3] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[3] *= exp(-Square(roughness * 1.0f));
     shRadiance.c[4] *= exp(-Square(roughness * 2.0f));
     shRadiance.c[5] *= exp(-Square(roughness * 2.0f));
     shRadiance.c[6] *= exp(-Square(roughness * 2.0f));

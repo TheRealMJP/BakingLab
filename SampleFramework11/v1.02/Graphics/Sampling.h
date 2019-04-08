@@ -116,10 +116,9 @@ inline Float2 SquareToConcentricDiskMapping(float x, float y)
     return result;
 }
 
-// Returns a random direction for sampling a GGX distribution.
-// Does everything in world space.
-inline Float3 SampleDirectionGGX(const Float3& v, const Float3& n, float roughness,
-                                 const Float3x3& tangentToWorld, float u1, float u2)
+// Returns a microfacet normal (half direction) that can be be used to compute a
+// reflected lighting direction. The PDF is equal to D(m) * dot(n, m)
+inline Float3 SampleGGXMicrofacet(const Float3& v, const Float3& n, float roughness, float u1, float u2)
 {
     float theta = std::atan2(roughness * std::sqrt(u1), std::sqrt(1 - u1));
     float phi = 2 * Pi * u2;
@@ -129,14 +128,26 @@ inline Float3 SampleDirectionGGX(const Float3& v, const Float3& n, float roughne
     h.y = std::sin(theta) * std::sin(phi);
     h.z = std::cos(theta);
 
+    return h;
+}
+
+// Returns a world-space lighting direction for sampling a GGX distribution.
+inline Float3 SampleDirectionGGX(const Float3& v, const Float3& n, float roughness,
+                                 const Float3x3& tangentToWorld, float u1, float u2)
+{
+    Float3 h = SampleGGXMicrofacet(v, n, roughness, u1, u2);
+
+    // Convert to world space
     h = Float3::Normalize(Float3::Transform(h, tangentToWorld));
 
+    // Reflect the view vector about the microfaet normal
     float hDotV = std::abs(Float3::Dot(h, v));
     Float3 sampleDir = 2.0f * hDotV * h - v;
     return Float3::Normalize(sampleDir);
 }
 
-// Returns the PDF for a particular GGX sample
+// Returns the PDF for a particular GGX sample after reflecting the view vector
+// about a microfacet normal (includes the Jacobian for going from half vector to lighting vector)
 inline float GGX_PDF(const Float3& n, const Float3& h, const Float3& v, float roughness)
 {
     float nDotH = Saturate(Float3::Dot(n, h));
