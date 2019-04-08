@@ -304,38 +304,38 @@ static void GenerateSHSpecularLookupTextures(ID3D11Device* device)
                 v.z = (vIdx + 0.5f) / ViewResolution;
                 v.x = std::sqrt(1.0f - Saturate(v.z * v.z));
 
-                SH9 sh;
-
+                SH9 finalSH;
                 SH9 accumulatedSH;
+
                 uint32 accumulatedSamples = 0;
                 for(uint64 sampleIdx = 0; sampleIdx < NumSamples; ++sampleIdx)
                 {
                     ++accumulatedSamples;
 
-                    Float2 sampleCoord = SampleCMJ2D(int32(sampleIdx), int32(SqrtNumSamples), int32(SqrtNumSamples), pattern++);
+                    Float2 sampleCoord = SampleCMJ2D(int32(sampleIdx), int32(SqrtNumSamples), int32(SqrtNumSamples), 0);
                     Float3 l = SampleDirectionGGX(v, n, Roughness, Float3x3(), sampleCoord.x, sampleCoord.y);
                     Float3 h = Float3::Normalize(v + l);
                     float nDotL = Saturate(l.z);
 
                     float pdf = GGX_PDF(n, h, v, Roughness);
                     float brdf = GGX_Specular(Roughness, n, h, v, l) * Fresnel(specAlbedo, h, l).x;
-                    SH9 sh = ProjectOntoSH9(l) * brdf * nDotL / pdf;
+                    SH9 projectedSH = ProjectOntoSH9(l) * brdf * nDotL / pdf;
 
-                    accumulatedSH += sh;
+                    accumulatedSH += projectedSH;
                     if(accumulatedSamples >= 1000)
                     {
-                        sh += accumulatedSH / float(NumSamples);
+                        finalSH += accumulatedSH / float(NumSamples);
                         accumulatedSH = SH9();
                         accumulatedSamples = 0;
                     }
                 }
 
                 if(accumulatedSamples > 0)
-                    sh += accumulatedSH / float(NumSamples);
+                    finalSH += accumulatedSH / float(NumSamples);
 
                 const uint64 idx = (fIdx * ViewResolution * RoughnessResolution) + (mIdx * ViewResolution) + vIdx;
-                texData0[idx] = Half4(sh[0], sh[2], sh[3], sh[6]);
-                texData1[idx] = Half2(sh[7], sh[8]);
+                texData0[idx] = Half4(finalSH[0], finalSH[2], finalSH[3], finalSH[6]);
+                texData1[idx] = Half2(finalSH[7], finalSH[8]);
             }
         }
     }
