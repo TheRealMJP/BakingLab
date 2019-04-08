@@ -12,8 +12,9 @@
 // Includes
 //=================================================================================================
 #include <Constants.hlsl>
-#include "EVSM.hlsl"
 #include <SH.hlsl>
+#include <Sampling.hlsl>
+#include "EVSM.hlsl"
 #include "AppSettings.hlsl"
 #include "SG.hlsl"
 
@@ -395,27 +396,76 @@ float Square(in float x)
 // Computes approximated specular from radiance encoded as a set of SH coefficients by
 // treating the SH radiance as a pre-filtered environment map
 // ------------------------------------------------------------------------------------------------
-float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3 specularAlbedo,
-                             in float sqrtRoughness, in SH9Color shRadiance)
+float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3x3 tangentFrame,
+                             in float3 specularAlbedo, in float sqrtRoughness, in SH9Color shRadiance)
 {
     const float3 reflectDir = reflect(-view, normal);
 
     const float roughness = sqrtRoughness * sqrtRoughness;
-    shRadiance.c[0] *= exp(-Square(roughness * 0.0f));
-    shRadiance.c[1] *= exp(-Square(roughness * 1.0f));
-    shRadiance.c[2] *= exp(-Square(roughness * 1.0f));
-    shRadiance.c[3] *= exp(-Square(roughness * 1.0f));
-    shRadiance.c[4] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[5] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[6] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[7] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[8] *= exp(-Square(roughness * 2.0f));
+    SH9Color filteredSHRadiance = shRadiance;
+    filteredSHRadiance.c[0] *= exp(-Square(roughness * 0.0f));
+    filteredSHRadiance.c[1] *= exp(-Square(roughness * 1.0f));
+    filteredSHRadiance.c[2] *= exp(-Square(roughness * 1.0f));
+    filteredSHRadiance.c[3] *= exp(-Square(roughness * 1.0f));
+    filteredSHRadiance.c[4] *= exp(-Square(roughness * 2.0f));
+    filteredSHRadiance.c[5] *= exp(-Square(roughness * 2.0f));
+    filteredSHRadiance.c[6] *= exp(-Square(roughness * 2.0f));
+    filteredSHRadiance.c[7] *= exp(-Square(roughness * 2.0f));
+    filteredSHRadiance.c[8] *= exp(-Square(roughness * 2.0f));
 
-    const float3 specLightColor = max(EvalSH9(reflectDir, shRadiance), 0.0f);
+    float3 specLightColor = max(EvalSH9(reflectDir, filteredSHRadiance), 0.0f);
 
     const float nDotV = saturate(dot(normal, view));
     const float2 AB = EnvSpecularLookup.SampleLevel(LinearSampler, float2(nDotV, sqrtRoughness), 0.0f);
-    const float3 envBRDF = specularAlbedo * AB.x + AB.y;
+    float3 envBRDF = specularAlbedo * AB.x + AB.y;
+
+    // Validation code for testing different specular components
+    /*const bool TestGGXSampling = false;
+    const bool TestFullGGX = false;
+
+    if(TestGGXSampling)
+    {
+        const uint SqrtNumSamples = 8;
+        const uint NumSamples = SqrtNumSamples * SqrtNumSamples;
+
+        float3 sum = 0.0f;
+        float weightSum = 0.00001f;
+
+        for(uint sIdx = 0; sIdx < NumSamples; ++sIdx)
+        {
+            const float2 randFloats = SampleCMJ2D(sIdx, SqrtNumSamples, SqrtNumSamples, 0);
+
+            float3 m = SampleGGXMicrofacet(roughness, randFloats.x, randFloats.y);
+            float3 h = normalize(mul(m, tangentFrame));
+            float hDotV = saturate(dot(h, view));
+            float3 l = normalize(2.0f * hDotV * h - view);
+
+            float nDotL = saturate(dot(normal, l));
+            if(nDotL > 0)
+            {
+                if(TestFullGGX)
+                {
+                    float pdf = SampleDirectionGGX_PDF(normal, h, view, roughness);
+                    float3 sampleWeight = GGX_Specular(roughness, normal, h, view, l) * nDotL / pdf;
+                    sampleWeight *= Fresnel(specularAlbedo, h, l);
+                    sum += max(EvalSH9(l, shRadiance), 0.0f) * sampleWeight;
+                }
+                else
+                {
+                    sum += max(EvalSH9(l, shRadiance), 0.0f) * nDotL;
+                    weightSum += nDotL;
+                }
+            }
+        }
+
+        if(TestFullGGX)
+        {
+            weightSum = NumSamples;
+            envBRDF = 1.0f;
+        }
+
+        specLightColor = sum / weightSum;
+    }*/
 
     return envBRDF * specLightColor;
 }
@@ -452,6 +502,7 @@ PSOutput PS(in PSInput input)
 
     const float3 normalSHSG = WorldSpaceBake ? normalWS : normalTS;
     const float3 viewSHSG = WorldSpaceBake ? viewWS : viewTS;
+    const float3x3 tangentFrameSHSG = WorldSpaceBake ? tangentToWorld : float3x3(float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1));
 
     // Gather material parameters
     float3 albedoMap = 1.0f;
@@ -558,7 +609,7 @@ PSOutput PS(in PSInput input)
             if(SHSpecularMode == SHSpecularModes_Frostbite)
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
             else if(SHSpecularMode == SHSpecularModes_Prefiltered)
-                indirectSpecular = PrefilteredSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
+                indirectSpecular = PrefilteredSHSpecular(viewSHSG, normalSHSG, tangentFrameSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
             else
                 indirectSpecular = ConvolutionSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
         }
@@ -575,7 +626,7 @@ PSOutput PS(in PSInput input)
             if(SHSpecularMode == SHSpecularModes_Frostbite)
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH4(shRadiance));
             else if(SHSpecularMode == SHSpecularModes_Prefiltered)
-                indirectSpecular = PrefilteredSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
+                indirectSpecular = PrefilteredSHSpecular(viewSHSG, normalSHSG, tangentFrameSHSG, specularAlbedo, sqrtRoughness, shRadiance);
             else
                 indirectSpecular = ConvolutionSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
         }

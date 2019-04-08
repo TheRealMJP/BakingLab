@@ -408,7 +408,7 @@ static void GenerateEnvSpecularLookupTexture(ID3D11Device* device)
 
                 const Float2 u1u2 = SampleCMJ2D(sIdx, SqrtNumSamples, SqrtNumSamples, 0);
 
-                const Float3 h = SampleGGXMicrofacet(v, n, roughness, u1u2.x, u1u2.y);
+                const Float3 h = SampleGGXMicrofacet(roughness, u1u2.x, u1u2.y);
                 const float hDotV = Saturate(Float3::Dot(h, v));
                 const Float3 l = 2.0f * hDotV * h - v;
 

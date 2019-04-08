@@ -118,7 +118,7 @@ inline Float2 SquareToConcentricDiskMapping(float x, float y)
 
 // Returns a microfacet normal (half direction) that can be be used to compute a
 // reflected lighting direction. The PDF is equal to D(m) * dot(n, m)
-inline Float3 SampleGGXMicrofacet(const Float3& v, const Float3& n, float roughness, float u1, float u2)
+inline Float3 SampleGGXMicrofacet(float roughness, float u1, float u2)
 {
     float theta = std::atan2(roughness * std::sqrt(u1), std::sqrt(1 - u1));
     float phi = 2 * Pi * u2;
@@ -135,7 +135,7 @@ inline Float3 SampleGGXMicrofacet(const Float3& v, const Float3& n, float roughn
 inline Float3 SampleDirectionGGX(const Float3& v, const Float3& n, float roughness,
                                  const Float3x3& tangentToWorld, float u1, float u2)
 {
-    Float3 h = SampleGGXMicrofacet(v, n, roughness, u1, u2);
+    Float3 h = SampleGGXMicrofacet(roughness, u1, u2);
 
     // Convert to world space
     h = Float3::Normalize(Float3::Transform(h, tangentToWorld));
