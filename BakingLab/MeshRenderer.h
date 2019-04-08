@@ -123,6 +123,7 @@ protected:
 
     ID3D11ShaderResourceViewPtr shSpecularLookupA;
     ID3D11ShaderResourceViewPtr shSpecularLookupB;
+    ID3D11ShaderResourceViewPtr envSpecularLookup;
 
     // Constant buffers
     struct MeshVSConstants

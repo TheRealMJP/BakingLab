@@ -317,6 +317,7 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
 
     shSpecularLookupA = LoadTexture(device, L"..\\Content\\Textures\\SHSpecularA.dds");
     shSpecularLookupB = LoadTexture(device, L"..\\Content\\Textures\\SHSpecularB.dds");
+    envSpecularLookup = LoadTexture(device, L"..\\Content\\Textures\\EnvSpecularLookup.dds");
 
     LoadShaders();
 
@@ -676,6 +677,7 @@ void MeshRenderer::RenderMainPass(ID3D11DeviceContext* context, const Camera& ca
                 areaLightShadowMap.SRView,
                 shSpecularLookupA,
                 shSpecularLookupB,
+                envSpecularLookup,
             };
 
             context->PSSetShaderResources(0, ArraySize_(psTextures), psTextures);

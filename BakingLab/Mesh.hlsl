@@ -66,6 +66,7 @@ Texture2DArray<float4> BakedLightingMap : register(t5);
 TextureCube<float> AreaLightShadowMap : register(t6);
 Texture3D<float4> SHSpecularLookupA : register(t7);
 Texture3D<float2> SHSpecularLookupB : register(t8);
+Texture2D<float2> EnvSpecularLookup : register(t9);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -397,23 +398,24 @@ float Square(in float x)
 float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3 specularAlbedo,
                              in float sqrtRoughness, in SH9Color shRadiance)
 {
-    float3 reflectDir = reflect(-view, normal);
+    const float3 reflectDir = reflect(-view, normal);
 
-    float roughness = sqrtRoughness * sqrtRoughness;
-    shRadiance.c[0] *= exp(-Square(roughness * 1.0f));
-    shRadiance.c[1] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[2] *= exp(-Square(roughness * 2.0f));
+    const float roughness = sqrtRoughness * sqrtRoughness;
+    shRadiance.c[0] *= exp(-Square(roughness * 0.0f));
+    shRadiance.c[1] *= exp(-Square(roughness * 1.0f));
+    shRadiance.c[2] *= exp(-Square(roughness * 1.0f));
     shRadiance.c[3] *= exp(-Square(roughness * 2.0f));
-    shRadiance.c[4] *= exp(-Square(roughness * 3.0f));
-    shRadiance.c[5] *= exp(-Square(roughness * 3.0f));
-    shRadiance.c[6] *= exp(-Square(roughness * 3.0f));
-    shRadiance.c[7] *= exp(-Square(roughness * 3.0f));
-    shRadiance.c[8] *= exp(-Square(roughness * 3.0f));
+    shRadiance.c[4] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[5] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[6] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[7] *= exp(-Square(roughness * 2.0f));
+    shRadiance.c[8] *= exp(-Square(roughness * 2.0f));
 
-    float3 specLightColor = max(EvalSH9(reflectDir, shRadiance), 0.0f);
+    const float3 specLightColor = max(EvalSH9(reflectDir, shRadiance), 0.0f);
 
-    float fresnelfactor = pow(1.0f - saturate(dot(normal, view)), 5.0f) / (4 - 3.0f * (1.0f - sqrtRoughness));
-    float3 envBRDF = specularAlbedo + (1.0f - specularAlbedo) * fresnelfactor;
+    const float nDotV = saturate(dot(normal, view));
+    const float2 AB = EnvSpecularLookup.SampleLevel(LinearSampler, float2(sqrtRoughness, nDotV), 0.0f);
+    const float3 envBRDF = specularAlbedo * AB.x + AB.y;
 
     return envBRDF * specLightColor;
 }
