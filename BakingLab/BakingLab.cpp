@@ -376,6 +376,8 @@ static void GenerateSHSpecularLookupTextures(ID3D11Device* device)
 // with a split-sum approximation
 static void GenerateEnvSpecularLookupTexture(ID3D11Device* device)
 {
+    std::string csvOutput = "SqrtRoughness,NDotV,A,B,Delta\n";
+
     const uint32 NumVSamples = 64;
     const uint32 NumRSamples = 64;
     const uint32 SqrtNumSamples = 32;
@@ -383,6 +385,7 @@ static void GenerateEnvSpecularLookupTexture(ID3D11Device* device)
 
     FixedArray<Half2> texels;
     texels.Init(NumVSamples * NumRSamples);
+
     uint32 texelIdx = 0;
 
     const Float3 n = Float3(0.0f, 0.0f, 1.0f);
@@ -431,6 +434,8 @@ static void GenerateEnvSpecularLookupTexture(ID3D11Device* device)
             texels[texelIdx] = Half2(A, B);
 
             ++texelIdx;
+
+            csvOutput += MakeAnsiString("%f,%f,%f,%f,%f\n", sqrtRoughness, nDotV, A, B, A + B);
         }
     }
 
@@ -454,6 +459,8 @@ static void GenerateEnvSpecularLookupTexture(ID3D11Device* device)
     DXCall(device->CreateTexture2D(&desc, &srData, &texture));
 
     SaveTextureAsDDS(texture, L"..\\Content\\Textures\\EnvSpecularLookup.dds");
+
+    WriteStringAsFile(L"EnvBRDF.csv", csvOutput);
 }
 
 BakingLab::BakingLab() : App(L"Baking Lab", MAKEINTRESOURCEW(IDI_DEFAULT)),

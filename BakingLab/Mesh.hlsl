@@ -423,6 +423,17 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3x3 tange
     const float2 AB = EnvSpecularLookup.SampleLevel(LinearSampler, float2(nDotV, sqrtRoughness), 0.0f);
     float3 envBRDF = specularAlbedo * AB.x + AB.y;
 
+    if(0)
+    {
+        const float nDotV2 = nDotV2 * nDotV;
+        const float sqrtRoughness3 = roughness * sqrtRoughness;
+        const float delta = 0.991086418474895f + 0.412367709802119f * sqrtRoughness * nDotV2 - 0.363848256078895f * roughness - 0.758634385642633f* nDotV * roughness;
+        const float B = 0.0306613448029984f * sqrtRoughness + 0.0238299731830387f / (0.0272458171384516f + sqrtRoughness3 + nDotV2) - 0.0454747751719356f;
+
+        const float A = delta - B;
+        envBRDF = specularAlbedo * A + B;
+    }
+
     // Validation code for testing different specular components
     /*const bool TestGGXSampling = false;
     const bool TestFullGGX = false;
