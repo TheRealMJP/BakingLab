@@ -140,8 +140,8 @@ inline Float3 SampleDirectionGGX(const Float3& v, const Float3& n, float roughne
     // Convert to world space
     h = Float3::Normalize(Float3::Transform(h, tangentToWorld));
 
-    // Reflect the view vector about the microfaet normal
-    float hDotV = std::abs(Float3::Dot(h, v));
+    // Reflect the view vector about the microfacet normal
+    float hDotV = Float3::Dot(h, v);
     Float3 sampleDir = 2.0f * hDotV * h - v;
     return Float3::Normalize(sampleDir);
 }

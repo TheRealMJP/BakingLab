@@ -133,8 +133,7 @@ float3 SampleGGXMicrofacet(float roughness, float u1, float u2)
 float3 SampleDirectionGGX(float3 v, float3 n, float roughness, float u1, float u2)
 {
     float3 h = SampleGGXMicrofacet(roughness, u1, u2);
-    float hDotV = saturate(dot(h, v));
-    return normalize(2.0f * hDotV * h - v);
+    return normalize(2.0f * dot(h, v) * h - v);
 }
 
 float3 SampleGGXVisibleNormal(float3 wo, float ax, float ay, float u1, float u2)

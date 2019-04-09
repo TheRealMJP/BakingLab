@@ -317,11 +317,13 @@ static void GenerateSHSpecularLookupTextures(ID3D11Device* device)
                     Float3 h = Float3::Normalize(v + l);
                     float nDotL = Saturate(l.z);
 
-                    float pdf = GGX_PDF(n, h, v, Roughness);
-                    float brdf = GGX_Specular(Roughness, n, h, v, l) * Fresnel(specAlbedo, h, l).x;
-                    SH9 projectedSH = ProjectOntoSH9(l) * brdf * nDotL / pdf;
+                    if(nDotL > 0.0f)
+                    {
+                        float pdf = GGX_PDF(n, h, v, Roughness);
+                        float brdf = GGX_Specular(Roughness, n, h, v, l) * Fresnel(specAlbedo, h, l).x;
+                        accumulatedSH += ProjectOntoSH9(l) * brdf * nDotL / pdf;
+                    }
 
-                    accumulatedSH += projectedSH;
                     if(accumulatedSamples >= 1000)
                     {
                         finalSH += accumulatedSH / float(NumSamples);
@@ -412,7 +414,7 @@ static void GenerateEnvSpecularLookupTexture(ID3D11Device* device)
                 const Float2 u1u2 = SampleCMJ2D(sIdx, SqrtNumSamples, SqrtNumSamples, 0);
 
                 const Float3 h = SampleGGXMicrofacet(roughness, u1u2.x, u1u2.y);
-                const float hDotV = Saturate(Float3::Dot(h, v));
+                const float hDotV = Float3::Dot(h, v);
                 const Float3 l = 2.0f * hDotV * h - v;
 
                 const float nDotL = l.z;
@@ -422,7 +424,7 @@ static void GenerateEnvSpecularLookupTexture(ID3D11Device* device)
                     const float pdf = GGX_PDF(n, h, v, roughness);
                     const float sampleWeight = GGX_Specular(roughness, n, h, v, l) * nDotL / pdf;
 
-                    const float fc = std::pow(1 - hDotV, 5.0f);
+                    const float fc = std::pow(1 - Saturate(hDotV), 5.0f);
 
                     A += (1.0f - fc) * sampleWeight;
                     B += fc * sampleWeight;

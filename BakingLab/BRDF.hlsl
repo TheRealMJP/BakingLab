@@ -113,12 +113,8 @@ float GGX_Specular(in float m, in float3 n, in float3 h, in float3 v, in float3 
     float m2 = m * m;
 
     // Calculate the distribution term
-    float d = m2 / (Pi * pow(nDotH * nDotH * (m2 - 1) + 1, 2.0f));
-
-    // Calculate the matching visibility term
-    float v1i = GGX_V1(m2, nDotL);
-    float v1o = GGX_V1(m2, nDotV);
-    float vis = v1i * v1o;
+    float x = nDotH * nDotH * (m2 - 1) + 1;
+    float d = m2 / (Pi * x * x);
 
     return d * GGXVisibility(m2, nDotL, nDotV);
 }

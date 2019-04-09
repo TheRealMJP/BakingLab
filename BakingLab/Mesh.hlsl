@@ -417,7 +417,9 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3x3 tange
     filteredSHRadiance.c[7] *= l2Scale;
     filteredSHRadiance.c[8] *= l2Scale;
 
-    float3 specLightColor = max(EvalSH9(reflectDir, filteredSHRadiance), 0.0f);
+    float3 lookupDir = lerp(reflectDir, normal, saturate(roughness - 0.25f));
+
+    float3 specLightColor = max(EvalSH9(lookupDir, filteredSHRadiance), 0.0f);
 
     const float nDotV = saturate(dot(normal, view));
     const float2 AB = EnvSpecularLookup.SampleLevel(LinearSampler, float2(nDotV, sqrtRoughness), 0.0f);
@@ -435,8 +437,8 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3x3 tange
     }
 
     // Validation code for testing different specular components
-    /*const bool TestGGXSampling = false;
-    const bool TestFullGGX = false;
+    /*const bool TestGGXSampling = true;
+    const bool TestFullGGX = true;
 
     if(TestGGXSampling)
     {
@@ -452,8 +454,7 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3x3 tange
 
             float3 m = SampleGGXMicrofacet(roughness, randFloats.x, randFloats.y);
             float3 h = normalize(mul(m, tangentFrame));
-            float hDotV = saturate(dot(h, view));
-            float3 l = normalize(2.0f * hDotV * h - view);
+            float3 l = normalize(2.0f * dot(h, view) * h - view);
 
             float nDotL = saturate(dot(normal, l));
             if(nDotL > 0)
