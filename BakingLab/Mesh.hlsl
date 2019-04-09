@@ -417,7 +417,7 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3x3 tange
     filteredSHRadiance.c[7] *= l2Scale;
     filteredSHRadiance.c[8] *= l2Scale;
 
-    float3 lookupDir = lerp(reflectDir, normal, saturate(roughness - 0.25f));
+    float3 lookupDir = normalize(lerp(reflectDir, normal, saturate(roughness - 0.25f)));
 
     float3 specLightColor = max(EvalSH9(lookupDir, filteredSHRadiance), 0.0f);
 
