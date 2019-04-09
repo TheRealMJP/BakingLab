@@ -279,11 +279,11 @@ float3 CalcLighting(in float3 normal, in float3 lightDir, in float3 lightColor,
 // ------------------------------------------------------------------------------------------------
 // Computes the irradiance for an SG light source using the selected approximation
 // ------------------------------------------------------------------------------------------------
-float3 SGIrradiance(in SG lightingLobe, in float3 normal, in int diffuseMode)
+float3 SGIrradiance(in SG lightingLobe, in float3 normal)
 {
-    if(diffuseMode == SGDiffuseModes_Punctual)
+    if(SGDiffuseMode == SGDiffuseModes_Punctual)
         return SGIrradiancePunctual(lightingLobe, normal);
-    else if(diffuseMode == SGDiffuseModes_Fitted)
+    else if(SGDiffuseMode == SGDiffuseModes_Fitted)
         return SGIrradianceFitted(lightingLobe, normal);
     else
         return SGIrradianceInnerProduct(lightingLobe, normal);
@@ -295,10 +295,15 @@ float3 SGIrradiance(in SG lightingLobe, in float3 normal, in int diffuseMode)
 float3 SpecularTermSG(in SG light, in float3 normal, in float roughness,
                       in float3 view, in float3 specAlbedo)
 {
-    if(UseASGWarp)
-        return SpecularTermASGWarp(light, normal, roughness, view, specAlbedo);
-    else
+    if(SGSpecularMode == SGSpecularModes_Punctual)
+    {
+        float3 irradiance;
+        return CalcLighting(normal, light.Axis, ApproximateSGIntegral(light), 0.0f, specAlbedo, roughness, view, irradiance);
+    }
+    else if(SGSpecularMode == SGSpecularModes_SGWarp)
         return SpecularTermSGWarp(light, normal, roughness, view, specAlbedo);
+    else
+        return SpecularTermASGWarp(light, normal, roughness, view, specAlbedo);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -318,7 +323,7 @@ void ComputeSGContribution(in Texture2DArray<float4> bakedLightingMap, in float2
         sg.Axis = SGDirections[i].xyz;
         sg.Sharpness = SGSharpness;
 
-        irradiance += SGIrradiance(sg, normal, SGDiffuseMode);
+        irradiance += SGIrradiance(sg, normal);
         specular += SpecularTermSG(sg, normal, roughness, view, specularAlbedo);
     }
 }
@@ -385,6 +390,34 @@ float3 FrostbiteSHSpecular(in float3 view, in float3 normal, in float3 specularA
 
     float3 irradiance;
     return CalcLighting(normal, specDir, specLightColor, 0.0f, specularAlbedo, roughness, view, irradiance);
+}
+
+// ------------------------------------------------------------------------------------------------
+// A very rough SH specular approximation that converts the SH-projected radiance into 3 point
+// lights oriented about the vertex normal
+// ------------------------------------------------------------------------------------------------
+float3 PunctualSHSpecular(in float3 view, in float3 normal, in float3x3 tangentFrame,
+                          in float3 specularAlbedo, in float sqrtRoughness, in SH9Color shRadiance)
+{
+    const float3 lightDirs[] =
+    {
+        float3(-1.0f / sqrt(6.0f), -1.0f / sqrt(2.0f), 1.0f / sqrt(3.0f)),
+        float3(-1.0f / sqrt(6.0f), 1.0f / sqrt(2.0f), 1.0f / sqrt(3.0f)),
+        float3(sqrt(2.0f / 3.0f), 0.0f, 1.0f / sqrt(3.0f)),
+    };
+
+    float3 result = 0.0f;
+    for(uint i = 0; i < 3; ++i)
+    {
+        const float3 lightDir = mul(lightDirs[i], tangentFrame);
+        const float3 lightColor = EvalSH9(lightDir, shRadiance) * Pi;
+
+        float3 irradiance;
+        result += CalcLighting(normal, lightDir, lightColor, 0.0f, specularAlbedo,
+                               sqrtRoughness * sqrtRoughness, view, irradiance);
+    }
+
+    return result / 3.0f;
 }
 
 float Square(in float x)
@@ -573,7 +606,7 @@ PSOutput PS(in PSInput input)
         float3 areaLightDir = normalize(areaLightPos - positionWS);
         float areaLightDist = length(areaLightPos - positionWS);
         SG lightLobe = MakeSphereSG(areaLightDir, AreaLightSize, AreaLightColor * FP16Scale, areaLightDist);
-        float3 sgIrradiance = SGIrradiance(lightLobe, normalWS, SGDiffuseMode);
+        float3 sgIrradiance = SGIrradiance(lightLobe, normalWS);
 
         float areaLightVisibility = 1.0f;
         if(EnableAreaLightShadows)
@@ -625,8 +658,10 @@ PSOutput PS(in PSInput input)
             else
                 indirectIrradiance = EvalSH4Irradiance(normalSHSG, shRadiance);
 
-            if(SHSpecularMode == SHSpecularModes_Frostbite)
+            if(SHSpecularMode == SHSpecularModes_DominantDirection)
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, shRadiance);
+            else if(SHSpecularMode == SHSpecularModes_Punctual)
+                indirectSpecular = PunctualSHSpecular(viewSHSG, normalSHSG, tangentFrameSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
             else if(SHSpecularMode == SHSpecularModes_Prefiltered)
                 indirectSpecular = PrefilteredSHSpecular(viewSHSG, normalSHSG, tangentFrameSHSG, specularAlbedo, sqrtRoughness, ConvertToSH9(shRadiance));
             else
@@ -642,8 +677,10 @@ PSOutput PS(in PSInput input)
 
             indirectIrradiance = EvalSH9Irradiance(normalSHSG, shRadiance);
 
-            if(SHSpecularMode == SHSpecularModes_Frostbite)
+            if(SHSpecularMode == SHSpecularModes_DominantDirection)
                 indirectSpecular = FrostbiteSHSpecular(viewSHSG, normalSHSG, specularAlbedo, sqrtRoughness, ConvertToSH4(shRadiance));
+            else if(SHSpecularMode == SHSpecularModes_Punctual)
+                indirectSpecular = PunctualSHSpecular(viewSHSG, normalSHSG, tangentFrameSHSG, specularAlbedo, sqrtRoughness, shRadiance);
             else if(SHSpecularMode == SHSpecularModes_Prefiltered)
                 indirectSpecular = PrefilteredSHSpecular(viewSHSG, normalSHSG, tangentFrameSHSG, specularAlbedo, sqrtRoughness, shRadiance);
             else

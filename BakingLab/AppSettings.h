@@ -181,6 +181,17 @@ enum class SGDiffuseModes
 
 typedef EnumSettingT<SGDiffuseModes> SGDiffuseModesSetting;
 
+enum class SGSpecularModes
+{
+    Punctual = 0,
+    SGWarp = 1,
+    ASGWarp = 2,
+
+    NumValues
+};
+
+typedef EnumSettingT<SGSpecularModes> SGSpecularModesSetting;
+
 enum class SH4DiffuseModes
 {
     Convolution = 0,
@@ -194,8 +205,9 @@ typedef EnumSettingT<SH4DiffuseModes> SH4DiffuseModesSetting;
 enum class SHSpecularModes
 {
     Convolution = 0,
-    Frostbite = 1,
-    Prefiltered = 2,
+    DominantDirection = 1,
+    Punctual = 2,
+    Prefiltered = 3,
 
     NumValues
 };
@@ -323,7 +335,7 @@ namespace AppSettings
     extern JitterModesSetting JitterMode;
     extern FloatSetting JitterScale;
     extern SGDiffuseModesSetting SGDiffuseMode;
-    extern BoolSetting UseASGWarp;
+    extern SGSpecularModesSetting SGSpecularMode;
     extern SH4DiffuseModesSetting SH4DiffuseMode;
     extern SHSpecularModesSetting SHSpecularMode;
     extern IntSetting LightMapResolution;
@@ -413,7 +425,7 @@ namespace AppSettings
         float FilterSize;
         float GaussianSigma;
         int32 SGDiffuseMode;
-        bool32 UseASGWarp;
+        int32 SGSpecularMode;
         int32 SH4DiffuseMode;
         int32 SHSpecularMode;
         int32 LightMapResolution;

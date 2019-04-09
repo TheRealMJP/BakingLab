@@ -306,6 +306,17 @@ enum SGDiffuseModes
     Fitted,
 }
 
+enum SGSpecularModes
+{
+    Punctual = 0,
+
+    [EnumLabel("SG Warp")]
+    SGWarp,
+
+    [EnumLabel("ASG Warp")]
+    ASGWarp,
+}
+
 enum SH4DiffuseModes
 {
     Convolution = 0,
@@ -315,7 +326,8 @@ enum SH4DiffuseModes
 enum SHSpecularModes
 {
     Convolution = 0,
-    Frostbite,
+    DominantDirection,
+    Punctual,
     Prefiltered,
 }
 
@@ -632,7 +644,7 @@ public class Settings
         SGDiffuseModes SGDiffuseMode = SGDiffuseModes.Fitted;
 
         [DisplayName("Use ASG Warp")]
-        bool UseASGWarp = true;
+        SGSpecularModes SGSpecularMode = SGSpecularModes.ASGWarp;
     }
 
     [ExpandGroup(false)]

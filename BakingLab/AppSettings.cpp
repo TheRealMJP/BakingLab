@@ -131,16 +131,24 @@ static const char* SGDiffuseModesLabels[3] =
     "Fitted (Hill 16)",
 };
 
+static const char* SGSpecularModesLabels[3] =
+{
+    "Punctual",
+    "SG Warp",
+    "ASG Warp",
+};
+
 static const char* SH4DiffuseModesLabels[2] =
 {
     "Convolution",
     "Geomerics",
 };
 
-static const char* SHSpecularModesLabels[3] =
+static const char* SHSpecularModesLabels[4] =
 {
     "Convolution",
-    "Frostbite",
+    "DominantDirection",
+    "Punctual",
     "Prefiltered",
 };
 
@@ -245,7 +253,7 @@ namespace AppSettings
     JitterModesSetting JitterMode;
     FloatSetting JitterScale;
     SGDiffuseModesSetting SGDiffuseMode;
-    BoolSetting UseASGWarp;
+    SGSpecularModesSetting SGSpecularMode;
     SH4DiffuseModesSetting SH4DiffuseMode;
     SHSpecularModesSetting SHSpecularMode;
     IntSetting LightMapResolution;
@@ -490,13 +498,13 @@ namespace AppSettings
         SGDiffuseMode.Initialize(tweakBar, "SGDiffuseMode", "SG Settings", "SG Diffuse Mode", "", SGDiffuseModes::Fitted, 3, SGDiffuseModesLabels);
         Settings.AddSetting(&SGDiffuseMode);
 
-        UseASGWarp.Initialize(tweakBar, "UseASGWarp", "SG Settings", "Use ASG Warp", "", true);
-        Settings.AddSetting(&UseASGWarp);
+        SGSpecularMode.Initialize(tweakBar, "SGSpecularMode", "SG Settings", "Use ASG Warp", "", SGSpecularModes::ASGWarp, 3, SGSpecularModesLabels);
+        Settings.AddSetting(&SGSpecularMode);
 
         SH4DiffuseMode.Initialize(tweakBar, "SH4DiffuseMode", "SH Settings", "L1 SH Diffuse Mode", "", SH4DiffuseModes::Convolution, 2, SH4DiffuseModesLabels);
         Settings.AddSetting(&SH4DiffuseMode);
 
-        SHSpecularMode.Initialize(tweakBar, "SHSpecularMode", "SH Settings", "SH Specular Mode", "", SHSpecularModes::Convolution, 3, SHSpecularModesLabels);
+        SHSpecularMode.Initialize(tweakBar, "SHSpecularMode", "SH Settings", "SH Specular Mode", "", SHSpecularModes::Convolution, 4, SHSpecularModesLabels);
         Settings.AddSetting(&SHSpecularMode);
 
         LightMapResolution.Initialize(tweakBar, "LightMapResolution", "Baking", "Light Map Resolution", "The texture resolution of the light map", 256, 64, 4096);
@@ -705,7 +713,7 @@ namespace AppSettings
         CBuffer.Data.FilterSize = FilterSize;
         CBuffer.Data.GaussianSigma = GaussianSigma;
         CBuffer.Data.SGDiffuseMode = SGDiffuseMode;
-        CBuffer.Data.UseASGWarp = UseASGWarp;
+        CBuffer.Data.SGSpecularMode = SGSpecularMode;
         CBuffer.Data.SH4DiffuseMode = SH4DiffuseMode;
         CBuffer.Data.SHSpecularMode = SHSpecularMode;
         CBuffer.Data.LightMapResolution = LightMapResolution;
