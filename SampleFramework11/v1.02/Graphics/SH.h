@@ -83,14 +83,12 @@ public:
         return result;
     }
 
-
     SH& operator*=(const T& scale)
     {
         for(uint64 i = 0; i < N; ++i)
             Coefficients[i] *= scale;
         return *this;
     }
-
 
     SH operator*(const SH& other) const
     {
@@ -106,7 +104,6 @@ public:
             Coefficients[i] *= other.Coefficients[i];
         return *this;
     }
-
 
     SH operator*(const T& scale) const
     {
@@ -129,6 +126,21 @@ public:
         for(uint64 i = 0; i < N; ++i)
             result.Coefficients[i] = Coefficients[i] / scale;
         return result;
+    }
+
+    SH operator/(const SH& other) const
+    {
+        SH result;
+        for(uint64 i = 0; i < N; ++i)
+            result.Coefficients[i] = Coefficients[i] / other.Coefficients[i];
+        return result;
+    }
+
+    SH& operator/=(const SH& other)
+    {
+        for(uint64 i = 0; i < N; ++i)
+            Coefficients[i] /= other.Coefficients[i];
+        return *this;
     }
 
     // Dot products

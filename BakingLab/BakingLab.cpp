@@ -1069,11 +1069,61 @@ static void GenerateSGFittedIrradianceTable(float sharpness, const wchar* filePa
     WriteStringAsFile(filePath, output);
 }
 
+static void GenerateSHGGXProjectionTable()
+{
+    std::string output = "Roughness,C2,C6\n";
+
+    const Float3 n = Float3(0.0f, 0.0f, 1.0f);
+    const Float3 v = Float3(0.0f, 0.0f, 1.0f);
+
+    SH9 proj0;
+
+    const uint32 NumRSamples = 64;
+    for(uint32 rIdx = 0; rIdx < NumRSamples; ++rIdx)
+    {
+        const float sqrtRoughness = (rIdx + 0.5f) / NumRSamples;
+        const float roughness = sqrtRoughness * sqrtRoughness;
+
+        SH9 proj;
+        float weightSum = 0.00001f;
+
+        const uint32 SqrtNumSamples = 32;
+        const uint32 NumSamples = SqrtNumSamples * SqrtNumSamples;
+        for(uint32 sIdx = 0; sIdx < NumSamples; ++sIdx)
+        {
+            const Float2 randFloats = SampleCMJ2D(sIdx, SqrtNumSamples, SqrtNumSamples, 0);
+
+            Float3 h = SampleGGXMicrofacet(roughness, randFloats.x, randFloats.y);
+            float hDotV = h.z;
+            Float3 l = Float3::Normalize(2.0f * hDotV * h - v);
+
+            float nDotL = l.z;
+            if(nDotL > 0)
+            {
+                proj += ProjectOntoSH9(l) * nDotL;
+                weightSum += nDotL;
+            }
+        }
+
+        proj /= weightSum;
+
+        if(rIdx == 0)
+            proj0 = proj;
+
+        proj /= proj0;
+
+        output += MakeAnsiString("%f,%f,%f\n", sqrtRoughness, proj[2], proj[6]);
+    }
+
+    WriteStringAsFile(L"SH_GGX_Proj.csv", output);
+}
+
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
     // GenerateGaussianIrradianceTable(4.0f, L"SG_Irradiance_4.0.txt");
     // GenerateSGInnerProductIrradianceTable(4.0f, L"SG_InnerProduct_Irradiance_4.0.txt");
     // GenerateSGFittedIrradianceTable(4.0f, L"SG_Fitted_Irradiance_4.0.txt");
+    // GenerateSHGGXProjectionTable();
 
     BakingLab app;
     app.Run();

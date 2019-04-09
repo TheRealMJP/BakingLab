@@ -402,16 +402,20 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3x3 tange
     const float3 reflectDir = reflect(-view, normal);
 
     const float roughness = sqrtRoughness * sqrtRoughness;
+
+    // Pre-filter the SH radiance with the GGX NDF using a fitted approximation
+    const float l1Scale = 1.66711256633276f / (1.65715038133932f + roughness);
+    const float l2Scale = 1.56127990596116f / (0.96989757593282f + roughness) - 0.599972342361123f;
+
     SH9Color filteredSHRadiance = shRadiance;
-    filteredSHRadiance.c[0] *= exp(-Square(roughness * 0.0f));
-    filteredSHRadiance.c[1] *= exp(-Square(roughness * 1.0f));
-    filteredSHRadiance.c[2] *= exp(-Square(roughness * 1.0f));
-    filteredSHRadiance.c[3] *= exp(-Square(roughness * 1.0f));
-    filteredSHRadiance.c[4] *= exp(-Square(roughness * 2.0f));
-    filteredSHRadiance.c[5] *= exp(-Square(roughness * 2.0f));
-    filteredSHRadiance.c[6] *= exp(-Square(roughness * 2.0f));
-    filteredSHRadiance.c[7] *= exp(-Square(roughness * 2.0f));
-    filteredSHRadiance.c[8] *= exp(-Square(roughness * 2.0f));
+    filteredSHRadiance.c[1] *= l1Scale;
+    filteredSHRadiance.c[2] *= l1Scale;
+    filteredSHRadiance.c[3] *= l1Scale;
+    filteredSHRadiance.c[4] *= l2Scale;
+    filteredSHRadiance.c[5] *= l2Scale;
+    filteredSHRadiance.c[6] *= l2Scale;
+    filteredSHRadiance.c[7] *= l2Scale;
+    filteredSHRadiance.c[8] *= l2Scale;
 
     float3 specLightColor = max(EvalSH9(reflectDir, filteredSHRadiance), 0.0f);
 
