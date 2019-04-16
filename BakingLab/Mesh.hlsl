@@ -899,7 +899,7 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
     }
 
 	// Add in the indirect
-    if((EnableIndirectLighting || ViewIndirectSpecular) && Voxelize_ == false)
+    if((EnableIndirectLighting || ViewIndirectSpecular || ViewIndirectDiffuse) && Voxelize_ == false)
     {
         float3 indirectIrradiance = 0.0f;
         float3 indirectSpecular = 0.0f;
@@ -930,8 +930,13 @@ PSOutput PS(in PSInput input, in bool isFrontFace : SV_IsFrontFace)
         if(EnableIndirectSpecular)
             lighting += indirectSpecular;
 
-        if(ViewIndirectSpecular)
-            lighting = indirectSpecular;
+        #if !ProbeRendering_
+            if(ViewIndirectSpecular)
+                lighting = indirectSpecular;
+
+            if(ViewIndirectDiffuse)
+                lighting = indirectIrradiance / Pi;
+        #endif
     }
 
     float illuminance = dot(irradiance, float3(0.2126f, 0.7152f, 0.0722f));

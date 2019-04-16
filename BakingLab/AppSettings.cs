@@ -881,6 +881,8 @@ public class Settings
         [UseAsShaderConstant(false)]
         bool ShowProbeVisualizer = false;
 
+        bool ViewIndirectDiffuse = false;
+
         bool ViewIndirectSpecular = false;
 
         [UseAsShaderConstant(false)]

@@ -76,6 +76,7 @@ cbuffer AppSettings : register(b7)
     float BloomExposure;
     float BloomMagnitude;
     float BloomBlurSigma;
+    bool ViewIndirectDiffuse;
     bool ViewIndirectSpecular;
     int VoxelVisualizerMipLevel;
 }

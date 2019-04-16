@@ -373,6 +373,7 @@ namespace AppSettings
     extern BoolSetting EnableLuminancePicker;
     extern BoolSetting ShowBakeDataVisualizer;
     extern BoolSetting ShowProbeVisualizer;
+    extern BoolSetting ViewIndirectDiffuse;
     extern BoolSetting ViewIndirectSpecular;
     extern VoxelVisualizerModesSetting VoxelVisualizerMode;
     extern IntSetting VoxelVisualizerMipLevel;
@@ -464,6 +465,7 @@ namespace AppSettings
         float BloomExposure;
         float BloomMagnitude;
         float BloomBlurSigma;
+        bool32 ViewIndirectDiffuse;
         bool32 ViewIndirectSpecular;
         int32 VoxelVisualizerMipLevel;
     };

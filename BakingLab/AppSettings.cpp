@@ -295,6 +295,7 @@ namespace AppSettings
     BoolSetting EnableLuminancePicker;
     BoolSetting ShowBakeDataVisualizer;
     BoolSetting ShowProbeVisualizer;
+    BoolSetting ViewIndirectDiffuse;
     BoolSetting ViewIndirectSpecular;
     VoxelVisualizerModesSetting VoxelVisualizerMode;
     IntSetting VoxelVisualizerMipLevel;
@@ -658,6 +659,9 @@ namespace AppSettings
         ShowProbeVisualizer.Initialize(tweakBar, "ShowProbeVisualizer", "Debug", "Show Probe Visualizer", "", false);
         Settings.AddSetting(&ShowProbeVisualizer);
 
+        ViewIndirectDiffuse.Initialize(tweakBar, "ViewIndirectDiffuse", "Debug", "View Indirect Diffuse", "", false);
+        Settings.AddSetting(&ViewIndirectDiffuse);
+
         ViewIndirectSpecular.Initialize(tweakBar, "ViewIndirectSpecular", "Debug", "View Indirect Specular", "", false);
         Settings.AddSetting(&ViewIndirectSpecular);
 
@@ -812,6 +816,7 @@ namespace AppSettings
         CBuffer.Data.BloomExposure = BloomExposure;
         CBuffer.Data.BloomMagnitude = BloomMagnitude;
         CBuffer.Data.BloomBlurSigma = BloomBlurSigma;
+        CBuffer.Data.ViewIndirectDiffuse = ViewIndirectDiffuse;
         CBuffer.Data.ViewIndirectSpecular = ViewIndirectSpecular;
         CBuffer.Data.VoxelVisualizerMipLevel = VoxelVisualizerMipLevel;
 
