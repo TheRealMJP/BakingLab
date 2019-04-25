@@ -679,10 +679,10 @@ public class Settings
         SolveModes SolveMode = SolveModes.NNLS;
     }
 
-    [ExpandGroup(false)]
+    [ExpandGroup(true)]
     public class Probes
     {
-        bool UseProbes = false;
+        bool UseProbes = true;
 
         ProbeModes ProbeMode = ProbeModes.CubeMap;
 
@@ -711,11 +711,11 @@ public class Settings
         int ProbeDistanceCubemapRes = 128;
 
         [UseAsShaderConstant(false)]
-        float SceneBoundsScale = 1.25f;
+        float SceneBoundsScale = 1.45f;
 
-        bool WeightProbesByNormal = false;
+        bool WeightProbesByNormal = true;
 
-        bool WeightProbesByVisibility = false;
+        bool WeightProbesByVisibility = true;
 
         [MinValue(1.0f)]
         [MaxValue(20.0f)]
@@ -730,7 +730,7 @@ public class Settings
         int ProbeDistanceIntegrationSamples = 32;
     }
 
-    [ExpandGroup(true)]
+    [ExpandGroup(false)]
     public class VCT
     {
         bool BakeWithVCT = false;

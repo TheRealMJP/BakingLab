@@ -536,7 +536,7 @@ namespace AppSettings
         SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "", SolveModes::NNLS, 3, SolveModesLabels);
         Settings.AddSetting(&SolveMode);
 
-        UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", false);
+        UseProbes.Initialize(tweakBar, "UseProbes", "Probes", "Use Probes", "", true);
         Settings.AddSetting(&UseProbes);
 
         ProbeMode.Initialize(tweakBar, "ProbeMode", "Probes", "Probe Mode", "", ProbeModes::CubeMap, 4, ProbeModesLabels);
@@ -560,13 +560,13 @@ namespace AppSettings
         ProbeDistanceCubemapRes.Initialize(tweakBar, "ProbeDistanceCubemapRes", "Probes", "Probe Distance Cubemap Res", "", 128, 1, 4096);
         Settings.AddSetting(&ProbeDistanceCubemapRes);
 
-        SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.2500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
+        SceneBoundsScale.Initialize(tweakBar, "SceneBoundsScale", "Probes", "Scene Bounds Scale", "", 1.4500f, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SceneBoundsScale);
 
-        WeightProbesByNormal.Initialize(tweakBar, "WeightProbesByNormal", "Probes", "Weight Probes By Normal", "", false);
+        WeightProbesByNormal.Initialize(tweakBar, "WeightProbesByNormal", "Probes", "Weight Probes By Normal", "", true);
         Settings.AddSetting(&WeightProbesByNormal);
 
-        WeightProbesByVisibility.Initialize(tweakBar, "WeightProbesByVisibility", "Probes", "Weight Probes By Visibility", "", false);
+        WeightProbesByVisibility.Initialize(tweakBar, "WeightProbesByVisibility", "Probes", "Weight Probes By Visibility", "", true);
         Settings.AddSetting(&WeightProbesByVisibility);
 
         DistanceFilterSharpness.Initialize(tweakBar, "DistanceFilterSharpness", "Probes", "Distance Filter Sharpness", "", 10.0000f, 1.0000f, 20.0000f, 0.0100f, ConversionMode::None, 1.0000f);
@@ -714,9 +714,9 @@ namespace AppSettings
 
         TwHelper::SetOpened(tweakBar, "Baking", false);
 
-        TwHelper::SetOpened(tweakBar, "Probes", false);
+        TwHelper::SetOpened(tweakBar, "Probes", true);
 
-        TwHelper::SetOpened(tweakBar, "VCT", true);
+        TwHelper::SetOpened(tweakBar, "VCT", false);
 
         TwHelper::SetOpened(tweakBar, "Scene", false);
 

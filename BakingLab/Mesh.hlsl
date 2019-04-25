@@ -492,6 +492,21 @@ void ComputeIndirectFromLightmap(in SurfaceContext surface, in float2 lightMapUV
     }
 }
 
+float Square(in float x)
+{
+    return x * x;
+}
+
+float3 Square(in float3 x)
+{
+    return x * x;
+}
+
+float4 Square(in float4 x)
+{
+    return x * x;
+}
+
 void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indirectIrradiance, out float3 indirectSpecular)
 {
     float3 normalizedSamplePos = saturate((surface.PositionWS - SceneMinBounds) / (SceneMaxBounds - SceneMinBounds));
@@ -501,8 +516,9 @@ void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indi
     float3 baseSamplePos = saturate(normalizedSamplePos - halfTexelSize) * probeDims;
     float3 lerpAmts = frac(baseSamplePos);
 
-    float3 irradianceSum = 0.0f;
-    float weightSum = 0.0f;
+    float4 irradianceSum = 0.0f;
+    float4 irradianceNoVisSum = 0.0f;
+    float visSum = 0.0f;
     for(uint i = 0; i < 8; ++i)
     {
         uint3 sampleOffset = uint3(i, i >> 1, i >> 2) & 0x1;
@@ -516,7 +532,9 @@ void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indi
         float distToProbe = length(probePosWS - surface.PositionWS);
 
         if(WeightProbesByNormal)
-            sampleWeight *= max(0.05f, dot(dirToProbe, surface.VtxNormalWS));
+            sampleWeight *= Square((dot(dirToProbe, surface.VtxNormalWS) + 1.0f) * 0.5f) + 0.2f;
+
+        float sampleWeightNoVis = sampleWeight;
 
         if(WeightProbesByVisibility)
         {
@@ -526,19 +544,28 @@ void ComputeIndirectFromProbeCubeMaps(in SurfaceContext surface, out float3 indi
             float2 distSample = ProbeDistanceCubeMaps.Sample(LinearSampler, float4(-dirToProbe, probeIdx));
             float visTerm = ChebyshevUpperBound(distSample, compareDistance, 0.0001f, 0.25f);
             sampleWeight *= visTerm;
+
+            visSum += visTerm;
         }
 
         sampleWeight = max(0.0002f, sampleWeight);
 
+        const float threshold = 0.2f;
+        if(sampleWeight < threshold)
+            sampleWeight *= Square(sampleWeight) / Square(threshold);
+
         float3 irradianceSample = ProbeIrradianceCubeMaps.Sample(LinearSampler, float4(surface.NormalWS, probeIdx)).xyz;
-        irradianceSum += irradianceSample * sampleWeight;
-        weightSum += sampleWeight;
+        irradianceSum += float4(irradianceSample, 1.0f) * sampleWeight;
+        irradianceNoVisSum += float4(irradianceSample, 1.0f) * sampleWeightNoVis;
     }
 
-    irradianceSum *= 1.0f / weightSum;
-    // irradianceSum *= 1.0f / max(weightSum, 0.0002f);
+    irradianceSum = irradianceSum / irradianceSum.w;
+    irradianceNoVisSum = irradianceNoVisSum / irradianceNoVisSum.w;
 
-    indirectIrradiance = irradianceSum;
+    indirectIrradiance = sqrt(lerp(Square(irradianceNoVisSum.xyz), Square(irradianceSum.xyz), saturate(4.0f * visSum)));
+
+    // indirectIrradiance = irradianceSum.xyz;
+
     indirectSpecular = 0.0f;
 }
 
