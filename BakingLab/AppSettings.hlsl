@@ -180,15 +180,16 @@ static const int SampleModes_UniformGrid = 3;
 static const int SampleModes_CMJ = 4;
 
 static const int BakeModes_Diffuse = 0;
-static const int BakeModes_HL2 = 1;
-static const int BakeModes_SH4 = 2;
-static const int BakeModes_SH9 = 3;
-static const int BakeModes_H4 = 4;
-static const int BakeModes_H6 = 5;
-static const int BakeModes_SG5 = 6;
-static const int BakeModes_SG6 = 7;
-static const int BakeModes_SG9 = 8;
-static const int BakeModes_SG12 = 9;
+static const int BakeModes_Directional = 1;
+static const int BakeModes_HL2 = 2;
+static const int BakeModes_SH4 = 3;
+static const int BakeModes_SH9 = 4;
+static const int BakeModes_H4 = 5;
+static const int BakeModes_H6 = 6;
+static const int BakeModes_SG5 = 7;
+static const int BakeModes_SG6 = 8;
+static const int BakeModes_SG9 = 9;
+static const int BakeModes_SG12 = 10;
 
 static const int SolveModes_Projection = 0;
 static const int SolveModes_SVD = 1;

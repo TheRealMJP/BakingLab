@@ -116,6 +116,7 @@ struct Float3
     static Float3 Transform(const Float3& v, const Quaternion& q);
     static Float3 Clamp(const Float3& val, const Float3& min, const Float3& max);
     static Float3 Perpendicular(const Float3& v);
+	static Float3 Max(const Float3& a, const Float3& b);
     static float Distance(const Float3& a, const Float3& b);
     static float Length(const Float3& v);
 };
@@ -155,7 +156,9 @@ struct Float4
     Float3 To3D() const;
     Float2 To2D() const;
 
+	static float Dot(const Float4& a, const Float4& b);
     static Float4 Clamp(const Float4& val, const Float4& min, const Float4& max);
+	static Float4 Float4::Normalize(const Float4& a);
     static Float4 Transform(const Float4& v, const Float4x4& m);
 };
 

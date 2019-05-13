@@ -467,6 +467,15 @@ Float3 Float3::Perpendicular(const Float3& vec)
     return Float3::Normalize(perp);
 }
 
+Float3 Float3::Max(const Float3& a, const Float3& b)
+{
+	Float3 retVal;
+	retVal.x = SampleFramework11::Max(a.x, b.x);
+	retVal.y = SampleFramework11::Max(a.y, b.y);
+	retVal.z = SampleFramework11::Max(a.z, b.z);
+	return retVal;
+}
+
 float Float3::Distance(const Float3& a, const Float3& b)
 {
     XMVECTOR x = a.ToSIMD();
@@ -636,6 +645,11 @@ Float2 Float4::To2D() const
     return Float2(x, y);
 }
 
+float Float4::Dot(const Float4& a, const Float4& b)
+{
+	return XMVectorGetX(XMVector4Dot(a.ToSIMD(), b.ToSIMD()));
+}
+
 Float4 Float4::Clamp(const Float4& val, const Float4& min, const Float4& max)
 {
     Float4 retVal;
@@ -644,6 +658,13 @@ Float4 Float4::Clamp(const Float4& val, const Float4& min, const Float4& max)
     retVal.z = SampleFramework11::Clamp(val.z, min.z, max.z);
     retVal.w = SampleFramework11::Clamp(val.w, min.w, max.w);
     return retVal;
+}
+
+Float4 Float4::Normalize(const Float4& a)
+{
+	Float4 result;
+	XMStoreFloat4(reinterpret_cast<XMFLOAT4*>(&result), XMVector4Normalize(a.ToSIMD()));
+	return result;
 }
 
 Float4 Float4::Transform(const Float4& v, const Float4x4& m)
