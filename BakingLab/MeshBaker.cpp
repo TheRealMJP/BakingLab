@@ -85,7 +85,7 @@ struct DiffuseBaker
         return SampleCosineHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS, Float3 normal)
     {
         ResultSum += sample;
     }
@@ -103,6 +103,64 @@ struct DiffuseBaker
         Float3 currValue = bakeOutput[0].To3D();
         currValue = Lerp<Float3>(newSample, currValue, lerpFactor);
         bakeOutput[0] = Float4(Float3::Clamp(currValue, 0.0f, FP16Max), 1.0f);
+    }
+};
+
+// Bakes irradiance based on Enlighten's directional approach, with 3 floats for color,
+// 3 for lighting main direction information, and 1 float to ensure that the directional
+// term evaluates to 1 when the surface normal aligns with normal used when baking.
+//
+// NOTE: A directional map can be encoded per RGB channel which puts the memory cost at
+// the cost of L1 SH but at a worse quality. This implementation with a single directional
+// map is provided as a cheap alternative at the expense of quality.
+//
+// Reference: https://static.docs.arm.com/100837/0308/enlighten_3-08_sdk_documentation__100837_0308_00_en.pdf
+struct DirectionalBaker
+{
+    static const uint64 BasisCount = 2;
+
+    uint64 NumSamples = 0;
+    Float3 ResultSum;
+    Float3 DirectionSum;
+    Float3 NormalSum;
+
+    void Init(uint64 numSamples, Float4 prevResult[BasisCount])
+    {
+        NumSamples = numSamples;
+
+        ResultSum = 0.0;
+        DirectionSum = 0.0;
+        NormalSum = 0.0;
+    }
+
+    Float3 SampleDirection(Float2 samplePoint)
+    {
+        return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
+    }
+
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS, Float3 normal)
+    {
+        normal = Float3::Normalize(normal);
+
+        const Float3 sampleDir = Float3::Normalize(sampleDirWS);
+
+        ResultSum += sample;
+        DirectionSum += sampleDir;
+        NormalSum += normal;
+    }
+
+    void FinalResult(Float4 bakeOutput[BasisCount])
+    {
+        Float3 finalColorResult = ResultSum * CosineWeightedMonteCarloFactor(NumSamples);
+        Float3 finalDirection = Float3::Normalize((DirectionSum * CosineWeightedMonteCarloFactor(NumSamples)) / std::max(ComputeLuminance(finalColorResult), 0.0001f));
+        Float3 averageNormal = Float3::Normalize(NormalSum * CosineWeightedMonteCarloFactor(NumSamples));
+
+        bakeOutput[0] = Float4(Float3::Clamp(finalColorResult, 0.0f, FP16Max), 1.0f);
+        bakeOutput[1] = Float4(finalDirection * 0.5f + 0.5, std::max(Float4::Dot(Float4(averageNormal, 1.0f) * 0.5f, Float4(finalDirection, 1.0f)), 0.0001f));
+    }
+
+    void ProgressiveResult(Float4 bakeOutput[BasisCount], uint64 passIdx)
+    {
     }
 };
 
@@ -125,7 +183,7 @@ struct HL2Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS, Float3 normal)
     {
         static const Float3 BasisDirs[BasisCount] =
         {
@@ -178,7 +236,7 @@ struct SH4Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS, Float3 normal)
     {
         const Float3 sampleDir = AppSettings::WorldSpaceBake ? sampleDirWS : sampleDirTS;
         ResultSum += ProjectOntoSH4Color(sampleDir, sample);
@@ -223,7 +281,7 @@ struct SH9Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS, Float3 normal)
     {
         const Float3 sampleDir = AppSettings::WorldSpaceBake ? sampleDirWS : sampleDirTS;
         ResultSum += ProjectOntoSH9Color(sampleDir, sample);
@@ -268,7 +326,7 @@ struct H4Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS, Float3 normal)
     {
         ResultSum += ProjectOntoSH9Color(sampleDirTS, sample);
     }
@@ -318,7 +376,7 @@ struct H6Baker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS, Float3 normal)
     {
         ResultSum += ProjectOntoSH9Color(sampleDirTS, sample);
     }
@@ -391,7 +449,7 @@ template<uint64 SGCount> struct SGBaker
         return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
     }
 
-    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS)
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS, Float3 normal)
     {
         const Float3 sampleDir = AppSettings::WorldSpaceBake ? sampleDirWS : sampleDirTS;
         SampleDirs[CurrSampleIdx] = sampleDir;
@@ -616,7 +674,10 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
                 if(addAreaLight)
                     sampleResult *= 2.0f;
 
-                baker.AddSample(rayDirTS, sampleIdx, sampleResult, rayDirWS);
+				if (!isfinite(sampleResult.x) || !isfinite(sampleResult.y) || !isfinite(sampleResult.z))
+					sampleResult = 0.0;
+
+                baker.AddSample(rayDirTS, sampleIdx, sampleResult, rayDirWS, bakePoint.Normal);
 
                 baker.ProgressiveResult(texelResults, sampleIdx);
 
@@ -690,7 +751,10 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
             if(addAreaLight)
                 sampleResult *= 2.0f;
 
-            baker.AddSample(rayDirTS, sampleIdx, sampleResult, rayDirWS);
+			if (!isfinite(sampleResult.x) || !isfinite(sampleResult.y) || !isfinite(sampleResult.z))
+				sampleResult = 0.0;
+
+            baker.AddSample(rayDirTS, sampleIdx, sampleResult, rayDirWS, bakePoint.Normal);
         }
 
         baker.FinalResult(texelResults);
@@ -1769,6 +1833,8 @@ void MeshBaker::StartBakeThreads()
     uint32 (__stdcall* threadFunction)(void*) = BakeThread<DiffuseBaker>;
     if(currBakeMode == BakeModes::HL2)
         threadFunction = BakeThread<HL2Baker>;
+	if (currBakeMode == BakeModes::Directional)
+		threadFunction = BakeThread<DirectionalBaker>;
     else if(currBakeMode == BakeModes::SH4)
         threadFunction = BakeThread<SH4Baker>;
     else if(currBakeMode == BakeModes::SH9)

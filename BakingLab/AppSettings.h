@@ -230,15 +230,16 @@ typedef EnumSettingT<SampleModes> SampleModesSetting;
 enum class BakeModes
 {
     Diffuse = 0,
-    HL2 = 1,
-    SH4 = 2,
-    SH9 = 3,
-    H4 = 4,
-    H6 = 5,
-    SG5 = 6,
-    SG6 = 7,
-    SG9 = 8,
-    SG12 = 9,
+    Directional = 1,
+    HL2 = 2,
+    SH4 = 3,
+    SH9 = 4,
+    H4 = 5,
+    H6 = 6,
+    SG5 = 7,
+    SG6 = 8,
+    SG9 = 9,
+    SG12 = 10,
 
     NumValues
 };
@@ -595,7 +596,7 @@ namespace AppSettings
     inline uint64 BasisCount(uint64 bakeMode)
     {
         Assert_(bakeMode < uint64(BakeModes::NumValues));
-        static const uint64 BasisCounts[] = { 1, 3, 4, 9, 4, 6, 5, 6, 9, 12 };
+        static const uint64 BasisCounts[] = { 1, 2, 3, 4, 9, 4, 6, 5, 6, 9, 12 };
         StaticAssert_(ArraySize_(BasisCounts) == uint64(BakeModes::NumValues));
         Assert_(BasisCounts[bakeMode] <= MaxBasisCount);
         return BasisCounts[bakeMode];
@@ -627,7 +628,7 @@ namespace AppSettings
 
     inline bool SupportsProgressiveIntegration(BakeModes bakeMode, SolveModes solveMode)
     {
-        if(SGCount(bakeMode) > 0 && (solveMode == SolveModes::SVD || solveMode == SolveModes::NNLS))
+        if((bakeMode == BakeModes::Directional) || (SGCount(bakeMode) > 0 && (solveMode == SolveModes::SVD || solveMode == SolveModes::NNLS)))
             return false;
         else
             return true;

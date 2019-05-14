@@ -645,6 +645,20 @@ PSOutput PS(in PSInput input)
                 indirectIrradiance += saturate(dot(normalTS, BasisDirs[i])) * lightMap;
             }
         }
+		else if (BakeMode == BakeModes_Directional)
+		{
+			float3 lightMapColor = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 0), 0.0f).xyz * Pi;
+			float4 lightmapDirection = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 1), 0.0f).xyzw;
+
+			float rebalancingCoefficient = max(lightmapDirection.w, 0.0001);
+
+			lightmapDirection = lightmapDirection * 2.0f - 1.0f;
+
+			float4 tau = float4(normalize(normalWS), 1.0f) * 0.5f;
+			float halfLambert = dot(tau, float4(lightmapDirection.xyz, 1.0f));
+
+			indirectIrradiance = lightMapColor * halfLambert / rebalancingCoefficient;
+		}
         else if(BakeMode == BakeModes_SH4)
         {
             SH4Color shRadiance;

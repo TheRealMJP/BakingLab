@@ -258,6 +258,9 @@ enum BakeModes
 {
     Diffuse = 0,
 
+    [EnumLabel("Directional")]
+    Directional,
+
     [EnumLabel("Half-Life 2")]
     HL2,
 
