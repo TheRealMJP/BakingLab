@@ -196,6 +196,7 @@ namespace AppSettings
 {
     BoolSetting EnableSun;
     BoolSetting SunAreaLightApproximation;
+    BoolSetting BakeDirectSunLight;
     ColorSetting SunTintColor;
     FloatSetting SunIntensityScale;
     FloatSetting SunSize;
@@ -310,6 +311,9 @@ namespace AppSettings
 
         SunAreaLightApproximation.Initialize(tweakBar, "SunAreaLightApproximation", "Sun Light", "Sun Area Light Approximation", "Controls whether the sun is treated as a disc area light in the real-time shader", true);
         Settings.AddSetting(&SunAreaLightApproximation);
+
+        BakeDirectSunLight.Initialize(tweakBar, "BakeDirectSunLight", "Sun Light", "Bake Direct Sun Light", "Bakes the direct contribution from the sun light into the light map", false);
+        Settings.AddSetting(&BakeDirectSunLight);
 
         SunTintColor.Initialize(tweakBar, "SunTintColor", "Sun Light", "Sun Tint Color", "The color of the sun", Float3(1.0000f, 1.0000f, 1.0000f), false, -340282300000000000000000000000000000000.0000f, 340282300000000000000000000000000000000.0000f, 0.0100f, ColorUnit::None);
         Settings.AddSetting(&SunTintColor);
@@ -673,6 +677,7 @@ namespace AppSettings
     {
         CBuffer.Data.EnableSun = EnableSun;
         CBuffer.Data.SunAreaLightApproximation = SunAreaLightApproximation;
+        CBuffer.Data.BakeDirectSunLight = BakeDirectSunLight;
         CBuffer.Data.SunTintColor = SunTintColor;
         CBuffer.Data.SunIntensityScale = SunIntensityScale;
         CBuffer.Data.SunSize = SunSize;

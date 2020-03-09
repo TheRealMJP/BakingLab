@@ -346,6 +346,9 @@ public class Settings
         [HelpText("Controls whether the sun is treated as a disc area light in the real-time shader")]
         bool SunAreaLightApproximation = true;
 
+        [HelpText("Bakes the direct contribution from the sun light into the light map")]
+        bool BakeDirectSunLight = false;
+
         [HelpText("The color of the sun")]
         Color SunTintColor = new Color(1.0f, 1.0f, 1.0f, 1.0f);
 

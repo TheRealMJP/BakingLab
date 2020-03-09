@@ -190,7 +190,7 @@ static float AreaLightIntersection(const Float3& rayStart, const Float3& rayDir,
 
 // Computes the difuse and specular contribution from the sun, given a 2D random sample point
 // representing a location on the surface of the light
-static Float3 SampleSunLight(const Float3& position, const Float3& normal, RTCScene scene,
+Float3 SampleSunLight(const Float3& position, const Float3& normal, RTCScene scene,
                              const Float3& diffuseAlbedo, const Float3& cameraPos,
                              bool includeSpecular, Float3 specAlbedo, float roughness,
                              float u1, float u2, Float3& irradiance)
@@ -263,6 +263,12 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
     const int64 maxPathLength = params.MaxPathLength;
     for(int64 pathLength = 1; pathLength <= maxPathLength || maxPathLength == -1; ++pathLength)
     {
+        const bool indirectSpecOnly = params.ViewIndirectSpecular && pathLength == 1;
+        const bool indirectDiffuseOnly = params.ViewIndirectDiffuse && pathLength == 1;
+        const bool enableSpecular = (params.EnableBounceSpecular || (pathLength == 1)) && params.EnableSpecular;
+        const bool enableDiffuse = params.EnableDiffuse;
+        const bool skipDirect = AppSettings::ShowGroundTruth && (!AppSettings::EnableDirectLighting || indirectDiffuseOnly) && (pathLength == 1);
+
         // See if we should randomly terminate this path using Russian Roullete
         const int32 rouletteDepth = params.RussianRouletteDepth;
         if(pathLength >= rouletteDepth && rouletteDepth != -1)
@@ -321,7 +327,7 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
             const uint64 materialIdx = bvh.MaterialIndices[ray.primID];
 
             Float3 albedo = 1.0f;
-            if(AppSettings::EnableAlbedoMaps)
+            if(AppSettings::EnableAlbedoMaps && !indirectDiffuseOnly)
                 albedo = SampleTexture2D(hitSurface.TexCoord, bvh.MaterialDiffuseMaps[materialIdx]);
 
             Float3x3 tangentToWorld;
@@ -356,11 +362,6 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
             sqrtRoughness = Saturate(sqrtRoughness);
             float roughness = sqrtRoughness * sqrtRoughness;
 
-            const bool indirectSpecOnly = params.ViewIndirectSpecular && pathLength == 1;
-            const bool indirectDiffuseOnly = params.ViewIndirectDiffuse && pathLength == 1;
-            const bool enableSpecular = (params.EnableBounceSpecular || pathLength == 1) && params.EnableSpecular;
-            const bool enableDiffuse = params.EnableDiffuse ? true : false;
-
             diffuseAlbedo *= enableDiffuse ? 1.0f : 0.0f;
 
             if(indirectSpecOnly == false)
@@ -373,9 +374,11 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
                     Float2 sunSample = params.SampleSet->Sun();
                     if(pathLength > 1)
                         sunSample = randomGenerator.RandomFloat2();
-                    directLighting += SampleSunLight(hitSurface.Position, normal, bvh.Scene, diffuseAlbedo,
+                    Float3 sunDirectLighting = SampleSunLight(hitSurface.Position, normal, bvh.Scene, diffuseAlbedo,
                                                      rayOrigin, enableSpecular, specAlbedo, roughness,
                                                      sunSample.x, sunSample.y, directIrradiance);
+                    if(!skipDirect || AppSettings::BakeDirectSunLight)
+                        directLighting += sunDirectLighting;
                 }
 
                 // Compute direct lighting from the area light
@@ -385,9 +388,11 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
                     if(pathLength > 1)
                         areaLightSample = randomGenerator.RandomFloat2();
                     Float3 areaLightSampleDir;
-                    directLighting += SampleAreaLight(hitSurface.Position, normal, bvh.Scene, diffuseAlbedo,
-                                                      rayOrigin, enableSpecular, specAlbedo, roughness,
-                                                      areaLightSample.x, areaLightSample.y, directIrradiance, areaLightSampleDir);
+                    Float3 areaLightDirectLighting = SampleAreaLight(hitSurface.Position, normal, bvh.Scene, diffuseAlbedo,
+                                                     rayOrigin, enableSpecular, specAlbedo, roughness,
+                                                     areaLightSample.x, areaLightSample.y, directIrradiance, areaLightSampleDir);
+                    if(!skipDirect || AppSettings::BakeDirectAreaLight)
+                        directLighting += areaLightDirectLighting;
                 }
 
                 radiance += directLighting * throughput;
@@ -463,11 +468,6 @@ Float3 PathTrace(const PathTracerParams& params, Random& randomGenerator, float&
                     }
                 }
             }
-
-			if(AppSettings::ShowGroundTruth && (!AppSettings::EnableDirectLighting || indirectDiffuseOnly) && pathLength == 1)
-			{
-				radiance *= 0.0f;
-			}
         }
         else {
             // We hit the sky, so we'll sample the sky radiance and then bail out

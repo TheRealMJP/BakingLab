@@ -2,6 +2,7 @@ cbuffer AppSettings : register(b7)
 {
     bool EnableSun;
     bool SunAreaLightApproximation;
+    bool BakeDirectSunLight;
     float3 SunTintColor;
     float SunIntensityScale;
     float SunSize;
