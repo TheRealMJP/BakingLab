@@ -668,6 +668,14 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
                     float illuminance = 0.0f;
                     bool hitSky = false;
                     sampleResult = PathTrace(params, random, illuminance, hitSky);
+
+                    if(AppSettings::BakeDirectSunLight)
+                    {
+                        Float3 sunLightIrradiance;
+                        sampleResult += SampleSunLight(bakePoint.Position, bakePoint.Normal, context.SceneBVH->Scene,
+                            1.0f, 0.0f, false, 0.0f, 1.0f, sampleSet.Lens().x,
+                            sampleSet.Lens().y, sunLightIrradiance);
+                    }
                 }
 
                 // Account for equally distributing our samples among the area light and the rest of the environment
@@ -745,6 +753,14 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
                 float illuminance = 0.0f;
                 bool hitSky = false;
                 sampleResult = PathTrace(params, random, illuminance, hitSky);
+
+                if(AppSettings::BakeDirectSunLight)
+                {
+                    Float3 sunLightIrradiance;
+                    sampleResult += SampleSunLight(bakePoint.Position, bakePoint.Normal, context.SceneBVH->Scene,
+                        1.0f, 0.0f, false, 0.0f, 1.0f, sampleSet.Lens().x,
+                        sampleSet.Lens().y, sunLightIrradiance);
+                }
             }
 
             // Account for equally distributing our samples among the area light and the rest of the environment
@@ -1664,7 +1680,8 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
         || AppSettings::SunTintColor.Changed() || AppSettings::SunIntensityScale.Changed()
         || AppSettings::SunSize.Changed() || AppSettings::NormalizeSunIntensity.Changed()
         || AppSettings::DiffuseAlbedoScale.Changed() || AppSettings::EnableAlbedoMaps.Changed()
-        || AppSettings::EnableAreaLightShadows.Changed() || AppSettings::MetallicOffset.Changed())
+        || AppSettings::EnableAreaLightShadows.Changed() || AppSettings::MetallicOffset.Changed()
+        || AppSettings::BakeDirectSunLight.Changed() || AppSettings::BakeDirectAreaLight.Changed())
     {
         InterlockedIncrement64(&renderTag);
         InterlockedIncrement64(&bakeTag);
@@ -1673,9 +1690,9 @@ MeshBakerStatus MeshBaker::Update(const Camera& camera, uint32 screenWidth, uint
     }
 
     // Change checks for baking only
-    if(AppSettings::BakeDirectAreaLight.Changed() || AppSettings::BakeRussianRouletteDepth.Changed()
-       || AppSettings::BakeRussianRouletteProbability.Changed() || AppSettings::MaxBakePathLength.Changed()
-       || AppSettings::SolveMode.Changed())
+    if(AppSettings::BakeDirectSunLight.Changed() || AppSettings::BakeDirectAreaLight.Changed()
+        || AppSettings::BakeRussianRouletteDepth.Changed() || AppSettings::BakeRussianRouletteProbability.Changed()
+        || AppSettings::MaxBakePathLength.Changed() || AppSettings::SolveMode.Changed())
     {
         InterlockedIncrement64(&bakeTag);
         currBakeBatch = 0;

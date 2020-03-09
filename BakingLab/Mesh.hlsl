@@ -580,7 +580,7 @@ PSOutput PS(in PSInput input)
     float3 lighting = 0.0f;
     float3 irradiance = 0.0f;
 
-    if(EnableDirectLighting && EnableSun)
+    if(EnableDirectLighting && EnableSun && !BakeDirectSunLight)
     {
         float3 sunIrradiance = 0.0f;
         float3 sunShadowVisibility = SunShadowVisibility(positionWS, depthVS);

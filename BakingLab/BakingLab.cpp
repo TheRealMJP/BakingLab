@@ -61,6 +61,7 @@ StaticAssert_(ArraySize_(SceneAlbedoScales) >= uint64(Scenes::NumValues));
 static Setting* LightSettings[] =
 {
     &AppSettings::EnableSun,
+    &AppSettings::BakeDirectSunLight,
     &AppSettings::SunTintColor,
     &AppSettings::SunIntensityScale,
     &AppSettings::SunSize,

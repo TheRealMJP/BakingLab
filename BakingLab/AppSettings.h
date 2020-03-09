@@ -278,6 +278,7 @@ namespace AppSettings
 
     extern BoolSetting EnableSun;
     extern BoolSetting SunAreaLightApproximation;
+    extern BoolSetting BakeDirectSunLight;
     extern ColorSetting SunTintColor;
     extern FloatSetting SunIntensityScale;
     extern FloatSetting SunSize;
@@ -385,6 +386,7 @@ namespace AppSettings
     {
         bool32 EnableSun;
         bool32 SunAreaLightApproximation;
+        bool32 BakeDirectSunLight;
         Float4Align Float3 SunTintColor;
         float SunIntensityScale;
         float SunSize;
