@@ -132,7 +132,7 @@ float4 PS(in PSInput input) : SV_Target0
     }
 	else if (BakeMode == BakeModes_Directional)
 	{
-        float3 lightMapColor = BakedLightingMap.SampleLevel(LinearSampler, float3(uv, 0), 0.0f).xyz * Pi;
+        float3 lightMapColor = BakedLightingMap.SampleLevel(LinearSampler, float3(uv, 0), 0.0f).xyz;
         float4 lightmapDirection = BakedLightingMap.SampleLevel(LinearSampler, float3(uv, 1), 0.0f).xyzw;
 
         float rebalancingCoefficient = max(lightmapDirection.w, 0.0001);
@@ -141,6 +141,26 @@ float4 PS(in PSInput input) : SV_Target0
 
         float4 tau = float4(normalize(normalWS), 1.0f) * 0.5f;
         float halfLambert = dot(tau, float4(lightmapDirection.xyz, 1.0f));
+
+        output = lightMapColor * halfLambert / rebalancingCoefficient;
+	}
+	else if (BakeMode == BakeModes_DirectionalRGB)
+	{
+        float3 lightMapColor = BakedLightingMap.SampleLevel(LinearSampler, float3(uv, 0), 0.0f).xyz;
+        float4 lightmapDirectionR = BakedLightingMap.SampleLevel(LinearSampler, float3(uv, 1), 0.0f).xyzw;
+        float4 lightmapDirectionG = BakedLightingMap.SampleLevel(LinearSampler, float3(uv, 2), 0.0f).xyzw;
+        float4 lightmapDirectionB = BakedLightingMap.SampleLevel(LinearSampler, float3(uv, 3), 0.0f).xyzw;
+
+        float3 rebalancingCoefficient = float3(max(lightmapDirectionR.w, 0.0001), max(lightmapDirectionG.w, 0.0001), max(lightmapDirectionB.w, 0.0001));
+
+        lightmapDirectionR = lightmapDirectionR * 2.0f - 1.0f;
+        lightmapDirectionG = lightmapDirectionG * 2.0f - 1.0f;
+        lightmapDirectionB = lightmapDirectionB * 2.0f - 1.0f;
+
+        float4 tau = float4(normalize(normalWS), 1.0f) * 0.5f;
+        float3 halfLambert = float3(dot(tau, float4(lightmapDirectionR.xyz, 1.0f)),
+            dot(tau, float4(lightmapDirectionG.xyz, 1.0f)),
+            dot(tau, float4(lightmapDirectionB.xyz, 1.0f)));
 
         output = lightMapColor * halfLambert / rebalancingCoefficient;
 	}

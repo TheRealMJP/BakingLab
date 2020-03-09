@@ -261,6 +261,9 @@ enum BakeModes
     [EnumLabel("Directional")]
     Directional,
 
+    [EnumLabel("DirectionalRGB")]
+    DirectionalRGB,
+
     [EnumLabel("Half-Life 2")]
     HL2,
 
