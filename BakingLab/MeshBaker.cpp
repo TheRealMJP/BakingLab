@@ -122,6 +122,7 @@ struct DirectionalBaker
     uint64 NumSamples = 0;
     Float3 ResultSum;
     Float3 DirectionSum;
+    float DirectionWeightSum;
     Float3 NormalSum;
 
     void Init(uint64 numSamples, Float4 prevResult[BasisCount])
@@ -130,6 +131,7 @@ struct DirectionalBaker
 
         ResultSum = 0.0;
         DirectionSum = 0.0;
+        DirectionWeightSum = 0.0;
         NormalSum = 0.0;
     }
 
@@ -145,18 +147,91 @@ struct DirectionalBaker
         const Float3 sampleDir = Float3::Normalize(sampleDirWS);
 
         ResultSum += sample;
-        DirectionSum += sampleDir;
+        DirectionSum += sampleDir * ComputeLuminance(sample);
+        DirectionWeightSum += ComputeLuminance(sample);
         NormalSum += normal;
     }
 
     void FinalResult(Float4 bakeOutput[BasisCount])
     {
         Float3 finalColorResult = ResultSum * CosineWeightedMonteCarloFactor(NumSamples);
-        Float3 finalDirection = Float3::Normalize((DirectionSum * CosineWeightedMonteCarloFactor(NumSamples)) / std::max(ComputeLuminance(finalColorResult), 0.0001f));
+
+        Float3 finalDirection = Float3::Normalize(DirectionSum / std::max(DirectionWeightSum, 0.0001f));
+
         Float3 averageNormal = Float3::Normalize(NormalSum * CosineWeightedMonteCarloFactor(NumSamples));
+        Float4 tau = Float4(averageNormal, 1.0f) * 0.5f;
 
         bakeOutput[0] = Float4(Float3::Clamp(finalColorResult, 0.0f, FP16Max), 1.0f);
-        bakeOutput[1] = Float4(finalDirection * 0.5f + 0.5, std::max(Float4::Dot(Float4(averageNormal, 1.0f) * 0.5f, Float4(finalDirection, 1.0f)), 0.0001f));
+        bakeOutput[1] = Float4(finalDirection * 0.5f + 0.5, std::max(Float4::Dot(tau, Float4(finalDirection, 1.0f)), 0.0001f));
+    }
+
+    void ProgressiveResult(Float4 bakeOutput[BasisCount], uint64 passIdx)
+    {
+    }
+};
+
+// Bakes irradiance based on Enlighten's RGB directional approach, with 3 floats for
+// color, and 4 floats per RGB channel were 3 of the floats are the direction for the
+// specific channel and the 4th float ensures that the directional term evaluates to 1
+// when the surface normal aligns with normal used when baking.
+//
+// Reference: https://static.docs.arm.com/100837/0308/enlighten_3-08_sdk_documentation__100837_0308_00_en.pdf
+struct DirectionalRGBBaker
+{
+    static const uint64 BasisCount = 4;
+
+    uint64 NumSamples = 0;
+    Float3 ResultSum;
+    Float3 DirectionSum[3];
+    Float3 DirectionWeightSum;
+    Float3 NormalSum;
+
+    void Init(uint64 numSamples, Float4 prevResult[BasisCount])
+    {
+        NumSamples = numSamples;
+
+        ResultSum = 0.0;
+        DirectionSum[0] = 0.0;
+        DirectionSum[1] = 0.0;
+        DirectionSum[2] = 0.0;
+        DirectionWeightSum = 0.0;
+        NormalSum = 0.0;
+    }
+
+    Float3 SampleDirection(Float2 samplePoint)
+    {
+        return SampleDirectionHemisphere(samplePoint.x, samplePoint.y);
+    }
+
+    void AddSample(Float3 sampleDirTS, uint64 sampleIdx, Float3 sample, Float3 sampleDirWS, Float3 normal)
+    {
+        normal = Float3::Normalize(normal);
+
+        const Float3 sampleDir = Float3::Normalize(sampleDirWS);
+
+        ResultSum += sample;
+        DirectionSum[0] += sampleDir * sample.x;
+        DirectionSum[1] += sampleDir * sample.y;
+        DirectionSum[2] += sampleDir * sample.z;
+        DirectionWeightSum += sample;
+        NormalSum += normal;
+    }
+
+    void FinalResult(Float4 bakeOutput[BasisCount])
+    {
+        Float3 finalColorResult = ResultSum * CosineWeightedMonteCarloFactor(NumSamples);
+
+        Float3 finalDirectionR = Float3::Normalize(DirectionSum[0] / std::max(DirectionWeightSum.x, 0.0001f));
+        Float3 finalDirectionG = Float3::Normalize(DirectionSum[1] / std::max(DirectionWeightSum.y, 0.0001f));
+        Float3 finalDirectionB = Float3::Normalize(DirectionSum[2] / std::max(DirectionWeightSum.z, 0.0001f));
+
+        Float3 averageNormal = Float3::Normalize(NormalSum * CosineWeightedMonteCarloFactor(NumSamples));
+        Float4 tau = Float4(averageNormal, 1.0f) * 0.5f;
+
+        bakeOutput[0] = Float4(Float3::Clamp(finalColorResult, 0.0f, FP16Max), 1.0f);
+        bakeOutput[1] = Float4(finalDirectionR * 0.5f + 0.5, std::max(Float4::Dot(tau, Float4(finalDirectionR, 1.0f)), 0.0001f));
+        bakeOutput[2] = Float4(finalDirectionG * 0.5f + 0.5, std::max(Float4::Dot(tau, Float4(finalDirectionG, 1.0f)), 0.0001f));
+        bakeOutput[3] = Float4(finalDirectionB * 0.5f + 0.5, std::max(Float4::Dot(tau, Float4(finalDirectionB, 1.0f)), 0.0001f));
     }
 
     void ProgressiveResult(Float4 bakeOutput[BasisCount], uint64 passIdx)
@@ -1850,8 +1925,10 @@ void MeshBaker::StartBakeThreads()
     uint32 (__stdcall* threadFunction)(void*) = BakeThread<DiffuseBaker>;
     if(currBakeMode == BakeModes::HL2)
         threadFunction = BakeThread<HL2Baker>;
-	if (currBakeMode == BakeModes::Directional)
+	else if (currBakeMode == BakeModes::Directional)
 		threadFunction = BakeThread<DirectionalBaker>;
+    else if(currBakeMode == BakeModes::DirectionalRGB)
+        threadFunction = BakeThread<DirectionalRGBBaker>;
     else if(currBakeMode == BakeModes::SH4)
         threadFunction = BakeThread<SH4Baker>;
     else if(currBakeMode == BakeModes::SH9)

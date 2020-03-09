@@ -659,6 +659,26 @@ PSOutput PS(in PSInput input)
 
 			indirectIrradiance = lightMapColor * halfLambert / rebalancingCoefficient;
 		}
+        else if(BakeMode == BakeModes_DirectionalRGB)
+        {
+            float3 lightMapColor = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 0), 0.0f).xyz * Pi;
+            float4 lightmapDirectionR = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 1), 0.0f).xyzw;
+            float4 lightmapDirectionG = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 2), 0.0f).xyzw;
+            float4 lightmapDirectionB = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 3), 0.0f).xyzw;
+
+            float3 rebalancingCoefficient = float3(max(lightmapDirectionR.w, 0.0001), max(lightmapDirectionG.w, 0.0001), max(lightmapDirectionB.w, 0.0001));
+
+            lightmapDirectionR = lightmapDirectionR * 2.0f - 1.0f;
+            lightmapDirectionG = lightmapDirectionG * 2.0f - 1.0f;
+            lightmapDirectionB = lightmapDirectionB * 2.0f - 1.0f;
+
+            float4 tau = float4(normalize(normalWS), 1.0f) * 0.5f;
+            float3 halfLambert = float3(dot(tau, float4(lightmapDirectionR.xyz, 1.0f)),
+                dot(tau, float4(lightmapDirectionG.xyz, 1.0f)),
+                dot(tau, float4(lightmapDirectionB.xyz, 1.0f)));
+
+            indirectIrradiance = lightMapColor * halfLambert / rebalancingCoefficient;
+        }
         else if(BakeMode == BakeModes_SH4)
         {
             SH4Color shRadiance;

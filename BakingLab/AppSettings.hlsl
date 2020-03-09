@@ -182,15 +182,16 @@ static const int SampleModes_CMJ = 4;
 
 static const int BakeModes_Diffuse = 0;
 static const int BakeModes_Directional = 1;
-static const int BakeModes_HL2 = 2;
-static const int BakeModes_SH4 = 3;
-static const int BakeModes_SH9 = 4;
-static const int BakeModes_H4 = 5;
-static const int BakeModes_H6 = 6;
-static const int BakeModes_SG5 = 7;
-static const int BakeModes_SG6 = 8;
-static const int BakeModes_SG9 = 9;
-static const int BakeModes_SG12 = 10;
+static const int BakeModes_DirectionalRGB = 2;
+static const int BakeModes_HL2 = 3;
+static const int BakeModes_SH4 = 4;
+static const int BakeModes_SH9 = 5;
+static const int BakeModes_H4 = 6;
+static const int BakeModes_H6 = 7;
+static const int BakeModes_SG5 = 8;
+static const int BakeModes_SG6 = 9;
+static const int BakeModes_SG9 = 10;
+static const int BakeModes_SG12 = 11;
 
 static const int SolveModes_Projection = 0;
 static const int SolveModes_SVD = 1;

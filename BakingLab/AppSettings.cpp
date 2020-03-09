@@ -161,10 +161,11 @@ static const char* SampleModesLabels[5] =
     "CMJ",
 };
 
-static const char* BakeModesLabels[11] =
+static const char* BakeModesLabels[12] =
 {
     "Diffuse",
     "Directional",
+    "DirectionalRGB",
     "Half-Life 2",
     "L1 SH",
     "L2 SH",
@@ -530,7 +531,7 @@ namespace AppSettings
         BakeRussianRouletteProbability.Initialize(tweakBar, "BakeRussianRouletteProbability", "Baking", "Russian Roullette Probability", "Maximum probability for continuing when Russian roulette is used", 0.5000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&BakeRussianRouletteProbability);
 
-        BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "The current encoding/basis used for baking light map sample points", BakeModes::SG5, 11, BakeModesLabels);
+        BakeMode.Initialize(tweakBar, "BakeMode", "Baking", "Bake Mode", "The current encoding/basis used for baking light map sample points", BakeModes::SG5, 12, BakeModesLabels);
         Settings.AddSetting(&BakeMode);
 
         SolveMode.Initialize(tweakBar, "SolveMode", "Baking", "Solve Mode", "Controls how path tracer radiance samples are converted into a set of per-texel SG lobes", SolveModes::RunningAverageNN, 5, SolveModesLabels);
