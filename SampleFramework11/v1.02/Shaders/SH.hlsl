@@ -11,22 +11,22 @@
 
 struct SH4
 {
-	float c[4];
+    float c[4];
 };
 
 struct SH4Color
 {
-	float3 c[4];
+    float3 c[4];
 };
 
 struct SH9
 {
-	float c[9];
+    float c[9];
 };
 
 struct SH9Color
 {
-	float3 c[9];
+    float3 c[9];
 };
 
 typedef float4 H4;
@@ -112,46 +112,46 @@ SH4Color ProjectOntoSH4Color(in float3 dir)
 //-------------------------------------------------------------------------------------------------
 float SHDotProduct(in SH4 a, in SH4 b)
 {
-	float result = 0.0f;
+    float result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 4; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 float3 SHDotProduct(in SH4 a, in SH4Color b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 4; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 float3 SHDotProduct(in SH4Color a, in SH4 b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 4; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 float3 SHDotProduct(in SH4Color a, in SH4Color b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 4; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -159,14 +159,14 @@ float3 SHDotProduct(in SH4Color a, in SH4Color b)
 //-------------------------------------------------------------------------------------------------
 float3 EvalSH4(in float3 dir, in SH4 sh)
 {
-	SH4 dirSH = ProjectOntoSH4(dir);
-	return SHDotProduct(dirSH, sh);
+    SH4 dirSH = ProjectOntoSH4(dir);
+    return SHDotProduct(dirSH, sh);
 }
 
 float3 EvalSH4(in float3 dir, in SH4Color sh)
 {
-	SH4Color dirSH = ProjectOntoSH4Color(dir, 1.0f);
-	return SHDotProduct(dirSH, sh);
+    SH4Color dirSH = ProjectOntoSH4Color(dir, 1.0f);
+    return SHDotProduct(dirSH, sh);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -175,14 +175,14 @@ float3 EvalSH4(in float3 dir, in SH4Color sh)
 //-------------------------------------------------------------------------------------------------
 float EvalSH4Irradiance(in float3 dir, in SH4 sh)
 {
-	SH4 dirSH = ProjectOntoSH4(dir, 1.0f, CosineA0, CosineA1);
-	return SHDotProduct(dirSH, sh);
+    SH4 dirSH = ProjectOntoSH4(dir, 1.0f, CosineA0, CosineA1);
+    return SHDotProduct(dirSH, sh);
 }
 
 float3 EvalSH4Irradiance(in float3 dir, in SH4Color sh)
 {
-	SH4Color dirSH = ProjectOntoSH4Color(dir, 1.0f, CosineA0, CosineA1);
-	return SHDotProduct(dirSH, sh);
+    SH4Color dirSH = ProjectOntoSH4Color(dir, 1.0f, CosineA0, CosineA1);
+    return SHDotProduct(dirSH, sh);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -398,22 +398,22 @@ SH9Color ProjectOntoSH9Color(in float3 n, in float3 color, in float A0, in float
 
 SH9 ProjectOntoSH9(in float3 dir, in float intensity)
 {
-	return ProjectOntoSH9(dir, intensity, 1.0f, 1.0f, 1.0f);
+    return ProjectOntoSH9(dir, intensity, 1.0f, 1.0f, 1.0f);
 }
 
 SH9Color ProjectOntoSH9Color(in float3 dir, in float3 color)
 {
-	return ProjectOntoSH9Color(dir, color, 1.0f, 1.0f, 1.0f);
+    return ProjectOntoSH9Color(dir, color, 1.0f, 1.0f, 1.0f);
 }
 
 SH9 ProjectOntoSH9(in float3 dir)
 {
-	return ProjectOntoSH9(dir, 1.0f, 1.0f, 1.0f, 1.0f);
+    return ProjectOntoSH9(dir, 1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 SH9Color ProjectOntoSH9Color(in float3 dir)
 {
-	return ProjectOntoSH9Color(dir, 1.0f, 1.0f, 1.0f, 1.0f);
+    return ProjectOntoSH9Color(dir, 1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -421,48 +421,48 @@ SH9Color ProjectOntoSH9Color(in float3 dir)
 //-------------------------------------------------------------------------------------------------
 float SHDotProduct(in SH9 a, in SH9 b)
 {
-	float result = 0.0f;
+    float result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 9; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 9; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 float3 SHDotProduct(in SH9Color a, in SH9 b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 9; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 9; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 
 float3 SHDotProduct(in SH9 a, in SH9Color b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 9; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 9; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 
 float3 SHDotProduct(in SH9Color a, in SH9Color b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 9; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 9; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -470,14 +470,14 @@ float3 SHDotProduct(in SH9Color a, in SH9Color b)
 //-------------------------------------------------------------------------------------------------
 float EvalSH9(in float3 dir, in SH9 sh)
 {
-	SH9 dirSH = ProjectOntoSH9(dir);
-	return SHDotProduct(dirSH, sh);
+    SH9 dirSH = ProjectOntoSH9(dir);
+    return SHDotProduct(dirSH, sh);
 }
 
 float3 EvalSH9(in float3 dir, in SH9Color sh)
 {
-	SH9Color dirSH = ProjectOntoSH9Color(dir);
-	return SHDotProduct(dirSH, sh);
+    SH9Color dirSH = ProjectOntoSH9Color(dir);
+    return SHDotProduct(dirSH, sh);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -486,14 +486,14 @@ float3 EvalSH9(in float3 dir, in SH9Color sh)
 //-------------------------------------------------------------------------------------------------
 float EvalSH9Irradiance(in float3 dir, in SH9 sh)
 {
-	SH9 dirSH = ProjectOntoSH9(dir, 1.0f, CosineA0, CosineA1, CosineA2);
-	return SHDotProduct(dirSH, sh);
+    SH9 dirSH = ProjectOntoSH9(dir, 1.0f, CosineA0, CosineA1, CosineA2);
+    return SHDotProduct(dirSH, sh);
 }
 
 float3 EvalSH9Irradiance(in float3 dir, in SH9Color sh)
 {
-	SH9Color dirSH = ProjectOntoSH9Color(dir, 1.0f, CosineA0, CosineA1, CosineA2);
-	return SHDotProduct(dirSH, sh);
+    SH9Color dirSH = ProjectOntoSH9Color(dir, 1.0f, CosineA0, CosineA1, CosineA2);
+    return SHDotProduct(dirSH, sh);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -763,58 +763,58 @@ H4 ProjectOntoH4(in float3 dir, in float value)
 //-------------------------------------------------------------------------------------------------
 H4 ConvertToH4(in SH9 sh)
 {
-	const float rt2 = sqrt(2.0f);
-	const float rt32 = sqrt(3.0f / 2.0f);
-	const float rt52 = sqrt(5.0f / 2.0f);
-	const float rt152 = sqrt(15.0f / 2.0f);
-	const float convMatrix[4][9] =
-	{
-		{ 1.0f / rt2, 0, 0.5f * rt32, 0, 0, 0, 0, 0, 0 },
-		{ 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0, 0, 0 },
-		{ 0, 0, 1.0f / (2.0f * rt2), 0, 0, 0, 0.25f * rt152, 0, 0 },
-		{ 0, 0, 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0 }
-	};
+    const float rt2 = sqrt(2.0f);
+    const float rt32 = sqrt(3.0f / 2.0f);
+    const float rt52 = sqrt(5.0f / 2.0f);
+    const float rt152 = sqrt(15.0f / 2.0f);
+    const float convMatrix[4][9] =
+    {
+        { 1.0f / rt2, 0, 0.5f * rt32, 0, 0, 0, 0, 0, 0 },
+        { 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0, 0, 0 },
+        { 0, 0, 1.0f / (2.0f * rt2), 0, 0, 0, 0.25f * rt152, 0, 0 },
+        { 0, 0, 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0 }
+    };
 
     H4 hBasis;
 
-	[unroll]
-	for(uint row = 0; row < 4; ++row)
-	{
-		hBasis[row] = 0.0f;
+    [unroll]
+    for(uint row = 0; row < 4; ++row)
+    {
+        hBasis[row] = 0.0f;
 
-		[unroll]
-		for(uint col = 0; col < 9; ++col)
-			hBasis[row] += convMatrix[row][col] * sh.c[col];
-	}
+        [unroll]
+        for(uint col = 0; col < 9; ++col)
+            hBasis[row] += convMatrix[row][col] * sh.c[col];
+    }
 
     return hBasis;
 }
 
 H4Color ConvertToH4(in SH9Color sh)
 {
-	const float rt2 = sqrt(2.0f);
-	const float rt32 = sqrt(3.0f / 2.0f);
-	const float rt52 = sqrt(5.0f / 2.0f);
-	const float rt152 = sqrt(15.0f / 2.0f);
-	const float convMatrix[4][9] =
-	{
-		{ 1.0f / rt2, 0, 0.5f * rt32, 0, 0, 0, 0, 0, 0 },
-		{ 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0, 0, 0 },
-		{ 0, 0, 1.0f / (2.0f * rt2), 0, 0, 0, 0.25f * rt152, 0, 0 },
-		{ 0, 0, 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0 }
-	};
+    const float rt2 = sqrt(2.0f);
+    const float rt32 = sqrt(3.0f / 2.0f);
+    const float rt52 = sqrt(5.0f / 2.0f);
+    const float rt152 = sqrt(15.0f / 2.0f);
+    const float convMatrix[4][9] =
+    {
+        { 1.0f / rt2, 0, 0.5f * rt32, 0, 0, 0, 0, 0, 0 },
+        { 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0, 0, 0 },
+        { 0, 0, 1.0f / (2.0f * rt2), 0, 0, 0, 0.25f * rt152, 0, 0 },
+        { 0, 0, 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0 }
+    };
 
     H4Color hBasis;
 
-	[unroll]
-	for(uint row = 0; row < 4; ++row)
-	{
-		hBasis.c[row] = 0.0f;
+    [unroll]
+    for(uint row = 0; row < 4; ++row)
+    {
+        hBasis.c[row] = 0.0f;
 
-		[unroll]
-		for(uint col = 0; col < 9; ++col)
-			hBasis.c[row] += convMatrix[row][col] * sh.c[col];
-	}
+        [unroll]
+        for(uint col = 0; col < 9; ++col)
+            hBasis.c[row] += convMatrix[row][col] * sh.c[col];
+    }
 
     return hBasis;
 }
@@ -824,7 +824,7 @@ H4Color ConvertToH4(in SH9Color sh)
 //-------------------------------------------------------------------------------------------------
 float EvalH4(in float3 n, in H4 hBasis)
 {
-	float result = 0.0f;
+    float result = 0.0f;
 
     // Band 0
     result += hBasis.x * (1.0f / sqrt(2.0f * Pi));
@@ -834,7 +834,7 @@ float EvalH4(in float3 n, in H4 hBasis)
     result += hBasis.z * sqrt(1.5f / Pi) * (2 * n.z - 1.0f);
     result += hBasis.w * -sqrt(1.5f / Pi) * n.x;
 
-	return result;
+    return result;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -842,7 +842,7 @@ float EvalH4(in float3 n, in H4 hBasis)
 //-------------------------------------------------------------------------------------------------
 float3 EvalH4(in float3 n, in H4Color hBasis)
 {
-	float3 color = 0.0f;
+    float3 color = 0.0f;
 
     // Band 0
     color += hBasis.c[0] * (1.0f / sqrt(2.0f * Pi));
@@ -852,7 +852,7 @@ float3 EvalH4(in float3 n, in H4Color hBasis)
     color += hBasis.c[2] * sqrt(1.5f / Pi) * (2 * n.z - 1.0f);
     color += hBasis.c[3] * -sqrt(1.5f / Pi) * n.x;
 
-	return color;
+    return color;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -870,46 +870,46 @@ float3 EvalH4(in float3 n, in float3 H0, in float3 H1, in float3 H2, in float3 H
 
 float HDotProduct(in H4 a, in H4 b)
 {
-	float result = 0.0f;
+    float result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 4; ++i)
-		result += a[i] * b[i];
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        result += a[i] * b[i];
 
-	return result;
+    return result;
 }
 
 float3 HDotProduct(in H4Color a, in H4 b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 4; ++i)
-		result += a.c[i] * b[i];
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        result += a.c[i] * b[i];
 
-	return result;
+    return result;
 }
 
 float3 HDotProduct(in H4 a, in H4Color b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 4; ++i)
-		result += a[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        result += a[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 float3 HDotProduct(in H4Color a, in H4Color b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 4; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 4; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 // == H6 =========================================================================================
@@ -920,62 +920,62 @@ float3 HDotProduct(in H4Color a, in H4Color b)
 //-------------------------------------------------------------------------------------------------
 H6 ConvertToH6(in SH9 sh)
 {
-	const float rt2 = sqrt(2.0f);
-	const float rt32 = sqrt(3.0f / 2.0f);
-	const float rt52 = sqrt(5.0f / 2.0f);
-	const float rt152 = sqrt(15.0f / 2.0f);
-	const float convMatrix[6][9] =
-	{
-		{ 1.0f / rt2, 0, 0.5f * rt32, 0, 0, 0, 0, 0, 0 },
-		{ 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0, 0, 0 },
-		{ 0, 0, 1.0f / (2.0f * rt2), 0, 0, 0, 0.25f * rt152, 0, 0 },
-		{ 0, 0, 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0 },
+    const float rt2 = sqrt(2.0f);
+    const float rt32 = sqrt(3.0f / 2.0f);
+    const float rt52 = sqrt(5.0f / 2.0f);
+    const float rt152 = sqrt(15.0f / 2.0f);
+    const float convMatrix[6][9] =
+    {
+        { 1.0f / rt2, 0, 0.5f * rt32, 0, 0, 0, 0, 0, 0 },
+        { 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0, 0, 0 },
+        { 0, 0, 1.0f / (2.0f * rt2), 0, 0, 0, 0.25f * rt152, 0, 0 },
+        { 0, 0, 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0 },
         { 0, 0, 0, 0, 1.0f / rt2, 0, 0, 0, 0 },
         { 0, 0, 0, 0, 0, 0, 0, 0, 1.0f / rt2 }
-	};
+    };
 
     H6 hBasis;
 
-	[unroll]
-	for(uint row = 0; row < 6; ++row)
-	{
-		hBasis.c[row] = 0.0f;
+    [unroll]
+    for(uint row = 0; row < 6; ++row)
+    {
+        hBasis.c[row] = 0.0f;
 
-		[unroll]
-		for(uint col = 0; col < 9; ++col)
-			hBasis.c[row] += convMatrix[row][col] * sh.c[col];
-	}
+        [unroll]
+        for(uint col = 0; col < 9; ++col)
+            hBasis.c[row] += convMatrix[row][col] * sh.c[col];
+    }
 
     return hBasis;
 }
 
 H6Color ConvertToH6(in SH9Color sh)
 {
-	const float rt2 = sqrt(2.0f);
-	const float rt32 = sqrt(3.0f / 2.0f);
-	const float rt52 = sqrt(5.0f / 2.0f);
-	const float rt152 = sqrt(15.0f / 2.0f);
-	const float convMatrix[6][9] =
-	{
-		{ 1.0f / rt2, 0, 0.5f * rt32, 0, 0, 0, 0, 0, 0 },
-		{ 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0, 0, 0 },
-		{ 0, 0, 1.0f / (2.0f * rt2), 0, 0, 0, 0.25f * rt152, 0, 0 },
-		{ 0, 0, 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0 },
+    const float rt2 = sqrt(2.0f);
+    const float rt32 = sqrt(3.0f / 2.0f);
+    const float rt52 = sqrt(5.0f / 2.0f);
+    const float rt152 = sqrt(15.0f / 2.0f);
+    const float convMatrix[6][9] =
+    {
+        { 1.0f / rt2, 0, 0.5f * rt32, 0, 0, 0, 0, 0, 0 },
+        { 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0, 0, 0 },
+        { 0, 0, 1.0f / (2.0f * rt2), 0, 0, 0, 0.25f * rt152, 0, 0 },
+        { 0, 0, 0, 1.0f / rt2, 0, 0, 0, (3.0f / 8.0f) * rt52, 0 },
         { 0, 0, 0, 0, 1.0f / rt2, 0, 0, 0, 0 },
         { 0, 0, 0, 0, 0, 0, 0, 0, 1.0f / rt2 }
-	};
+    };
 
     H6Color hBasis;
 
-	[unroll]
-	for(uint row = 0; row < 6; ++row)
-	{
-		hBasis.c[row] = 0.0f;
+    [unroll]
+    for(uint row = 0; row < 6; ++row)
+    {
+        hBasis.c[row] = 0.0f;
 
-		[unroll]
-		for(uint col = 0; col < 9; ++col)
-			hBasis.c[row] += convMatrix[row][col] * sh.c[col];
-	}
+        [unroll]
+        for(uint col = 0; col < 9; ++col)
+            hBasis.c[row] += convMatrix[row][col] * sh.c[col];
+    }
 
     return hBasis;
 }
@@ -1008,7 +1008,7 @@ float EvalH6(in float3 n, in H6 hBasis)
 //-------------------------------------------------------------------------------------------------
 float3 EvalH6(in float3 n, in H6Color hBasis)
 {
-	float3 color = 0.0f;
+    float3 color = 0.0f;
 
     // Band 0
     color += hBasis.c[0] * (1.0f / sqrt(2.0f * Pi));
@@ -1022,49 +1022,49 @@ float3 EvalH6(in float3 n, in H6Color hBasis)
     color += hBasis.c[4] * 0.5f * sqrt(7.5f / Pi) * n.x * n.y;
     color += hBasis.c[5] * 0.5f * sqrt(7.5f / Pi) * (n.x * n.x - n.y * n.y);
 
-	return color;
+    return color;
 }
 
 float HDotProduct(in H6 a, in H6 b)
 {
-	float result = 0.0f;
+    float result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 6; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 6; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 float3 HDotProduct(in H6Color a, in H6 b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 6; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 6; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 float3 HDotProduct(in H6 a, in H6Color b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 6; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 6; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }
 
 float3 HDotProduct(in H6Color a, in H6Color b)
 {
-	float3 result = 0.0f;
+    float3 result = 0.0f;
 
-	[unroll]
-	for(uint i = 0; i < 6; ++i)
-		result += a.c[i] * b.c[i];
+    [unroll]
+    for(uint i = 0; i < 6; ++i)
+        result += a.c[i] * b.c[i];
 
-	return result;
+    return result;
 }

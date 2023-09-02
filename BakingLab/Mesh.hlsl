@@ -29,7 +29,7 @@ static const uint NumCascades = 4;
 cbuffer VSConstants : register(b0)
 {
     float4x4 World;
-	float4x4 View;
+    float4x4 View;
     float4x4 WorldViewProjection;
     float4x4 PrevWorldViewProjection;
 }
@@ -41,8 +41,8 @@ cbuffer PSConstants : register(b0)
     float3 SunIlluminance;
     float SinSunAngularRadius;
     float3 CameraPosWS;
-	float4x4 ShadowMatrix;
-	float4 CascadeSplits;
+    float4x4 ShadowMatrix;
+    float4 CascadeSplits;
     float4 CascadeOffsets[NumCascades];
     float4 CascadeScales[NumCascades];
     float OffsetScale;
@@ -79,38 +79,38 @@ SamplerComparisonState PCFSampler : register(s3);
 //=================================================================================================
 struct VSInput
 {
-    float3 PositionOS 		    : POSITION;
-    float3 NormalOS 		    : NORMAL;
-    float2 TexCoord 		    : TEXCOORD0;
+    float3 PositionOS           : POSITION;
+    float3 NormalOS             : NORMAL;
+    float2 TexCoord             : TEXCOORD0;
     float2 LightMapUV           : TEXCOORD1;
-	float3 TangentOS 		    : TANGENT;
-	float3 BitangentOS		    : BITANGENT;
+    float3 TangentOS            : TANGENT;
+    float3 BitangentOS          : BITANGENT;
 };
 
 struct VSOutput
 {
-    float4 PositionCS 		    : SV_Position;
+    float4 PositionCS           : SV_Position;
 
-    float3 NormalWS 		    : NORMALWS;
+    float3 NormalWS             : NORMALWS;
     float3 PositionWS           : POSITIONWS;
     float DepthVS               : DEPTHVS;
-	float3 TangentWS 		    : TANGENTWS;
-	float3 BitangentWS 		    : BITANGENTWS;
-	float2 TexCoord 		    : TEXCOORD;
+    float3 TangentWS            : TANGENTWS;
+    float3 BitangentWS          : BITANGENTWS;
+    float2 TexCoord             : TEXCOORD;
     float2 LightMapUV           : LIGHTMAPUV;
     float3 PrevPosition         : PREVPOSITION;
 };
 
 struct PSInput
 {
-    float4 PositionSS 		    : SV_Position;
+    float4 PositionSS           : SV_Position;
 
-    float3 NormalWS 		    : NORMALWS;
+    float3 NormalWS             : NORMALWS;
     float3 PositionWS           : POSITIONWS;
     float DepthVS               : DEPTHVS;
-    float3 TangentWS 		    : TANGENTWS;
-	float3 BitangentWS 		    : BITANGENTWS;
-    float2 TexCoord 		    : TEXCOORD;
+    float3 TangentWS            : TANGENTWS;
+    float3 BitangentWS          : BITANGENTWS;
+    float2 TexCoord             : TEXCOORD;
     float2 LightMapUV           : LIGHTMAPUV;
     float3 PrevPosition         : PREVPOSITION;
 };
@@ -138,12 +138,12 @@ VSOutput VS(in VSInput input, in uint VertexID : SV_VertexID)
     output.DepthVS = output.PositionCS.w;
 
 
-	// Rotate the normal into world space
+    // Rotate the normal into world space
     output.NormalWS = normalize(mul(input.NormalOS, (float3x3)World));
 
-	// Rotate the rest of the tangent frame into world space
-	output.TangentWS = normalize(mul(input.TangentOS, (float3x3)World));
-	output.BitangentWS = normalize(mul(input.BitangentOS, (float3x3)World));
+    // Rotate the rest of the tangent frame into world space
+    output.TangentWS = normalize(mul(input.TangentOS, (float3x3)World));
+    output.BitangentWS = normalize(mul(input.BitangentOS, (float3x3)World));
 
     // Pass along the texture coordinates
     output.TexCoord = input.TexCoord;
@@ -203,28 +203,28 @@ float3 SampleShadowCascade(in float3 shadowPosition, in float3 shadowPosDX,
 //--------------------------------------------------------------------------------------
 float3 SunShadowVisibility(in float3 positionWS, in float depthVS)
 {
-	float3 shadowVisibility = 1.0f;
-	uint cascadeIdx = 0;
+    float3 shadowVisibility = 1.0f;
+    uint cascadeIdx = 0;
 
     // Project into shadow space
     float3 samplePos = positionWS;
-	float3 shadowPosition = mul(float4(samplePos, 1.0f), ShadowMatrix).xyz;
+    float3 shadowPosition = mul(float4(samplePos, 1.0f), ShadowMatrix).xyz;
     float3 shadowPosDX = ddx(shadowPosition);
     float3 shadowPosDY = ddy(shadowPosition);
 
-	// Figure out which cascade to sample from
-	[unroll]
-	for(uint i = 0; i < NumCascades - 1; ++i)
-	{
-		[flatten]
-		if(depthVS > CascadeSplits[i])
-			cascadeIdx = i + 1;
-	}
+    // Figure out which cascade to sample from
+    [unroll]
+    for(uint i = 0; i < NumCascades - 1; ++i)
+    {
+        [flatten]
+        if(depthVS > CascadeSplits[i])
+            cascadeIdx = i + 1;
+    }
 
-	shadowVisibility = SampleShadowCascade(shadowPosition, shadowPosDX, shadowPosDY,
+    shadowVisibility = SampleShadowCascade(shadowPosition, shadowPosDX, shadowPosDY,
                                            cascadeIdx);
 
-	return shadowVisibility;
+    return shadowVisibility;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -255,8 +255,8 @@ float AreaLightShadowVisibility(in float3 positionWS)
 // Calculates the lighting result for an analytical light source
 //-------------------------------------------------------------------------------------------------
 float3 CalcLighting(in float3 normal, in float3 lightDir, in float3 lightColor,
-					in float3 diffuseAlbedo, in float3 specularAlbedo, in float roughness,
-					in float3 view, inout float3 irradiance)
+                    in float3 diffuseAlbedo, in float3 specularAlbedo, in float roughness,
+                    in float3 view, inout float3 irradiance)
 {
     float3 lighting = diffuseAlbedo * (1.0f / 3.14159f);
 
@@ -527,7 +527,7 @@ float3 PrefilteredSHSpecular(in float3 view, in float3 normal, in float3x3 tange
 //=================================================================================================
 PSOutput PS(in PSInput input)
 {
-	const float3 vtxNormal = normalize(input.NormalWS);
+    const float3 vtxNormal = normalize(input.NormalWS);
     const float3 positionWS = input.PositionWS;
 
     const float3 viewWS = normalize(CameraPosWS - positionWS);
@@ -536,10 +536,10 @@ PSOutput PS(in PSInput input)
 
     const float2 uv = input.TexCoord;
 
-	float3 normalTS = float3(0, 0, 1);
-	float3 tangentWS = normalize(input.TangentWS);
-	float3 bitangentWS = normalize(input.BitangentWS);
-	float3x3 tangentToWorld = float3x3(tangentWS, bitangentWS, normalWS);
+    float3 normalTS = float3(0, 0, 1);
+    float3 tangentWS = normalize(input.TangentWS);
+    float3 bitangentWS = normalize(input.BitangentWS);
+    float3x3 tangentToWorld = float3x3(tangentWS, bitangentWS, normalWS);
 
     if(EnableNormalMaps)
     {
@@ -617,7 +617,7 @@ PSOutput PS(in PSInput input)
         irradiance += sgIrradiance * areaLightVisibility;
     }
 
-	// Add in the indirect
+    // Add in the indirect
     if(EnableIndirectLighting || ViewIndirectDiffuse || ViewIndirectSpecular)
     {
         float3 indirectIrradiance = 0.0f;
@@ -645,20 +645,20 @@ PSOutput PS(in PSInput input)
                 indirectIrradiance += saturate(dot(normalTS, BasisDirs[i])) * lightMap;
             }
         }
-		else if (BakeMode == BakeModes_Directional)
-		{
-			float3 lightMapColor = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 0), 0.0f).xyz * Pi;
-			float4 lightmapDirection = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 1), 0.0f).xyzw;
+        else if (BakeMode == BakeModes_Directional)
+        {
+            float3 lightMapColor = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 0), 0.0f).xyz * Pi;
+            float4 lightmapDirection = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 1), 0.0f).xyzw;
 
-			float rebalancingCoefficient = max(lightmapDirection.w, 0.0001);
+            float rebalancingCoefficient = max(lightmapDirection.w, 0.0001);
 
-			lightmapDirection = lightmapDirection * 2.0f - 1.0f;
+            lightmapDirection = lightmapDirection * 2.0f - 1.0f;
 
-			float4 tau = float4(normalize(normalWS), 1.0f) * 0.5f;
-			float halfLambert = dot(tau, float4(lightmapDirection.xyz, 1.0f));
+            float4 tau = float4(normalize(normalWS), 1.0f) * 0.5f;
+            float halfLambert = dot(tau, float4(lightmapDirection.xyz, 1.0f));
 
-			indirectIrradiance = lightMapColor * halfLambert / rebalancingCoefficient;
-		}
+            indirectIrradiance = lightMapColor * halfLambert / rebalancingCoefficient;
+        }
         else if(BakeMode == BakeModes_DirectionalRGB)
         {
             float3 lightMapColor = BakedLightingMap.SampleLevel(LinearSampler, float3(input.LightMapUV, 0), 0.0f).xyz * Pi;

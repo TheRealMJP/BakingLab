@@ -757,8 +757,8 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
                 if(addAreaLight)
                     sampleResult *= 2.0f;
 
-				if (!isfinite(sampleResult.x) || !isfinite(sampleResult.y) || !isfinite(sampleResult.z))
-					sampleResult = 0.0;
+                if (!isfinite(sampleResult.x) || !isfinite(sampleResult.y) || !isfinite(sampleResult.z))
+                    sampleResult = 0.0;
 
                 baker.AddSample(rayDirTS, sampleIdx, sampleResult, rayDirWS, bakePoint.Normal);
 
@@ -842,8 +842,8 @@ template<typename TBaker> static bool BakeDriver(BakeThreadContext& context, TBa
             if(addAreaLight)
                 sampleResult *= 2.0f;
 
-			if (!isfinite(sampleResult.x) || !isfinite(sampleResult.y) || !isfinite(sampleResult.z))
-				sampleResult = 0.0;
+            if (!isfinite(sampleResult.x) || !isfinite(sampleResult.y) || !isfinite(sampleResult.z))
+                sampleResult = 0.0;
 
             baker.AddSample(rayDirTS, sampleIdx, sampleResult, rayDirWS, bakePoint.Normal);
         }
@@ -1925,8 +1925,8 @@ void MeshBaker::StartBakeThreads()
     uint32 (__stdcall* threadFunction)(void*) = BakeThread<DiffuseBaker>;
     if(currBakeMode == BakeModes::HL2)
         threadFunction = BakeThread<HL2Baker>;
-	else if (currBakeMode == BakeModes::Directional)
-		threadFunction = BakeThread<DirectionalBaker>;
+    else if (currBakeMode == BakeModes::Directional)
+        threadFunction = BakeThread<DirectionalBaker>;
     else if(currBakeMode == BakeModes::DirectionalRGB)
         threadFunction = BakeThread<DirectionalRGBBaker>;
     else if(currBakeMode == BakeModes::SH4)
