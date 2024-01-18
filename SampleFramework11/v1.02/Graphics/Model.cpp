@@ -170,6 +170,16 @@ void Mesh::InitFromAssimpMesh(ID3D11Device* device, const aiMesh& assimpMesh)
             currOffset += 8;
             vertexData.push_back(assimpMesh.mTextureCoords[i]);
         }
+        else if(i == 1)
+        {
+            elemDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+            elemDesc.AlignedByteOffset = currOffset;
+            elemDesc.SemanticName = "TEXCOORD";
+            elemDesc.SemanticIndex = 1;
+            inputElements.push_back(elemDesc);
+            currOffset += 8;
+            vertexData.push_back(assimpMesh.mTextureCoords[0]);
+        }
     }
 
     if(assimpMesh.HasTangentsAndBitangents())
