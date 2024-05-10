@@ -168,6 +168,7 @@ static const int SGSpecularModes_ASGWarp = 2;
 
 static const int SH4DiffuseModes_Convolution = 0;
 static const int SH4DiffuseModes_Geomerics = 1;
+static const int SH4DiffuseModes_ZH3 = 2;
 
 static const int SHSpecularModes_Convolution = 0;
 static const int SHSpecularModes_DominantDirection = 1;

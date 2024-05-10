@@ -217,6 +217,27 @@ float3 EvalSH4IrradianceGeomerics(in float3 dir, in SH4Color sh)
 }
 
 //-------------------------------------------------------------------------------------------------
+// From "ZH3: Quadratic Zonal Harmonics" - https://torust.me/ZH3.pdf
+//-------------------------------------------------------------------------------------------------
+float3 EvalSH4IrradianceZH3Hallucinate(in float3 dir, in SH4Color sh)
+{
+    const float3 lumCoefficients = float3(0.2126f, 0.7152f, 0.0722f);
+    const float3 zonalAxis = normalize(float3(-dot(sh.c[3], lumCoefficients), -dot(sh.c[1], lumCoefficients), dot(sh.c[2], lumCoefficients)));
+
+    const float3 ratio = float3(abs(dot(float3(-sh.c[3].r, -sh.c[1].r, sh.c[2].r), zonalAxis)),
+                                abs(dot(float3(-sh.c[3].g, -sh.c[1].g, sh.c[2].g), zonalAxis)),
+                                abs(dot(float3(-sh.c[3].b, -sh.c[1].b, sh.c[2].b), zonalAxis))) / sh.c[0];
+    const float3 zonalL2Coeff = sh.c[0] * (0.08f * ratio + 0.6f * ratio * ratio);
+
+    const float fZ = dot(zonalAxis, dir);
+    const float zhDir = sqrt(5.0f / (16.0f * Pi)) * (3.0f * fZ * fZ - 1.0f);
+
+    const float3 baseIrradiance = EvalSH4Irradiance(dir, sh);
+
+    return baseIrradiance + (0.25f * zonalL2Coeff * zhDir);
+}
+
+//-------------------------------------------------------------------------------------------------
 // Converts from 3-band to 2-band SH
 //-------------------------------------------------------------------------------------------------
 SH4 ConvertToSH4(in SH9 sh9)

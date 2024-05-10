@@ -327,6 +327,7 @@ enum SH4DiffuseModes
 {
     Convolution = 0,
     Geomerics,
+    ZH3,
 }
 
 enum SHSpecularModes

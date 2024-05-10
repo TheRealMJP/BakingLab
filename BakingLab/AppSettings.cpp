@@ -138,10 +138,11 @@ static const char* SGSpecularModesLabels[3] =
     "ASG Warp",
 };
 
-static const char* SH4DiffuseModesLabels[2] =
+static const char* SH4DiffuseModesLabels[3] =
 {
     "Convolution",
     "Geomerics",
+    "ZH3",
 };
 
 static const char* SHSpecularModesLabels[4] =
@@ -507,7 +508,7 @@ namespace AppSettings
         SGSpecularMode.Initialize(tweakBar, "SGSpecularMode", "SG Settings", "Use ASG Warp", "", SGSpecularModes::ASGWarp, 3, SGSpecularModesLabels);
         Settings.AddSetting(&SGSpecularMode);
 
-        SH4DiffuseMode.Initialize(tweakBar, "SH4DiffuseMode", "SH Settings", "L1 SH Diffuse Mode", "", SH4DiffuseModes::Convolution, 2, SH4DiffuseModesLabels);
+        SH4DiffuseMode.Initialize(tweakBar, "SH4DiffuseMode", "SH Settings", "L1 SH Diffuse Mode", "", SH4DiffuseModes::Convolution, 3, SH4DiffuseModesLabels);
         Settings.AddSetting(&SH4DiffuseMode);
 
         SHSpecularMode.Initialize(tweakBar, "SHSpecularMode", "SH Settings", "SH Specular Mode", "", SHSpecularModes::Convolution, 4, SHSpecularModesLabels);

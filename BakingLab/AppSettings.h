@@ -196,6 +196,7 @@ enum class SH4DiffuseModes
 {
     Convolution = 0,
     Geomerics = 1,
+    ZH3 = 2,
 
     NumValues
 };

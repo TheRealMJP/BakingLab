@@ -689,6 +689,8 @@ PSOutput PS(in PSInput input)
 
             if(SH4DiffuseMode == SH4DiffuseModes_Geomerics)
                 indirectIrradiance = EvalSH4IrradianceGeomerics(normalSHSG, shRadiance);
+            else if(SH4DiffuseMode == SH4DiffuseModes_ZH3)
+                indirectIrradiance = EvalSH4IrradianceZH3Hallucinate(normalSHSG, shRadiance);
             else
                 indirectIrradiance = EvalSH4Irradiance(normalSHSG, shRadiance);
 
