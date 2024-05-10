@@ -234,7 +234,7 @@ float3 EvalSH4IrradianceZH3Hallucinate(in float3 dir, in SH4Color sh)
 
     const float3 baseIrradiance = EvalSH4Irradiance(dir, sh);
 
-    return baseIrradiance + (0.25f * zonalL2Coeff * zhDir);
+    return baseIrradiance + (Pi * 0.25f * zonalL2Coeff * zhDir);
 }
 
 //-------------------------------------------------------------------------------------------------
